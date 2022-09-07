@@ -8,20 +8,54 @@
 
 /* Begin PBXBuildFile section */
 		64C5446228C838D100C23393 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5446128C838D100C23393 /* AppDelegate.m */; };
-		64C5446528C838D100C23393 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5446428C838D100C23393 /* SceneDelegate.m */; };
 		64C5446828C838D100C23393 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5446728C838D100C23393 /* ViewController.m */; };
 		64C5446B28C838D100C23393 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 64C5446928C838D100C23393 /* Main.storyboard */; };
 		64C5446D28C838D400C23393 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 64C5446C28C838D400C23393 /* Assets.xcassets */; };
 		64C5447028C838D400C23393 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 64C5446E28C838D400C23393 /* LaunchScreen.storyboard */; };
 		64C5447328C838D400C23393 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5447228C838D400C23393 /* main.m */; };
+		64C5447F28C8395200C23393 /* AudioPlayCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5447E28C8395200C23393 /* AudioPlayCell.m */; };
+		64C5448228C83A0700C23393 /* TTi.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5448128C83A0700C23393 /* TTi.m */; };
+		64C5448B28C83A7700C23393 /* AudioSpectrumRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5448728C83A7700C23393 /* AudioSpectrumRecorder.m */; };
+		64C5448C28C83A7700C23393 /* RealtimeAnalyzer.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5448A28C83A7700C23393 /* RealtimeAnalyzer.m */; };
+		64C5448D28C83A7700C23393 /* SpectrumView.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5448528C83A7700C23393 /* SpectrumView.m */; };
+		64C5448E28C83A7700C23393 /* AudioSpectrumPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5448628C83A7700C23393 /* AudioSpectrumPlayer.m */; };
+		64C544AE28C83AD600C23393 /* 周深 - Rubia.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449028C83AD600C23393 /* 周深 - Rubia.mp3 */; };
+		64C544AF28C83AD600C23393 /* Varien - Future Funk.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449128C83AD600C23393 /* Varien - Future Funk.mp3 */; };
+		64C544B028C83AD600C23393 /* Xeuphoria - Sky City.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449228C83AD600C23393 /* Xeuphoria - Sky City.mp3 */; };
+		64C544B128C83AD600C23393 /* 鈴木瑛美子 - フロントメモリー.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449328C83AD600C23393 /* 鈴木瑛美子 - フロントメモリー.mp3 */; };
+		64C544B228C83AD600C23393 /* ILLENIUM,Nevve - Fractures.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449428C83AD600C23393 /* ILLENIUM,Nevve - Fractures.mp3 */; };
+		64C544B328C83AD600C23393 /* Alida - Feathers.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449528C83AD600C23393 /* Alida - Feathers.mp3 */; };
+		64C544B428C83AD600C23393 /* 黄霄雲 - 星辰大海.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449628C83AD600C23393 /* 黄霄雲 - 星辰大海.mp3 */; };
+		64C544B528C83AD600C23393 /* Lenka - Crystal Ball.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449728C83AD600C23393 /* Lenka - Crystal Ball.mp3 */; };
+		64C544B628C83AD600C23393 /* Sub Urban - Cradles.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449828C83AD600C23393 /* Sub Urban - Cradles.mp3 */; };
+		64C544B728C83AD600C23393 /* 陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449928C83AD600C23393 /* 陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3 */; };
+		64C544B828C83AD600C23393 /* Zero Venture - Northern Skies (Original Mix).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449A28C83AD600C23393 /* Zero Venture - Northern Skies (Original Mix).mp3 */; };
+		64C544B928C83AD600C23393 /* Taylor Swift - I Knew You Were Trouble..mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449B28C83AD600C23393 /* Taylor Swift - I Knew You Were Trouble..mp3 */; };
+		64C544BA28C83AD600C23393 /* 初音ミク,CosMo@暴走P - 初音未来的消失.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449C28C83AD600C23393 /* 初音ミク,CosMo@暴走P - 初音未来的消失.mp3 */; };
+		64C544BB28C83AD600C23393 /* Vicetone - Tremble (Original Mix).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449D28C83AD600C23393 /* Vicetone - Tremble (Original Mix).mp3 */; };
+		64C544BC28C83AD600C23393 /* Elektronomia - Vision.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449E28C83AD600C23393 /* Elektronomia - Vision.mp3 */; };
+		64C544BD28C83AD600C23393 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C5449F28C83AD600C23393 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).mp3 */; };
+		64C544BE28C83AD600C23393 /* 岩崎琢 - Bang! Bang! Bang! Bang! Have a Nice Dream.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A028C83AD600C23393 /* 岩崎琢 - Bang! Bang! Bang! Bang! Have a Nice Dream.mp3 */; };
+		64C544BF28C83AD600C23393 /* Imagine Dragons - Warriors.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A128C83AD600C23393 /* Imagine Dragons - Warriors.mp3 */; };
+		64C544C028C83AD600C23393 /* Akeboshi - wind (ワインド).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A228C83AD600C23393 /* Akeboshi - wind (ワインド).mp3 */; };
+		64C544C128C83AD600C23393 /* Missio - I See You.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A328C83AD600C23393 /* Missio - I See You.mp3 */; };
+		64C544C228C83AD600C23393 /* Zedd - Ignite.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A428C83AD600C23393 /* Zedd - Ignite.mp3 */; };
+		64C544C328C83AD600C23393 /* 心要野.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A528C83AD600C23393 /* 心要野.mp3 */; };
+		64C544C428C83AD600C23393 /* Kingsfoil - Grapevine Valentine(Nrdo bootleg)-Nrdo.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A628C83AD600C23393 /* Kingsfoil - Grapevine Valentine(Nrdo bootleg)-Nrdo.mp3 */; };
+		64C544C528C83AD600C23393 /* Alex Aiono,Feder,MDZN - Lordly (MDZN Remix).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A728C83AD600C23393 /* Alex Aiono,Feder,MDZN - Lordly (MDZN Remix).mp3 */; };
+		64C544C628C83AD600C23393 /* 金骏植 - My Everthing.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A828C83AD600C23393 /* 金骏植 - My Everthing.mp3 */; };
+		64C544C728C83AD600C23393 /* 后海大鲨鱼 - 猛犸.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544A928C83AD600C23393 /* 后海大鲨鱼 - 猛犸.mp3 */; };
+		64C544C828C83AD600C23393 /* 岩崎琢 - PSYCHEDELIC SOUL JAM.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544AA28C83AD600C23393 /* 岩崎琢 - PSYCHEDELIC SOUL JAM.mp3 */; };
+		64C544C928C83AD600C23393 /* 马頔 - 无畏.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544AB28C83AD600C23393 /* 马頔 - 无畏.mp3 */; };
+		64C544CA28C83AD600C23393 /* CMA - You're Not Alone.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544AC28C83AD600C23393 /* CMA - You're Not Alone.mp3 */; };
+		64C544CB28C83AD600C23393 /* SPYAIR - My Friend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C544AD28C83AD600C23393 /* SPYAIR - My Friend.mp3 */; };
+		64C544CF28C83B1200C23393 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 64C544CE28C83B1200C23393 /* AudioToolbox.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		64C5445D28C838D100C23393 /* AudioSampleBuffer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioSampleBuffer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		64C5446028C838D100C23393 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		64C5446128C838D100C23393 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		64C5446328C838D100C23393 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
-		64C5446428C838D100C23393 /* SceneDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SceneDelegate.m; sourceTree = "<group>"; };
 		64C5446628C838D100C23393 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
 		64C5446728C838D100C23393 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		64C5446A28C838D100C23393 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -29,6 +63,50 @@
 		64C5446F28C838D400C23393 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		64C5447128C838D400C23393 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		64C5447228C838D400C23393 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		64C5447D28C8395200C23393 /* AudioPlayCell.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioPlayCell.h; sourceTree = "<group>"; };
+		64C5447E28C8395200C23393 /* AudioPlayCell.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AudioPlayCell.m; sourceTree = "<group>"; };
+		64C5448028C83A0700C23393 /* TTi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TTi.h; sourceTree = "<group>"; };
+		64C5448128C83A0700C23393 /* TTi.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TTi.m; sourceTree = "<group>"; };
+		64C5448328C83A7600C23393 /* SpectrumView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SpectrumView.h; sourceTree = "<group>"; };
+		64C5448428C83A7600C23393 /* RealtimeAnalyzer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RealtimeAnalyzer.h; sourceTree = "<group>"; };
+		64C5448528C83A7700C23393 /* SpectrumView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SpectrumView.m; sourceTree = "<group>"; };
+		64C5448628C83A7700C23393 /* AudioSpectrumPlayer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AudioSpectrumPlayer.m; sourceTree = "<group>"; };
+		64C5448728C83A7700C23393 /* AudioSpectrumRecorder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AudioSpectrumRecorder.m; sourceTree = "<group>"; };
+		64C5448828C83A7700C23393 /* AudioSpectrumRecorder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioSpectrumRecorder.h; sourceTree = "<group>"; };
+		64C5448928C83A7700C23393 /* AudioSpectrumPlayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioSpectrumPlayer.h; sourceTree = "<group>"; };
+		64C5448A28C83A7700C23393 /* RealtimeAnalyzer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RealtimeAnalyzer.m; sourceTree = "<group>"; };
+		64C5449028C83AD600C23393 /* 周深 - Rubia.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周深 - Rubia.mp3"; sourceTree = "<group>"; };
+		64C5449128C83AD600C23393 /* Varien - Future Funk.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Varien - Future Funk.mp3"; sourceTree = "<group>"; };
+		64C5449228C83AD600C23393 /* Xeuphoria - Sky City.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Xeuphoria - Sky City.mp3"; sourceTree = "<group>"; };
+		64C5449328C83AD600C23393 /* 鈴木瑛美子 - フロントメモリー.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "鈴木瑛美子 - フロントメモリー.mp3"; sourceTree = "<group>"; };
+		64C5449428C83AD600C23393 /* ILLENIUM,Nevve - Fractures.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "ILLENIUM,Nevve - Fractures.mp3"; sourceTree = "<group>"; };
+		64C5449528C83AD600C23393 /* Alida - Feathers.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Alida - Feathers.mp3"; sourceTree = "<group>"; };
+		64C5449628C83AD600C23393 /* 黄霄雲 - 星辰大海.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "黄霄雲 - 星辰大海.mp3"; sourceTree = "<group>"; };
+		64C5449728C83AD600C23393 /* Lenka - Crystal Ball.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Lenka - Crystal Ball.mp3"; sourceTree = "<group>"; };
+		64C5449828C83AD600C23393 /* Sub Urban - Cradles.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Sub Urban - Cradles.mp3"; sourceTree = "<group>"; };
+		64C5449928C83AD600C23393 /* 陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3"; sourceTree = "<group>"; };
+		64C5449A28C83AD600C23393 /* Zero Venture - Northern Skies (Original Mix).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Zero Venture - Northern Skies (Original Mix).mp3"; sourceTree = "<group>"; };
+		64C5449B28C83AD600C23393 /* Taylor Swift - I Knew You Were Trouble..mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Taylor Swift - I Knew You Were Trouble..mp3"; sourceTree = "<group>"; };
+		64C5449C28C83AD600C23393 /* 初音ミク,CosMo@暴走P - 初音未来的消失.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "初音ミク,CosMo@暴走P - 初音未来的消失.mp3"; sourceTree = "<group>"; };
+		64C5449D28C83AD600C23393 /* Vicetone - Tremble (Original Mix).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Vicetone - Tremble (Original Mix).mp3"; sourceTree = "<group>"; };
+		64C5449E28C83AD600C23393 /* Elektronomia - Vision.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Elektronomia - Vision.mp3"; sourceTree = "<group>"; };
+		64C5449F28C83AD600C23393 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Little Mix,Steve Void - Break Up Song (Steve Void Remix).mp3"; sourceTree = "<group>"; };
+		64C544A028C83AD600C23393 /* 岩崎琢 - Bang! Bang! Bang! Bang! Have a Nice Dream.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "岩崎琢 - Bang! Bang! Bang! Bang! Have a Nice Dream.mp3"; sourceTree = "<group>"; };
+		64C544A128C83AD600C23393 /* Imagine Dragons - Warriors.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Imagine Dragons - Warriors.mp3"; sourceTree = "<group>"; };
+		64C544A228C83AD600C23393 /* Akeboshi - wind (ワインド).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Akeboshi - wind (ワインド).mp3"; sourceTree = "<group>"; };
+		64C544A328C83AD600C23393 /* Missio - I See You.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Missio - I See You.mp3"; sourceTree = "<group>"; };
+		64C544A428C83AD600C23393 /* Zedd - Ignite.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Zedd - Ignite.mp3"; sourceTree = "<group>"; };
+		64C544A528C83AD600C23393 /* 心要野.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "心要野.mp3"; sourceTree = "<group>"; };
+		64C544A628C83AD600C23393 /* Kingsfoil - Grapevine Valentine(Nrdo bootleg)-Nrdo.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Kingsfoil - Grapevine Valentine(Nrdo bootleg)-Nrdo.mp3"; sourceTree = "<group>"; };
+		64C544A728C83AD600C23393 /* Alex Aiono,Feder,MDZN - Lordly (MDZN Remix).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Alex Aiono,Feder,MDZN - Lordly (MDZN Remix).mp3"; sourceTree = "<group>"; };
+		64C544A828C83AD600C23393 /* 金骏植 - My Everthing.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "金骏植 - My Everthing.mp3"; sourceTree = "<group>"; };
+		64C544A928C83AD600C23393 /* 后海大鲨鱼 - 猛犸.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "后海大鲨鱼 - 猛犸.mp3"; sourceTree = "<group>"; };
+		64C544AA28C83AD600C23393 /* 岩崎琢 - PSYCHEDELIC SOUL JAM.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "岩崎琢 - PSYCHEDELIC SOUL JAM.mp3"; sourceTree = "<group>"; };
+		64C544AB28C83AD600C23393 /* 马頔 - 无畏.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "马頔 - 无畏.mp3"; sourceTree = "<group>"; };
+		64C544AC28C83AD600C23393 /* CMA - You're Not Alone.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "CMA - You're Not Alone.mp3"; sourceTree = "<group>"; };
+		64C544AD28C83AD600C23393 /* SPYAIR - My Friend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "SPYAIR - My Friend.mp3"; sourceTree = "<group>"; };
+		64C544CC28C83B1200C23393 /* AudioSampleBuffer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AudioSampleBuffer.entitlements; sourceTree = "<group>"; };
+		64C544CE28C83B1200C23393 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -36,6 +114,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				64C544CF28C83B1200C23393 /* AudioToolbox.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -47,6 +126,7 @@
 			children = (
 				64C5445F28C838D100C23393 /* AudioSampleBuffer */,
 				64C5445E28C838D100C23393 /* Products */,
+				64C544CD28C83B1200C23393 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -61,17 +141,83 @@
 		64C5445F28C838D100C23393 /* AudioSampleBuffer */ = {
 			isa = PBXGroup;
 			children = (
+				64C544CC28C83B1200C23393 /* AudioSampleBuffer.entitlements */,
+				64C5448F28C83AD600C23393 /* Audio */,
+				64C544D028C83B5A00C23393 /* AudioSampleBuffer */,
 				64C5446028C838D100C23393 /* AppDelegate.h */,
 				64C5446128C838D100C23393 /* AppDelegate.m */,
-				64C5446328C838D100C23393 /* SceneDelegate.h */,
-				64C5446428C838D100C23393 /* SceneDelegate.m */,
 				64C5446628C838D100C23393 /* ViewController.h */,
 				64C5446728C838D100C23393 /* ViewController.m */,
+				64C5447D28C8395200C23393 /* AudioPlayCell.h */,
+				64C5447E28C8395200C23393 /* AudioPlayCell.m */,
+				64C5448028C83A0700C23393 /* TTi.h */,
+				64C5448128C83A0700C23393 /* TTi.m */,
 				64C5446928C838D100C23393 /* Main.storyboard */,
 				64C5446C28C838D400C23393 /* Assets.xcassets */,
 				64C5446E28C838D400C23393 /* LaunchScreen.storyboard */,
 				64C5447128C838D400C23393 /* Info.plist */,
 				64C5447228C838D400C23393 /* main.m */,
+			);
+			path = AudioSampleBuffer;
+			sourceTree = "<group>";
+		};
+		64C5448F28C83AD600C23393 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				64C5449028C83AD600C23393 /* 周深 - Rubia.mp3 */,
+				64C5449128C83AD600C23393 /* Varien - Future Funk.mp3 */,
+				64C5449228C83AD600C23393 /* Xeuphoria - Sky City.mp3 */,
+				64C5449328C83AD600C23393 /* 鈴木瑛美子 - フロントメモリー.mp3 */,
+				64C5449428C83AD600C23393 /* ILLENIUM,Nevve - Fractures.mp3 */,
+				64C5449528C83AD600C23393 /* Alida - Feathers.mp3 */,
+				64C5449628C83AD600C23393 /* 黄霄雲 - 星辰大海.mp3 */,
+				64C5449728C83AD600C23393 /* Lenka - Crystal Ball.mp3 */,
+				64C5449828C83AD600C23393 /* Sub Urban - Cradles.mp3 */,
+				64C5449928C83AD600C23393 /* 陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3 */,
+				64C5449A28C83AD600C23393 /* Zero Venture - Northern Skies (Original Mix).mp3 */,
+				64C5449B28C83AD600C23393 /* Taylor Swift - I Knew You Were Trouble..mp3 */,
+				64C5449C28C83AD600C23393 /* 初音ミク,CosMo@暴走P - 初音未来的消失.mp3 */,
+				64C5449D28C83AD600C23393 /* Vicetone - Tremble (Original Mix).mp3 */,
+				64C5449E28C83AD600C23393 /* Elektronomia - Vision.mp3 */,
+				64C5449F28C83AD600C23393 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).mp3 */,
+				64C544A028C83AD600C23393 /* 岩崎琢 - Bang! Bang! Bang! Bang! Have a Nice Dream.mp3 */,
+				64C544A128C83AD600C23393 /* Imagine Dragons - Warriors.mp3 */,
+				64C544A228C83AD600C23393 /* Akeboshi - wind (ワインド).mp3 */,
+				64C544A328C83AD600C23393 /* Missio - I See You.mp3 */,
+				64C544A428C83AD600C23393 /* Zedd - Ignite.mp3 */,
+				64C544A528C83AD600C23393 /* 心要野.mp3 */,
+				64C544A628C83AD600C23393 /* Kingsfoil - Grapevine Valentine(Nrdo bootleg)-Nrdo.mp3 */,
+				64C544A728C83AD600C23393 /* Alex Aiono,Feder,MDZN - Lordly (MDZN Remix).mp3 */,
+				64C544A828C83AD600C23393 /* 金骏植 - My Everthing.mp3 */,
+				64C544A928C83AD600C23393 /* 后海大鲨鱼 - 猛犸.mp3 */,
+				64C544AA28C83AD600C23393 /* 岩崎琢 - PSYCHEDELIC SOUL JAM.mp3 */,
+				64C544AB28C83AD600C23393 /* 马頔 - 无畏.mp3 */,
+				64C544AC28C83AD600C23393 /* CMA - You're Not Alone.mp3 */,
+				64C544AD28C83AD600C23393 /* SPYAIR - My Friend.mp3 */,
+			);
+			name = Audio;
+			path = "../../../Documents/1扩展/CAGradientLayerBasicDemo-master/CAGradientLayer坐标系统/CAGradientLayer坐标系统/Audio";
+			sourceTree = "<group>";
+		};
+		64C544CD28C83B1200C23393 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				64C544CE28C83B1200C23393 /* AudioToolbox.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		64C544D028C83B5A00C23393 /* AudioSampleBuffer */ = {
+			isa = PBXGroup;
+			children = (
+				64C5448928C83A7700C23393 /* AudioSpectrumPlayer.h */,
+				64C5448628C83A7700C23393 /* AudioSpectrumPlayer.m */,
+				64C5448828C83A7700C23393 /* AudioSpectrumRecorder.h */,
+				64C5448728C83A7700C23393 /* AudioSpectrumRecorder.m */,
+				64C5448428C83A7600C23393 /* RealtimeAnalyzer.h */,
+				64C5448A28C83A7700C23393 /* RealtimeAnalyzer.m */,
+				64C5448328C83A7600C23393 /* SpectrumView.h */,
+				64C5448528C83A7700C23393 /* SpectrumView.m */,
 			);
 			path = AudioSampleBuffer;
 			sourceTree = "<group>";
@@ -133,9 +279,39 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				64C544B028C83AD600C23393 /* Xeuphoria - Sky City.mp3 in Resources */,
+				64C544B828C83AD600C23393 /* Zero Venture - Northern Skies (Original Mix).mp3 in Resources */,
+				64C544C928C83AD600C23393 /* 马頔 - 无畏.mp3 in Resources */,
+				64C544BA28C83AD600C23393 /* 初音ミク,CosMo@暴走P - 初音未来的消失.mp3 in Resources */,
+				64C544B728C83AD600C23393 /* 陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3 in Resources */,
+				64C544C128C83AD600C23393 /* Missio - I See You.mp3 in Resources */,
+				64C544BE28C83AD600C23393 /* 岩崎琢 - Bang! Bang! Bang! Bang! Have a Nice Dream.mp3 in Resources */,
+				64C544B128C83AD600C23393 /* 鈴木瑛美子 - フロントメモリー.mp3 in Resources */,
 				64C5447028C838D400C23393 /* LaunchScreen.storyboard in Resources */,
+				64C544AF28C83AD600C23393 /* Varien - Future Funk.mp3 in Resources */,
+				64C544B428C83AD600C23393 /* 黄霄雲 - 星辰大海.mp3 in Resources */,
+				64C544AE28C83AD600C23393 /* 周深 - Rubia.mp3 in Resources */,
+				64C544C228C83AD600C23393 /* Zedd - Ignite.mp3 in Resources */,
+				64C544B628C83AD600C23393 /* Sub Urban - Cradles.mp3 in Resources */,
+				64C544BD28C83AD600C23393 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).mp3 in Resources */,
+				64C544C828C83AD600C23393 /* 岩崎琢 - PSYCHEDELIC SOUL JAM.mp3 in Resources */,
+				64C544C528C83AD600C23393 /* Alex Aiono,Feder,MDZN - Lordly (MDZN Remix).mp3 in Resources */,
+				64C544CA28C83AD600C23393 /* CMA - You're Not Alone.mp3 in Resources */,
+				64C544B928C83AD600C23393 /* Taylor Swift - I Knew You Were Trouble..mp3 in Resources */,
+				64C544C628C83AD600C23393 /* 金骏植 - My Everthing.mp3 in Resources */,
 				64C5446D28C838D400C23393 /* Assets.xcassets in Resources */,
+				64C544C028C83AD600C23393 /* Akeboshi - wind (ワインド).mp3 in Resources */,
+				64C544CB28C83AD600C23393 /* SPYAIR - My Friend.mp3 in Resources */,
+				64C544BC28C83AD600C23393 /* Elektronomia - Vision.mp3 in Resources */,
+				64C544C728C83AD600C23393 /* 后海大鲨鱼 - 猛犸.mp3 in Resources */,
+				64C544B528C83AD600C23393 /* Lenka - Crystal Ball.mp3 in Resources */,
+				64C544C328C83AD600C23393 /* 心要野.mp3 in Resources */,
+				64C544C428C83AD600C23393 /* Kingsfoil - Grapevine Valentine(Nrdo bootleg)-Nrdo.mp3 in Resources */,
+				64C544BB28C83AD600C23393 /* Vicetone - Tremble (Original Mix).mp3 in Resources */,
+				64C544BF28C83AD600C23393 /* Imagine Dragons - Warriors.mp3 in Resources */,
 				64C5446B28C838D100C23393 /* Main.storyboard in Resources */,
+				64C544B328C83AD600C23393 /* Alida - Feathers.mp3 in Resources */,
+				64C544B228C83AD600C23393 /* ILLENIUM,Nevve - Fractures.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,10 +322,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				64C5448E28C83A7700C23393 /* AudioSpectrumPlayer.m in Sources */,
 				64C5446828C838D100C23393 /* ViewController.m in Sources */,
+				64C5447F28C8395200C23393 /* AudioPlayCell.m in Sources */,
+				64C5448B28C83A7700C23393 /* AudioSpectrumRecorder.m in Sources */,
 				64C5446228C838D100C23393 /* AppDelegate.m in Sources */,
+				64C5448228C83A0700C23393 /* TTi.m in Sources */,
 				64C5447328C838D400C23393 /* main.m in Sources */,
-				64C5446528C838D100C23393 /* SceneDelegate.m in Sources */,
+				64C5448D28C83A7700C23393 /* SpectrumView.m in Sources */,
+				64C5448C28C83A7700C23393 /* RealtimeAnalyzer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -290,16 +471,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AudioSampleBuffer/AudioSampleBuffer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7ZF87VM79F;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AudioSampleBuffer/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -307,6 +491,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gongtuo.AudioSampleBuffer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -317,16 +502,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = AudioSampleBuffer/AudioSampleBuffer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7ZF87VM79F;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AudioSampleBuffer/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -334,6 +522,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gongtuo.AudioSampleBuffer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
