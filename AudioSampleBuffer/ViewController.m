@@ -13,9 +13,10 @@
 #import "AnimationCoordinator.h"
 #import "VisualEffectManager.h"
 #import "GalaxyControlPanel.h"
+#import "CyberpunkControlPanel.h"
 #import <AVFoundation/AVFoundation.h>
 
-@interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate>
+@interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate>
 {
     BOOL enterBackground;
     NSInteger index;
@@ -43,18 +44,8 @@
 @property (nonatomic, strong) UIButton *effectSelectorButton;
 @property (nonatomic, strong) GalaxyControlPanel *galaxyControlPanel;
 @property (nonatomic, strong) UIButton *galaxyControlButton;
-
-// 🎛️ 赛博朋克控制
+@property (nonatomic, strong) CyberpunkControlPanel *cyberpunkControlPanel;
 @property (nonatomic, strong) UIButton *cyberpunkControlButton;
-@property (nonatomic, strong) UISwitch *climaxEffectSwitch;
-@property (nonatomic, strong) UISwitch *debugBarsSwitch;
-@property (nonatomic, strong) UIView *cyberpunkControlPanel;
-
-// 🎨 频段特效开关
-@property (nonatomic, strong) UISwitch *bassEffectSwitch;
-@property (nonatomic, strong) UISwitch *midEffectSwitch;
-@property (nonatomic, strong) UISwitch *trebleEffectSwitch;
-
 @end
 
 @implementation ViewController
@@ -157,7 +148,7 @@
     // 添加星系控制按钮
     [self createGalaxyControlButton];
     
-    // 🎛️ 添加赛博朋克控制按钮
+    // 添加赛博朋克控制按钮
     [self createCyberpunkControlButton];
 }
 
@@ -184,21 +175,20 @@
     [self.view addSubview:self.galaxyControlButton];
 }
 
-// 🎛️ 创建赛博朋克控制按钮
 - (void)createCyberpunkControlButton {
     self.cyberpunkControlButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.cyberpunkControlButton setTitle:@"⚡⚙️" forState:UIControlStateNormal];
     self.cyberpunkControlButton.titleLabel.font = [UIFont systemFontOfSize:16];
-    self.cyberpunkControlButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.8 blue:0.8 alpha:0.9];
+    self.cyberpunkControlButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.3 blue:0.4 alpha:0.9];
     self.cyberpunkControlButton.layer.cornerRadius = 25;
     self.cyberpunkControlButton.layer.borderWidth = 1.0;
-    self.cyberpunkControlButton.layer.borderColor = [UIColor whiteColor].CGColor;
+    self.cyberpunkControlButton.layer.borderColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0].CGColor;
     self.cyberpunkControlButton.frame = CGRectMake(200, 50, 80, 50);
     
     // 添加阴影效果，增强可见性
     self.cyberpunkControlButton.layer.shadowColor = [UIColor cyanColor].CGColor;
     self.cyberpunkControlButton.layer.shadowOffset = CGSizeMake(0, 2);
-    self.cyberpunkControlButton.layer.shadowOpacity = 0.8;
+    self.cyberpunkControlButton.layer.shadowOpacity = 0.6;
     self.cyberpunkControlButton.layer.shadowRadius = 4;
     
     [self.cyberpunkControlButton addTarget:self 
@@ -634,253 +624,27 @@
     [self.galaxyControlPanel showAnimated:YES];
 }
 
-// 🎛️ 赛博朋克控制按钮点击
 - (void)cyberpunkControlButtonTapped:(UIButton *)sender {
     if (!self.cyberpunkControlPanel) {
-        [self createCyberpunkControlPanel];
+        self.cyberpunkControlPanel = [[CyberpunkControlPanel alloc] initWithFrame:CGRectMake(20, 150, 
+                                                                                             self.view.bounds.size.width - 40, 
+                                                                                             350)];
+        self.cyberpunkControlPanel.delegate = self;
+        [self.view addSubview:self.cyberpunkControlPanel];
+        
+        // 设置默认值（全部开启）
+        NSDictionary *defaultSettings = @{
+            @"enableClimaxEffect": @(1.0),
+            @"enableBassEffect": @(1.0),
+            @"enableMidEffect": @(1.0),
+            @"enableTrebleEffect": @(1.0),
+            @"showDebugBars": @(1.0)
+        };
+        [self.cyberpunkControlPanel setCurrentSettings:defaultSettings];
     }
     
-    // 切换显示/隐藏
-    if (self.cyberpunkControlPanel.alpha == 0) {
-        [self showCyberpunkControlPanel];
-    } else {
-        [self hideCyberpunkControlPanel];
-    }
-}
-
-// 创建赛博朋克控制面板
-- (void)createCyberpunkControlPanel {
-    CGFloat panelWidth = 280;
-    CGFloat panelHeight = 380;  // 增加高度以容纳5个开关
-    CGFloat padding = 20;
-    
-    self.cyberpunkControlPanel = [[UIView alloc] initWithFrame:CGRectMake(
-        self.view.bounds.size.width - panelWidth - padding,
-        120,
-        panelWidth,
-        panelHeight
-    )];
-    
-    self.cyberpunkControlPanel.backgroundColor = [UIColor colorWithRed:0.05 green:0.05 blue:0.15 alpha:0.95];
-    self.cyberpunkControlPanel.layer.cornerRadius = 15;
-    self.cyberpunkControlPanel.layer.borderWidth = 2;
-    self.cyberpunkControlPanel.layer.borderColor = [UIColor cyanColor].CGColor;
-    self.cyberpunkControlPanel.layer.shadowColor = [UIColor cyanColor].CGColor;
-    self.cyberpunkControlPanel.layer.shadowOffset = CGSizeMake(0, 0);
-    self.cyberpunkControlPanel.layer.shadowRadius = 10;
-    self.cyberpunkControlPanel.layer.shadowOpacity = 0.6;
-    self.cyberpunkControlPanel.alpha = 0;
-    
-    CGFloat currentY = 15;
-    CGFloat rowHeight = 50;
-    
-    // 标题
-    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, currentY, panelWidth, 30)];
-    titleLabel.text = @"⚡ 赛博朋克控制";
-    titleLabel.textColor = [UIColor cyanColor];
-    titleLabel.font = [UIFont boldSystemFontOfSize:18];
-    titleLabel.textAlignment = NSTextAlignmentCenter;
-    [self.cyberpunkControlPanel addSubview:titleLabel];
-    currentY += 45;
-    
-    // 🎨 频段特效分组标题
-    UILabel *frequencyLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, currentY, panelWidth - 40, 25)];
-    frequencyLabel.text = @"🎨 频段特效";
-    frequencyLabel.textColor = [UIColor colorWithRed:0.5 green:0.9 blue:0.9 alpha:1.0];
-    frequencyLabel.font = [UIFont boldSystemFontOfSize:14];
-    [self.cyberpunkControlPanel addSubview:frequencyLabel];
-    currentY += 30;
-    
-    // 低音特效开关（红色）
-    UILabel *bassLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, currentY, 160, 30)];
-    bassLabel.text = @"🔴 低音特效";
-    bassLabel.textColor = [UIColor whiteColor];
-    bassLabel.font = [UIFont systemFontOfSize:15];
-    [self.cyberpunkControlPanel addSubview:bassLabel];
-    
-    self.bassEffectSwitch = [[UISwitch alloc] initWithFrame:CGRectMake(panelWidth - 70, currentY, 51, 31)];
-    self.bassEffectSwitch.on = [self.visualEffectManager getCyberpunkEnableBassEffect];
-    self.bassEffectSwitch.onTintColor = [UIColor redColor];
-    [self.bassEffectSwitch addTarget:self 
-                              action:@selector(bassEffectSwitchChanged:) 
-                    forControlEvents:UIControlEventValueChanged];
-    [self.cyberpunkControlPanel addSubview:self.bassEffectSwitch];
-    currentY += rowHeight;
-    
-    // 中音特效开关（绿色）
-    UILabel *midLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, currentY, 160, 30)];
-    midLabel.text = @"🟢 中音特效";
-    midLabel.textColor = [UIColor whiteColor];
-    midLabel.font = [UIFont systemFontOfSize:15];
-    [self.cyberpunkControlPanel addSubview:midLabel];
-    
-    self.midEffectSwitch = [[UISwitch alloc] initWithFrame:CGRectMake(panelWidth - 70, currentY, 51, 31)];
-    self.midEffectSwitch.on = [self.visualEffectManager getCyberpunkEnableMidEffect];
-    self.midEffectSwitch.onTintColor = [UIColor greenColor];
-    [self.midEffectSwitch addTarget:self 
-                             action:@selector(midEffectSwitchChanged:) 
-                   forControlEvents:UIControlEventValueChanged];
-    [self.cyberpunkControlPanel addSubview:self.midEffectSwitch];
-    currentY += rowHeight;
-    
-    // 高音特效开关（蓝色）
-    UILabel *trebleLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, currentY, 160, 30)];
-    trebleLabel.text = @"🔵 高音特效";
-    trebleLabel.textColor = [UIColor whiteColor];
-    trebleLabel.font = [UIFont systemFontOfSize:15];
-    [self.cyberpunkControlPanel addSubview:trebleLabel];
-    
-    self.trebleEffectSwitch = [[UISwitch alloc] initWithFrame:CGRectMake(panelWidth - 70, currentY, 51, 31)];
-    self.trebleEffectSwitch.on = [self.visualEffectManager getCyberpunkEnableTrebleEffect];
-    self.trebleEffectSwitch.onTintColor = [UIColor blueColor];
-    [self.trebleEffectSwitch addTarget:self 
-                                action:@selector(trebleEffectSwitchChanged:) 
-                      forControlEvents:UIControlEventValueChanged];
-    [self.cyberpunkControlPanel addSubview:self.trebleEffectSwitch];
-    currentY += rowHeight + 10;
-    
-    // 分隔线
-    UIView *separatorLine = [[UIView alloc] initWithFrame:CGRectMake(20, currentY, panelWidth - 40, 1)];
-    separatorLine.backgroundColor = [UIColor colorWithWhite:0.3 alpha:0.5];
-    [self.cyberpunkControlPanel addSubview:separatorLine];
-    currentY += 15;
-    
-    // 🎛️ 其他控制分组标题
-    UILabel *otherLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, currentY, panelWidth - 40, 25)];
-    otherLabel.text = @"🎛️ 其他控制";
-    otherLabel.textColor = [UIColor colorWithRed:0.5 green:0.9 blue:0.9 alpha:1.0];
-    otherLabel.font = [UIFont boldSystemFontOfSize:14];
-    [self.cyberpunkControlPanel addSubview:otherLabel];
-    currentY += 30;
-    
-    // 高能效果开关（黄色）
-    UILabel *climaxLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, currentY, 160, 30)];
-    climaxLabel.text = @"🟨 高能效果";
-    climaxLabel.textColor = [UIColor whiteColor];
-    climaxLabel.font = [UIFont systemFontOfSize:15];
-    [self.cyberpunkControlPanel addSubview:climaxLabel];
-    
-    self.climaxEffectSwitch = [[UISwitch alloc] initWithFrame:CGRectMake(panelWidth - 70, currentY, 51, 31)];
-    self.climaxEffectSwitch.on = [self.visualEffectManager getCyberpunkEnableClimaxEffect];
-    self.climaxEffectSwitch.onTintColor = [UIColor colorWithRed:1.0 green:0.8 blue:0.0 alpha:1.0];
-    [self.climaxEffectSwitch addTarget:self 
-                                action:@selector(climaxEffectSwitchChanged:) 
-                      forControlEvents:UIControlEventValueChanged];
-    [self.cyberpunkControlPanel addSubview:self.climaxEffectSwitch];
-    currentY += rowHeight;
-    
-    // 调试条开关
-    UILabel *debugLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, currentY, 160, 30)];
-    debugLabel.text = @"🎯 调试强度条";
-    debugLabel.textColor = [UIColor whiteColor];
-    debugLabel.font = [UIFont systemFontOfSize:15];
-    [self.cyberpunkControlPanel addSubview:debugLabel];
-    
-    self.debugBarsSwitch = [[UISwitch alloc] initWithFrame:CGRectMake(panelWidth - 70, currentY, 51, 31)];
-    self.debugBarsSwitch.on = [self.visualEffectManager getCyberpunkShowDebugBars];
-    self.debugBarsSwitch.onTintColor = [UIColor cyanColor];
-    [self.debugBarsSwitch addTarget:self 
-                             action:@selector(debugBarsSwitchChanged:) 
-                   forControlEvents:UIControlEventValueChanged];
-    [self.cyberpunkControlPanel addSubview:self.debugBarsSwitch];
-    
-    // 关闭按钮
-    UIButton *closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [closeButton setTitle:@"✕" forState:UIControlStateNormal];
-    closeButton.titleLabel.font = [UIFont boldSystemFontOfSize:20];
-    closeButton.frame = CGRectMake(panelWidth - 40, 10, 30, 30);
-    [closeButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    [closeButton addTarget:self 
-                    action:@selector(hideCyberpunkControlPanel) 
-          forControlEvents:UIControlEventTouchUpInside];
-    [self.cyberpunkControlPanel addSubview:closeButton];
-    
-    [self.view addSubview:self.cyberpunkControlPanel];
-}
-
-// 显示赛博朋克控制面板
-- (void)showCyberpunkControlPanel {
-    [UIView animateWithDuration:0.3 animations:^{
-        self.cyberpunkControlPanel.alpha = 1.0;
-    }];
+    [self.cyberpunkControlPanel showAnimated:YES];
     [self.view bringSubviewToFront:self.cyberpunkControlPanel];
-}
-
-// 隐藏赛博朋克控制面板
-- (void)hideCyberpunkControlPanel {
-    [UIView animateWithDuration:0.3 animations:^{
-        self.cyberpunkControlPanel.alpha = 0;
-    }];
-}
-
-// 高能效果开关变化
-- (void)climaxEffectSwitchChanged:(UISwitch *)sender {
-    [self.visualEffectManager setCyberpunkEnableClimaxEffect:sender.on];
-    
-    // 视觉反馈
-    [UIView animateWithDuration:0.2 animations:^{
-        self.cyberpunkControlButton.transform = CGAffineTransformMakeScale(1.1, 1.1);
-    } completion:^(BOOL finished) {
-        [UIView animateWithDuration:0.2 animations:^{
-            self.cyberpunkControlButton.transform = CGAffineTransformIdentity;
-        }];
-    }];
-}
-
-// 调试条开关变化
-- (void)debugBarsSwitchChanged:(UISwitch *)sender {
-    [self.visualEffectManager setCyberpunkShowDebugBars:sender.on];
-    
-    // 视觉反馈
-    [UIView animateWithDuration:0.2 animations:^{
-        self.cyberpunkControlButton.transform = CGAffineTransformMakeScale(1.1, 1.1);
-    } completion:^(BOOL finished) {
-        [UIView animateWithDuration:0.2 animations:^{
-            self.cyberpunkControlButton.transform = CGAffineTransformIdentity;
-        }];
-    }];
-}
-
-// 🎨 低音特效开关变化（红色）
-- (void)bassEffectSwitchChanged:(UISwitch *)sender {
-    [self.visualEffectManager setCyberpunkEnableBassEffect:sender.on];
-    
-    // 视觉反馈
-    [UIView animateWithDuration:0.2 animations:^{
-        self.cyberpunkControlButton.transform = CGAffineTransformMakeScale(1.1, 1.1);
-    } completion:^(BOOL finished) {
-        [UIView animateWithDuration:0.2 animations:^{
-            self.cyberpunkControlButton.transform = CGAffineTransformIdentity;
-        }];
-    }];
-}
-
-// 🎨 中音特效开关变化（绿色）
-- (void)midEffectSwitchChanged:(UISwitch *)sender {
-    [self.visualEffectManager setCyberpunkEnableMidEffect:sender.on];
-    
-    // 视觉反馈
-    [UIView animateWithDuration:0.2 animations:^{
-        self.cyberpunkControlButton.transform = CGAffineTransformMakeScale(1.1, 1.1);
-    } completion:^(BOOL finished) {
-        [UIView animateWithDuration:0.2 animations:^{
-            self.cyberpunkControlButton.transform = CGAffineTransformIdentity;
-        }];
-    }];
-}
-
-// 🎨 高音特效开关变化（蓝色）
-- (void)trebleEffectSwitchChanged:(UISwitch *)sender {
-    [self.visualEffectManager setCyberpunkEnableTrebleEffect:sender.on];
-    
-    // 视觉反馈
-    [UIView animateWithDuration:0.2 animations:^{
-        self.cyberpunkControlButton.transform = CGAffineTransformMakeScale(1.1, 1.1);
-    } completion:^(BOOL finished) {
-        [UIView animateWithDuration:0.2 animations:^{
-            self.cyberpunkControlButton.transform = CGAffineTransformIdentity;
-        }];
-    }];
 }
 
 - (void)quickEffectButtonTapped:(UIButton *)sender {
@@ -972,6 +736,21 @@
     if (self.visualEffectManager.currentEffectType != VisualEffectTypeGalaxy) {
         [self.visualEffectManager setCurrentEffect:VisualEffectTypeGalaxy animated:YES];
         [self updateEffectButtonStates:VisualEffectTypeGalaxy];
+    }
+}
+
+#pragma mark - CyberpunkControlDelegate
+
+- (void)cyberpunkControlDidUpdateSettings:(NSDictionary *)settings {
+    NSLog(@"⚡ 赛博朋克设置更新: %@", settings);
+    
+    // 应用新的赛博朋克设置
+    [self.visualEffectManager setRenderParameters:settings];
+    
+    // 如果当前不是赛博朋克效果，自动切换到赛博朋克效果
+    if (self.visualEffectManager.currentEffectType != VisualEffectTypeCyberPunk) {
+        [self.visualEffectManager setCurrentEffect:VisualEffectTypeCyberPunk animated:YES];
+        [self updateEffectButtonStates:VisualEffectTypeCyberPunk];
     }
 }
 

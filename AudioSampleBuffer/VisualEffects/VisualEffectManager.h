@@ -108,27 +108,6 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (NSDictionary *)recommendedSettingsForCurrentDevice;
 
-/**
- * 🎛️ 赛博朋克控制方法
- */
-- (void)setCyberpunkEnableClimaxEffect:(BOOL)enable;
-- (void)setCyberpunkShowDebugBars:(BOOL)show;
-- (BOOL)getCyberpunkEnableClimaxEffect;
-- (BOOL)getCyberpunkShowDebugBars;
-
-/**
- * 🎨 赛博朋克频段特效控制方法
- */
-- (void)setCyberpunkEnableBassEffect:(BOOL)enable;    // 低音特效（红色）
-- (void)setCyberpunkEnableMidEffect:(BOOL)enable;     // 中音特效（绿色）
-- (void)setCyberpunkEnableTrebleEffect:(BOOL)enable;  // 高音特效（蓝色）
-- (BOOL)getCyberpunkEnableBassEffect;
-- (BOOL)getCyberpunkEnableMidEffect;
-- (BOOL)getCyberpunkEnableTrebleEffect;
-
-// 便捷属性访问（只读）
-@property (nonatomic, strong, readonly, nullable) CyberPunkRenderer *cyberpunkRenderer;
-
 @end
 
 NS_ASSUME_NONNULL_END

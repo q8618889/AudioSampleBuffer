@@ -211,23 +211,9 @@ typedef struct {
         [self updateGalaxyUniforms:uniforms];
     }
     
-    // 🎛️ 更新赛博朋克控制参数（如果是赛博朋克渲染器）
+    // 更新赛博朋克参数（如果是赛博朋克渲染器）
     if ([self isKindOfClass:[CyberPunkRenderer class]]) {
-        CyberPunkRenderer *cyberpunkRenderer = (CyberPunkRenderer *)self;
-        uniforms->cyberpunkControls = (vector_float4){
-            cyberpunkRenderer.enableClimaxEffect ? 1.0f : 0.0f,  // x: 高能效果开关
-            cyberpunkRenderer.showDebugBars ? 1.0f : 0.0f,       // y: 调试条显示开关
-            0.0f,                                                 // z: reserved1
-            0.0f                                                  // w: reserved2
-        };
-        
-        // 🎨 更新频段特效控制参数
-        uniforms->cyberpunkFrequencyControls = (vector_float4){
-            cyberpunkRenderer.enableBassEffect ? 1.0f : 0.0f,    // x: 低音特效开关（红色）
-            cyberpunkRenderer.enableMidEffect ? 1.0f : 0.0f,     // y: 中音特效开关（绿色）
-            cyberpunkRenderer.enableTrebleEffect ? 1.0f : 0.0f,  // z: 高音特效开关（蓝色）
-            0.0f                                                  // w: reserved
-        };
+        [self updateCyberpunkUniforms:uniforms];
     }
     
     // 更新投影矩阵
@@ -238,6 +224,11 @@ typedef struct {
 
 // 更新星系参数的方法（在子类中重写）
 - (void)updateGalaxyUniforms:(Uniforms *)uniforms {
+    // 默认实现，子类重写
+}
+
+// 更新赛博朋克参数的方法（在子类中重写）
+- (void)updateCyberpunkUniforms:(Uniforms *)uniforms {
     // 默认实现，子类重写
 }
 
@@ -531,20 +522,6 @@ typedef struct {
 
 @implementation CyberPunkRenderer
 
-// 🎛️ 重写初始化方法，设置默认值
-- (instancetype)initWithMetalView:(MTKView *)metalView {
-    if (self = [super initWithMetalView:metalView]) {
-        _enableClimaxEffect = YES;  // 默认开启高能效果（黄色）
-        _showDebugBars = NO;         // 默认隐藏调试条
-        
-        // 🎨 频段特效默认全部开启
-        _enableBassEffect = YES;    // 默认开启低音特效（红色）
-        _enableMidEffect = YES;     // 默认开启中音特效（绿色）
-        _enableTrebleEffect = YES;  // 默认开启高音特效（蓝色）
-    }
-    return self;
-}
-
 - (void)setupPipeline {
     // 创建赛博朋克效果的渲染管线
     MTLRenderPipelineDescriptor *pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
@@ -574,6 +551,22 @@ typedef struct {
         NSLog(@"❌ 片段函数: %@", pipelineDescriptor.fragmentFunction);
         return;
     }
+}
+
+- (void)updateCyberpunkUniforms:(Uniforms *)uniforms {
+    // 从渲染参数中获取赛博朋克设置
+    NSDictionary *params = self.renderParameters;
+    
+    // 赛博朋克控制: (enableClimaxEffect, showDebugBars, reserved1, reserved2)
+    float enableClimaxEffect = [params[@"enableClimaxEffect"] floatValue];
+    float showDebugBars = [params[@"showDebugBars"] floatValue];
+    uniforms->cyberpunkControls = (vector_float4){enableClimaxEffect, showDebugBars, 0.0f, 0.0f};
+    
+    // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
+    float enableBassEffect = [params[@"enableBassEffect"] floatValue];
+    float enableMidEffect = [params[@"enableMidEffect"] floatValue];
+    float enableTrebleEffect = [params[@"enableTrebleEffect"] floatValue];
+    uniforms->cyberpunkFrequencyControls = (vector_float4){enableBassEffect, enableMidEffect, enableTrebleEffect, 0.0f};
 }
 
 - (void)encodeRenderCommands:(id<MTLRenderCommandEncoder>)encoder {
