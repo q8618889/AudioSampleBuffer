@@ -659,21 +659,21 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
         bassAudio += uniforms.audioData[i].x;
     }
     bassAudio /= 18.0;
-    bassAudio *= 3.0; // 大幅增强到3倍
+    bassAudio *= 1.8; // 大幅增强到3倍
     
     // 中音：18-58（更宽范围） + 增强
     for (int i = 18; i < 58; i++) {
         midAudio += uniforms.audioData[i].x;
     }
     midAudio /= 40.0;
-    midAudio *= 2.5; // 大幅增强到2.5倍
+    midAudio *= 1.9; // 大幅增强到2.5倍
     
     // 高音：45-79（更宽范围，从更低频段开始） + 大幅增强
     for (int i = 45; i < 79; i++) {
         trebleAudio += uniforms.audioData[i].x;
     }
     trebleAudio /= 34.0;
-    trebleAudio *= 3.5; // 大幅增强到3.5倍
+    trebleAudio *= 1.6; // 大幅增强到3.5倍
     
     // 限制最大值，避免过度
     bassAudio = min(bassAudio, 1.5);
@@ -723,37 +723,38 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     float enableMidEffect = uniforms.cyberpunkFrequencyControls.y;    // 0.0=关闭, 1.0=开启（绿色中音）
     float enableTrebleEffect = uniforms.cyberpunkFrequencyControls.z; // 0.0=关闭, 1.0=开启（蓝色高音）
     
-    // ===== 🔥 高潮检测系统（精准版 - 使用原始音频数据，不受频段开关影响）=====
-    // 多维度检测音乐高能时刻 - 提高阈值，更谨慎触发
+    // ===== 🔥 高潮检测系统（降低版 - 适配低音频增强，使用原始音频数据）=====
+    // 多维度检测音乐高能时刻 - 大幅降低阈值，确保能触发
     
     // 1. 综合能量（使用原始数据）
     float totalEnergy = (bassAudioOriginal + midAudioOriginal + trebleAudioOriginal) / 3.0;
     
-    // 2. 低音响应（使用原始数据，提高阈值，降低响应系数）
-    float bassResponse = smoothstep(0.15, 0.6, bassAudioOriginal) * 1.1; // 15%开始，60%满
+    // 2. 低音响应（使用原始数据，降低阈值，提高响应系数）
+    float bassResponse = smoothstep(0.08, 0.35, bassAudioOriginal) * 1.5; // 8%开始，35%满
     
-    // 3. 中音响应（使用原始数据，提高阈值）
-    float midResponse = smoothstep(0.15, 0.6, midAudioOriginal) * 1.0;
+    // 3. 中音响应（使用原始数据，降低阈值）
+    float midResponse = smoothstep(0.08, 0.35, midAudioOriginal) * 1.4;
     
-    // 4. 高音响应（使用原始数据，提高阈值）
-    float trebleResponse = smoothstep(0.15, 0.6, trebleAudioOriginal) * 1.1;
+    // 4. 高音响应（使用原始数据，降低阈值）
+    float trebleResponse = smoothstep(0.08, 0.35, trebleAudioOriginal) * 1.5;
     
-    // 5. 峰值响应（使用原始数据，需要更高的峰值）
+    // 5. 峰值响应（使用原始数据，降低峰值要求）
     float peakValue = max(max(bassAudioOriginal, midAudioOriginal), trebleAudioOriginal);
-    float peakResponse = smoothstep(0.25, 0.7, peakValue) * 1.2; // 25%开始
+    float peakResponse = smoothstep(0.12, 0.4, peakValue) * 1.6; // 12%开始
     
-    // 6. 综合响应强度（降低增益系数）
-    float responseA = totalEnergy * 1.5; // 降低到1.5
-    float responseB = max(max(bassResponse, midResponse), trebleResponse) * 1.0; // 降低到1.0
-    float responseC = (bassResponse + midResponse + trebleResponse) / 3.5; // 提高除数
-    float responseD = peakResponse * 1.2; // 降低到1.2
+    // 6. 综合响应强度（提高增益系数）
+    float responseA = totalEnergy * 2.0; // 提高到2.0
+    float responseB = max(max(bassResponse, midResponse), trebleResponse) * 1.3; // 提高到1.3
+    float responseC = (bassResponse + midResponse + trebleResponse) / 2.8; // 降低除数
+    float responseD = peakResponse * 1.2; // 提高到1.5
     
     // 最终高潮强度（取最大值）
     float isClimax = max(max(responseA, responseB), max(responseC, responseD));
     
-    // 🔥 提高触发阈值：小于0.4的值压缩到更小
-    if (isClimax < 0.4) {
-        isClimax = isClimax * 0.5; // 低值大幅压缩，减少误触发
+    // 🔥 移除低值压缩，让低音频强度也能触发
+    // 改为轻微提升低值，让黄色条更容易出现
+    if (isClimax < 0.3) {
+        isClimax = isClimax * 0.6; // 低值轻微提升
     }
     
     // 🔥 非线性压缩：高值时压缩（避免刺眼）
