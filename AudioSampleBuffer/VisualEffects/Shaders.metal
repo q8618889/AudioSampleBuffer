@@ -33,6 +33,7 @@ struct Uniforms {
     float4 galaxyParams2; // 星系参数2: (colorShiftSpeed, nebulaIntensity, pulseStrength, audioSensitivity)
     float4 galaxyParams3; // 星系参数3: (starDensity, spiralArms, colorTheme, reserved)
     float4 cyberpunkControls; // 赛博朋克控制: (enableClimaxEffect, showDebugBars, reserved1, reserved2)
+    float4 cyberpunkFrequencyControls; // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
 };
 
 #pragma mark - 辅助函数
@@ -446,26 +447,26 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     float trebleAudio = 0.0;
     
     // 分频段采样音频（大幅增强，让调试条清晰可见）
-    // 低音：0-18（更宽范围） + 大幅增强
+    // 低音：0-18（更宽范围） + 适度增强
     for (int i = 0; i < 18; i++) {
         bassAudio += uniforms.audioData[i].x;
     }
     bassAudio /= 18.0;
-    bassAudio *= 3.0; // 大幅增强到3倍
+    bassAudio *= 1.5; // 适度增强到1.5倍（从3.0降低）
     
-    // 中音：18-58（更宽范围） + 增强
+    // 中音：18-58（更宽范围） + 适度增强
     for (int i = 18; i < 58; i++) {
         midAudio += uniforms.audioData[i].x;
     }
     midAudio /= 40.0;
-    midAudio *= 2.5; // 大幅增强到2.5倍
+    midAudio *= 1.25; // 适度增强到1.25倍（从2.5降低）
     
-    // 高音：45-79（更宽范围，从更低频段开始） + 大幅增强
+    // 高音：45-79（更宽范围，从更低频段开始） + 适度增强
     for (int i = 45; i < 79; i++) {
         trebleAudio += uniforms.audioData[i].x;
     }
     trebleAudio /= 34.0;
-    trebleAudio *= 3.5; // 大幅增强到3.5倍
+    trebleAudio *= 1.75; // 适度增强到1.75倍（从3.5降低）
     
     // 限制最大值，避免过度
     bassAudio = min(bassAudio, 1.5);
@@ -504,23 +505,34 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     float enableClimaxEffect = uniforms.cyberpunkControls.x; // 0.0=关闭, 1.0=开启
     float showDebugBars = uniforms.cyberpunkControls.y;      // 0.0=隐藏, 1.0=显示
     
-    // ===== 🔥 高潮检测系统（精准版 - 只在真正高潮时触发）=====
+    // 🎨 读取频段特效控制参数
+    float enableBassEffect = uniforms.cyberpunkFrequencyControls.x;   // 0.0=关闭, 1.0=开启（红色低音）
+    float enableMidEffect = uniforms.cyberpunkFrequencyControls.y;    // 0.0=关闭, 1.0=开启（绿色中音）
+    float enableTrebleEffect = uniforms.cyberpunkFrequencyControls.z; // 0.0=关闭, 1.0=开启（蓝色高音）
+    
+    // 💡 重要：在应用频段开关之前，先保存原始音频数据用于isClimax计算
+    // 这样即使关闭红绿蓝频段特效，黄色强度条仍然正常工作
+    float bassAudioOriginal = bassAudio;
+    float midAudioOriginal = midAudio;
+    float trebleAudioOriginal = trebleAudio;
+    
+    // ===== 🔥 高潮检测系统（精准版 - 使用原始音频数据，不受频段开关影响）=====
     // 多维度检测音乐高能时刻 - 提高阈值，更谨慎触发
     
-    // 1. 综合能量
-    float totalEnergy = (bassAudio + midAudio + trebleAudio) / 3.0;
+    // 1. 综合能量（使用原始数据）
+    float totalEnergy = (bassAudioOriginal + midAudioOriginal + trebleAudioOriginal) / 3.0;
     
-    // 2. 低音响应（提高阈值，降低响应系数）
-    float bassResponse = smoothstep(0.15, 0.6, bassAudio) * 1.1; // 15%开始，60%满
+    // 2. 低音响应（使用原始数据，提高阈值，降低响应系数）
+    float bassResponse = smoothstep(0.15, 0.6, bassAudioOriginal) * 1.1; // 15%开始，60%满
     
-    // 3. 中音响应（提高阈值）
-    float midResponse = smoothstep(0.15, 0.6, midAudio) * 1.0;
+    // 3. 中音响应（使用原始数据，提高阈值）
+    float midResponse = smoothstep(0.15, 0.6, midAudioOriginal) * 1.0;
     
-    // 4. 高音响应（提高阈值）
-    float trebleResponse = smoothstep(0.15, 0.6, trebleAudio) * 1.1;
+    // 4. 高音响应（使用原始数据，提高阈值）
+    float trebleResponse = smoothstep(0.15, 0.6, trebleAudioOriginal) * 1.1;
     
-    // 5. 峰值响应（需要更高的峰值）
-    float peakValue = max(max(bassAudio, midAudio), trebleAudio);
+    // 5. 峰值响应（使用原始数据，需要更高的峰值）
+    float peakValue = max(max(bassAudioOriginal, midAudioOriginal), trebleAudioOriginal);
     float peakResponse = smoothstep(0.25, 0.7, peakValue) * 1.2; // 25%开始
     
     // 6. 综合响应强度（降低增益系数）
@@ -549,6 +561,20 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     // 🎛️ 应用高能效果开关
     if (enableClimaxEffect < 0.5) {
         isClimax = 0.0; // 关闭高能效果时，isClimax强制为0
+    }
+    
+    // 🎨 应用频段特效开关（在isClimax计算完成后才应用，这样黄色强度不受红绿蓝开关影响）
+    if (enableBassEffect < 0.5) {
+        bassAudio = 0.0;         // 关闭低音特效时，低音数据归零
+        bassAudioDisplay = 0.0;  // 调试条也归零
+    }
+    if (enableMidEffect < 0.5) {
+        midAudio = 0.0;          // 关闭中音特效时，中音数据归零
+        midAudioDisplay = 0.0;   // 调试条也归零
+    }
+    if (enableTrebleEffect < 0.5) {
+        trebleAudio = 0.0;       // 关闭高音特效时，高音数据归零
+        trebleAudioDisplay = 0.0; // 调试条也归零
     }
     
     // ===== 1. 故障效果（Glitch）- 根据音频强度 =====

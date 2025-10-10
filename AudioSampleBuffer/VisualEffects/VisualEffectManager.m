@@ -510,4 +510,90 @@
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
+#pragma mark - 🎛️ 赛博朋克控制方法
+
+- (CyberPunkRenderer *)cyberpunkRenderer {
+    if ([_currentRenderer isKindOfClass:[CyberPunkRenderer class]]) {
+        return (CyberPunkRenderer *)_currentRenderer;
+    }
+    return nil;
+}
+
+- (void)setCyberpunkEnableClimaxEffect:(BOOL)enable {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    if (renderer) {
+        renderer.enableClimaxEffect = enable;
+        NSLog(@"🎛️ 赛博朋克高能效果: %@", enable ? @"开启" : @"关闭");
+    } else {
+        NSLog(@"⚠️ 当前不是赛博朋克效果，无法设置");
+    }
+}
+
+- (void)setCyberpunkShowDebugBars:(BOOL)show {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    if (renderer) {
+        renderer.showDebugBars = show;
+        NSLog(@"🎛️ 赛博朋克调试条: %@", show ? @"显示" : @"隐藏");
+    } else {
+        NSLog(@"⚠️ 当前不是赛博朋克效果，无法设置");
+    }
+}
+
+- (BOOL)getCyberpunkEnableClimaxEffect {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    return renderer ? renderer.enableClimaxEffect : YES; // 默认开启
+}
+
+- (BOOL)getCyberpunkShowDebugBars {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    return renderer ? renderer.showDebugBars : NO; // 默认隐藏
+}
+
+#pragma mark - 🎨 赛博朋克频段特效控制
+
+- (void)setCyberpunkEnableBassEffect:(BOOL)enable {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    if (renderer) {
+        renderer.enableBassEffect = enable;
+        NSLog(@"🎨 赛博朋克低音特效（红色）: %@", enable ? @"开启" : @"关闭");
+    } else {
+        NSLog(@"⚠️ 当前不是赛博朋克效果，无法设置");
+    }
+}
+
+- (void)setCyberpunkEnableMidEffect:(BOOL)enable {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    if (renderer) {
+        renderer.enableMidEffect = enable;
+        NSLog(@"🎨 赛博朋克中音特效（绿色）: %@", enable ? @"开启" : @"关闭");
+    } else {
+        NSLog(@"⚠️ 当前不是赛博朋克效果，无法设置");
+    }
+}
+
+- (void)setCyberpunkEnableTrebleEffect:(BOOL)enable {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    if (renderer) {
+        renderer.enableTrebleEffect = enable;
+        NSLog(@"🎨 赛博朋克高音特效（蓝色）: %@", enable ? @"开启" : @"关闭");
+    } else {
+        NSLog(@"⚠️ 当前不是赛博朋克效果，无法设置");
+    }
+}
+
+- (BOOL)getCyberpunkEnableBassEffect {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    return renderer ? renderer.enableBassEffect : YES; // 默认开启
+}
+
+- (BOOL)getCyberpunkEnableMidEffect {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    return renderer ? renderer.enableMidEffect : YES; // 默认开启
+}
+
+- (BOOL)getCyberpunkEnableTrebleEffect {
+    CyberPunkRenderer *renderer = self.cyberpunkRenderer;
+    return renderer ? renderer.enableTrebleEffect : YES; // 默认开启
+}
+
 @end

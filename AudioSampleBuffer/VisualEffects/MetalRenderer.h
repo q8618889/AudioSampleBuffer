@@ -132,8 +132,13 @@ NS_ASSUME_NONNULL_BEGIN
 @interface CyberPunkRenderer : BaseMetalRenderer
 
 // 🎛️ 赛博朋克控制参数
-@property (nonatomic, assign) BOOL enableClimaxEffect; // 开启/关闭高能效果
+@property (nonatomic, assign) BOOL enableClimaxEffect; // 开启/关闭高能效果（黄色）
 @property (nonatomic, assign) BOOL showDebugBars;      // 显示/隐藏强度条
+
+// 🎨 频段特效独立控制
+@property (nonatomic, assign) BOOL enableBassEffect;   // 开启/关闭低音特效（红色）
+@property (nonatomic, assign) BOOL enableMidEffect;    // 开启/关闭中音特效（绿色）
+@property (nonatomic, assign) BOOL enableTrebleEffect; // 开启/关闭高音特效（蓝色）
 
 @end
 

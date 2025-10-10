@@ -26,6 +26,7 @@ typedef struct {
     vector_float4 galaxyParams2; // 星系参数2: (colorShiftSpeed, nebulaIntensity, pulseStrength, audioSensitivity)
     vector_float4 galaxyParams3; // 星系参数3: (starDensity, spiralArms, colorTheme, reserved)
     vector_float4 cyberpunkControls; // 赛博朋克控制: (enableClimaxEffect, showDebugBars, reserved1, reserved2)
+    vector_float4 cyberpunkFrequencyControls; // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
 } Uniforms;
 
 @interface BaseMetalRenderer ()
@@ -218,6 +219,14 @@ typedef struct {
             cyberpunkRenderer.showDebugBars ? 1.0f : 0.0f,       // y: 调试条显示开关
             0.0f,                                                 // z: reserved1
             0.0f                                                  // w: reserved2
+        };
+        
+        // 🎨 更新频段特效控制参数
+        uniforms->cyberpunkFrequencyControls = (vector_float4){
+            cyberpunkRenderer.enableBassEffect ? 1.0f : 0.0f,    // x: 低音特效开关（红色）
+            cyberpunkRenderer.enableMidEffect ? 1.0f : 0.0f,     // y: 中音特效开关（绿色）
+            cyberpunkRenderer.enableTrebleEffect ? 1.0f : 0.0f,  // z: 高音特效开关（蓝色）
+            0.0f                                                  // w: reserved
         };
     }
     
@@ -525,8 +534,13 @@ typedef struct {
 // 🎛️ 重写初始化方法，设置默认值
 - (instancetype)initWithMetalView:(MTKView *)metalView {
     if (self = [super initWithMetalView:metalView]) {
-        _enableClimaxEffect = YES;  // 默认开启高能效果
+        _enableClimaxEffect = YES;  // 默认开启高能效果（黄色）
         _showDebugBars = NO;         // 默认隐藏调试条
+        
+        // 🎨 频段特效默认全部开启
+        _enableBassEffect = YES;    // 默认开启低音特效（红色）
+        _enableMidEffect = YES;     // 默认开启中音特效（绿色）
+        _enableTrebleEffect = YES;  // 默认开启高音特效（蓝色）
     }
     return self;
 }
