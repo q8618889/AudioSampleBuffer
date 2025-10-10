@@ -480,6 +480,12 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     float midAudioDisplay = midAudio;
     float trebleAudioDisplay = trebleAudio;
     
+    // 💡 关键：在multiChannelSuppression之前，先保存完整强度的音频数据用于isClimax计算
+    // 这样isClimax不会被抑制因子削弱，保持正常触发
+    float bassAudioOriginal = bassAudio;
+    float midAudioOriginal = midAudio;
+    float trebleAudioOriginal = trebleAudio;
+    
     // 🔥 多频段同时触发检测与抑制（防止刺眼）
     // 检测有多少个频段处于高值状态（> 0.3）
     float highBassCount = step(0.3, bassAudio);
@@ -509,12 +515,6 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     float enableBassEffect = uniforms.cyberpunkFrequencyControls.x;   // 0.0=关闭, 1.0=开启（红色低音）
     float enableMidEffect = uniforms.cyberpunkFrequencyControls.y;    // 0.0=关闭, 1.0=开启（绿色中音）
     float enableTrebleEffect = uniforms.cyberpunkFrequencyControls.z; // 0.0=关闭, 1.0=开启（蓝色高音）
-    
-    // 💡 重要：在应用频段开关之前，先保存原始音频数据用于isClimax计算
-    // 这样即使关闭红绿蓝频段特效，黄色强度条仍然正常工作
-    float bassAudioOriginal = bassAudio;
-    float midAudioOriginal = midAudio;
-    float trebleAudioOriginal = trebleAudio;
     
     // ===== 🔥 高潮检测系统（精准版 - 使用原始音频数据，不受频段开关影响）=====
     // 多维度检测音乐高能时刻 - 提高阈值，更谨慎触发
