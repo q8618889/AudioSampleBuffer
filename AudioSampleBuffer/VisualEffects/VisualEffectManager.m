@@ -171,6 +171,19 @@
             settings[@"matrixSpeed"] = @(2.0);
             settings[@"glitchEffect"] = @(YES);
             settings[@"neonColors"] = @(YES);
+            // 网格和背景控制
+            settings[@"enableGrid"] = @(1.0);  // 默认开启网格
+            settings[@"backgroundMode"] = @(0.0);  // 默认网格背景模式
+            settings[@"solidColorR"] = @(0.15);
+            settings[@"solidColorG"] = @(0.1);
+            settings[@"solidColorB"] = @(0.25);
+            settings[@"backgroundIntensity"] = @(0.8);
+            // 特效开关（默认全部开启）
+            settings[@"enableClimaxEffect"] = @(1.0);
+            settings[@"enableBassEffect"] = @(1.0);
+            settings[@"enableMidEffect"] = @(1.0);
+            settings[@"enableTrebleEffect"] = @(1.0);
+            settings[@"showDebugBars"] = @(0.0);  // 调试条默认关闭
             break;
             
         case VisualEffectTypeGalaxy:

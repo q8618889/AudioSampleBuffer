@@ -35,8 +35,9 @@ struct Uniforms {
     float4 galaxyParams1; // 星系参数1: (coreIntensity, edgeIntensity, rotationSpeed, glowRadius)
     float4 galaxyParams2; // 星系参数2: (colorShiftSpeed, nebulaIntensity, pulseStrength, audioSensitivity)
     float4 galaxyParams3; // 星系参数3: (starDensity, spiralArms, colorTheme, reserved)
-    float4 cyberpunkControls; // 赛博朋克控制: (enableClimaxEffect, showDebugBars, reserved1, reserved2)
+    float4 cyberpunkControls; // 赛博朋克控制: (enableClimaxEffect, showDebugBars, enableGrid, backgroundMode)
     float4 cyberpunkFrequencyControls; // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
+    float4 cyberpunkBackgroundParams; // 赛博朋克背景参数: (solidColorR, solidColorG, solidColorB, intensity)
 };
 
 #pragma mark - 辅助函数（使用static inline避免重复符号）

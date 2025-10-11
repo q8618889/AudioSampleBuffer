@@ -85,11 +85,19 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     // 🎛️ 读取赛博朋克控制参数
     float enableClimaxEffect = uniforms.cyberpunkControls.x; // 0.0=关闭, 1.0=开启
     float showDebugBars = uniforms.cyberpunkControls.y;      // 0.0=隐藏, 1.0=显示
+    float enableGrid = uniforms.cyberpunkControls.z;         // 0.0=隐藏网格, 1.0=显示网格
+    float backgroundMode = uniforms.cyberpunkControls.w;     // 背景模式: 0=网格, 1=纯色, 2=粒子, 3=渐变, 4=无
     
     // 🎨 读取频段特效控制参数
     float enableBassEffect = uniforms.cyberpunkFrequencyControls.x;   // 0.0=关闭, 1.0=开启（红色低音）
     float enableMidEffect = uniforms.cyberpunkFrequencyControls.y;    // 0.0=关闭, 1.0=开启（绿色中音）
     float enableTrebleEffect = uniforms.cyberpunkFrequencyControls.z; // 0.0=关闭, 1.0=开启（蓝色高音）
+    
+    // 🎨 读取背景参数
+    float3 solidColor = float3(uniforms.cyberpunkBackgroundParams.x, 
+                               uniforms.cyberpunkBackgroundParams.y, 
+                               uniforms.cyberpunkBackgroundParams.z);
+    float backgroundIntensity = uniforms.cyberpunkBackgroundParams.w;
     
     // ===== 🔥 高潮检测系统（降低版 - 适配低音频增强，使用原始音频数据）=====
     // 多维度检测音乐高能时刻 - 大幅降低阈值，确保能触发
@@ -234,6 +242,11 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     float audioIntensity = baseFlicker * (0.5 + midAudio * 1.5); // 音频时的强度
     
     gridLine *= (baseIntensity + hasAudio * (audioIntensity - baseIntensity + gridAnimation));
+    
+    // 🎛️ 应用网格开关：如果关闭网格，gridLine归零
+    if (enableGrid < 0.5) {
+        gridLine = 0.0;
+    }
     
     // ===== 🌟 高潮专属效果：全屏能量爆发（移除条件判断，始终计算）=====
     float climaxEffect = 0.0;
@@ -488,8 +501,54 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     // ===== 10. RGB色差（Chromatic Aberration）===== 
     // 注：RGB色差效果已在组合阶段实现
     
+    // ===== 🎨 背景模式系统 =====
+    float3 backgroundColor = float3(0.0);
+    
+    // 根据backgroundMode选择不同的背景
+    // 0 = 网格背景（默认，通过gridLine渲染）
+    // 1 = 纯色背景
+    // 2 = 动态粒子背景
+    // 3 = 音频响应渐变背景
+    // 4 = 无背景（纯透明）
+    
+    if (backgroundMode > 0.5 && backgroundMode < 1.5) {
+        // 模式1: 纯色背景（可自定义颜色）
+        backgroundColor = solidColor * backgroundIntensity * (0.3 + averageAudio * 0.4);
+    } else if (backgroundMode > 1.5 && backgroundMode < 2.5) {
+        // 模式2: 动态粒子背景
+        float2 particleBgUV = glitchUV * 30.0 + time * 0.5;
+        float particleBgNoise = fract(sin(dot(floor(particleBgUV), float2(12.9898, 78.233))) * 43758.5453);
+        float particleBg = step(0.92, particleBgNoise) * (0.4 + averageAudio * 0.6);
+        
+        // 粒子颜色随音频变化
+        backgroundColor = mix(
+            float3(0.1, 0.15, 0.25),  // 深蓝色
+            float3(0.3, 0.1, 0.4),    // 紫色
+            sin(time * 0.5 + averageAudio * 3.0) * 0.5 + 0.5
+        ) * particleBg * backgroundIntensity;
+    } else if (backgroundMode > 2.5 && backgroundMode < 3.5) {
+        // 模式3: 音频响应渐变背景
+        float2 gradientCenter = float2(0.5, 0.5);
+        float gradientDist = length(glitchUV - gradientCenter);
+        
+        // 从中心到边缘的渐变
+        float gradientValue = smoothstep(0.0, 1.0, gradientDist);
+        
+        // 根据音频调制渐变
+        float audioGradient = sin(gradientDist * 5.0 - time * 2.0 + averageAudio * 10.0) * 0.5 + 0.5;
+        
+        // 渐变颜色（从青色到紫色）
+        float3 gradientColor1 = float3(0.0, 0.4, 0.6) * (1.0 + bassAudio);
+        float3 gradientColor2 = float3(0.4, 0.0, 0.6) * (1.0 + trebleAudio);
+        backgroundColor = mix(gradientColor1, gradientColor2, gradientValue) * audioGradient * backgroundIntensity * 0.5;
+    }
+    // else: 模式0（网格）或模式4（无背景）不添加额外背景色
+    
     // ===== 组合所有效果 =====
     float3 finalColor = float3(0.0);
+    
+    // 先添加背景
+    finalColor += backgroundColor;
     
     // 基础霓虹网格和图形
     finalColor += cyanNeon * 1.5;

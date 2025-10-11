@@ -25,8 +25,9 @@ typedef struct {
     vector_float4 galaxyParams1; // 星系参数1: (coreIntensity, edgeIntensity, rotationSpeed, glowRadius)
     vector_float4 galaxyParams2; // 星系参数2: (colorShiftSpeed, nebulaIntensity, pulseStrength, audioSensitivity)
     vector_float4 galaxyParams3; // 星系参数3: (starDensity, spiralArms, colorTheme, reserved)
-    vector_float4 cyberpunkControls; // 赛博朋克控制: (enableClimaxEffect, showDebugBars, reserved1, reserved2)
+    vector_float4 cyberpunkControls; // 赛博朋克控制: (enableClimaxEffect, showDebugBars, enableGrid, backgroundMode)
     vector_float4 cyberpunkFrequencyControls; // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
+    vector_float4 cyberpunkBackgroundParams; // 赛博朋克背景参数: (solidColorR, solidColorG, solidColorB, intensity)
 } Uniforms;
 
 @interface BaseMetalRenderer ()
@@ -557,16 +558,25 @@ typedef struct {
     // 从渲染参数中获取赛博朋克设置
     NSDictionary *params = self.renderParameters;
     
-    // 赛博朋克控制: (enableClimaxEffect, showDebugBars, reserved1, reserved2)
+    // 赛博朋克控制: (enableClimaxEffect, showDebugBars, enableGrid, backgroundMode)
     float enableClimaxEffect = [params[@"enableClimaxEffect"] floatValue];
     float showDebugBars = [params[@"showDebugBars"] floatValue];
-    uniforms->cyberpunkControls = (vector_float4){enableClimaxEffect, showDebugBars, 0.0f, 0.0f};
+    float enableGrid = [params[@"enableGrid"] floatValue];
+    float backgroundMode = [params[@"backgroundMode"] floatValue];
+    uniforms->cyberpunkControls = (vector_float4){enableClimaxEffect, showDebugBars, enableGrid, backgroundMode};
     
     // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
     float enableBassEffect = [params[@"enableBassEffect"] floatValue];
     float enableMidEffect = [params[@"enableMidEffect"] floatValue];
     float enableTrebleEffect = [params[@"enableTrebleEffect"] floatValue];
     uniforms->cyberpunkFrequencyControls = (vector_float4){enableBassEffect, enableMidEffect, enableTrebleEffect, 0.0f};
+    
+    // 赛博朋克背景参数: (solidColorR, solidColorG, solidColorB, intensity)
+    float solidColorR = [params[@"solidColorR"] floatValue];
+    float solidColorG = [params[@"solidColorG"] floatValue];
+    float solidColorB = [params[@"solidColorB"] floatValue];
+    float backgroundIntensity = [params[@"backgroundIntensity"] floatValue];
+    uniforms->cyberpunkBackgroundParams = (vector_float4){solidColorR, solidColorG, solidColorB, backgroundIntensity};
 }
 
 - (void)encodeRenderCommands:(id<MTLRenderCommandEncoder>)encoder {

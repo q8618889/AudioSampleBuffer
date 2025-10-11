@@ -129,292 +129,290 @@ fragment float4 lightning_fragment(RasterizerData in [[stage_in]],
     float radius = length(diff);
     float angle = atan2(diff.y, diff.x);
     
-    // ===== 音频数据处理 =====
+    // ===== 音频数据处理（参考赛博朋克shader）=====
+    // 1️⃣ 直接从音频数据获取频段能量（赛博朋克方式）
+    float bassAudio = 0.0;
+    float midAudio = 0.0;
+    float trebleAudio = 0.0;
+    
+    // 低频 (0-9): 贝斯、底鼓
+    for (int i = 0; i < 10; i++) {
+        bassAudio += uniforms.audioData[i].x;
+    }
+    bassAudio = bassAudio / 10.0;
+    
+    // 中频 (10-39): 人声、吉他、键盘
+    for (int i = 10; i < 40; i++) {
+        midAudio += uniforms.audioData[i].x;
+    }
+    midAudio = midAudio / 30.0;
+    
+    // 高频 (40-79): 镲片、高音合成器
+    for (int i = 40; i < 80; i++) {
+        trebleAudio += uniforms.audioData[i].x;
+    }
+    trebleAudio = trebleAudio / 40.0;
+    
+    // 平均音频强度
+    float averageAudio = (bassAudio + midAudio + trebleAudio) / 3.0;
+    
+    // 💡 关键：保存原始音频数据用于高潮检测（不被后续处理削弱）
+    float bassAudioOriginal = bassAudio;
+    float midAudioOriginal = midAudio;
+    float trebleAudioOriginal = trebleAudio;
+    
+    // 2️⃣ 获取局部音频值（用于细节）
     float normalizedAngle = (angle + M_PI_F) / (2.0 * M_PI_F);
     int spectrumIndex = int(normalizedAngle * 79.0);
     float audioValue = uniforms.audioData[spectrumIndex].x;
     
-    // 频段分析
-    float bassEnergy = 0.0;
-    float midEnergy = 0.0;
-    float trebleEnergy = 0.0;
+    // 重命名为更清晰的变量名
+    float bassEnergy = bassAudio;
+    float midEnergy = midAudio;
+    float trebleEnergy = trebleAudio;
+    float totalEnergy = averageAudio;
     
-    for (int i = 0; i < 10; i++) {
-        bassEnergy += uniforms.audioData[i].x;
-    }
-    for (int i = 10; i < 40; i++) {
-        midEnergy += uniforms.audioData[i].x;
-    }
-    for (int i = 40; i < 79; i++) {
-        trebleEnergy += uniforms.audioData[i].x;
-    }
+    // ===== 🔥 高潮检测系统（完全参考赛博朋克 - 使用原始音频数据）=====
+    // 多维度检测音乐高能时刻 - 大幅降低阈值，确保能触发
     
-    bassEnergy /= 10.0;
-    midEnergy /= 30.0;
-    trebleEnergy /= 39.0;
+    // 1. 综合能量（使用原始数据）
+    float totalEnergyResponse = (bassAudioOriginal + midAudioOriginal + trebleAudioOriginal) / 3.0 * 2.5; // 提升2.5倍
     
-    float totalEnergy = (bassEnergy + midEnergy + trebleEnergy) / 3.0;
+    // 2. 低音响应（使用原始数据，降低阈值，提高响应系数）
+    float bassResponse = smoothstep(0.08, 0.35, bassAudioOriginal) * 1.8; // 8%开始，35%满
     
-    // ===== 🔥 高潮检测系统（多维度音乐响应 - 闪电特化版）=====
-    // 1. 综合能量响应（大幅提升，让闪电更容易触发）
-    float totalEnergyResponse = totalEnergy * 3.0;
+    // 3. 中音响应（使用原始数据，降低阈值）
+    float midResponse = smoothstep(0.08, 0.35, midAudioOriginal) * 1.6;
     
-    // 2. 低音响应（降低阈值，提高响应系数 - 闪电主要由低音驱动）
-    float bassResponse = smoothstep(0.05, 0.25, bassEnergy) * 2.0; // 降低阈值到0.05
+    // 4. 高音响应（使用原始数据，降低阈值）
+    float trebleResponse = smoothstep(0.08, 0.35, trebleAudioOriginal) * 1.8;
     
-    // 3. 中音响应
-    float midResponse = smoothstep(0.06, 0.3, midEnergy) * 1.5;
+    // 5. 峰值响应（使用原始数据，降低峰值要求）
+    float peakValue = max(max(bassAudioOriginal, midAudioOriginal), trebleAudioOriginal);
+    float peakResponse = smoothstep(0.12, 0.4, peakValue) * 2.0; // 12%开始
     
-    // 4. 高音响应（闪电枝干）
-    float trebleResponse = smoothstep(0.06, 0.3, trebleEnergy) * 1.8;
-    
-    // 5. 峰值响应
-    float peakValue = max(max(bassEnergy, midEnergy), trebleEnergy);
-    float peakResponse = smoothstep(0.08, 0.35, peakValue) * 2.0;
-    
-    // 6. 综合响应强度
+    // 6. 综合响应强度（提高增益系数）
     float responseA = totalEnergyResponse;
     float responseB = max(max(bassResponse, midResponse), trebleResponse) * 1.5;
     float responseC = (bassResponse + midResponse + trebleResponse) / 2.5;
-    float responseD = peakResponse * 1.3;
+    float responseD = peakResponse * 1.4;
     
-    // 最终音乐强度
+    // 最终音乐强度（取最大值）
     float musicIntensity = max(max(responseA, responseB), max(responseC, responseD));
     
-    // 轻微提升低值（让安静时也有基础效果）
-    if (musicIntensity < 0.2) {
-        musicIntensity = musicIntensity * 0.8 + 0.1;
+    // 🔥 轻微提升低值，让低音频强度也能触发
+    if (musicIntensity < 0.3) {
+        musicIntensity = musicIntensity * 0.7; // 低值轻微提升
     }
     
-    // 非线性压缩高值
+    // 🔥 非线性压缩：高值时压缩（避免刺眼）
     if (musicIntensity > 1.0) {
         float excess = musicIntensity - 1.0;
-        musicIntensity = 1.0 + sqrt(excess) * 0.6;
+        musicIntensity = 1.0 + sqrt(excess) * 0.5;
     }
     
-    // 最终限制
-    musicIntensity = clamp(musicIntensity, 0.1, 2.0); // 提高上限到2.0
+    // 最终限制：最高1.8
+    musicIntensity = clamp(musicIntensity, 0.0, 1.8);
     
-    // ===== 低频主闪电触发（降低阈值）=====
-    float bassThreshold = smoothstep(0.05, 0.25, bassEnergy); // 大幅降低阈值
-    float lightningTrigger = bassThreshold * (sin(time * 10.0 + bassEnergy * 20.0) * 0.5 + 0.5);
+    // ===== 低频主闪电触发（使用原始音频数据，大幅降低阈值）=====
+    float bassThreshold = smoothstep(0.05, 0.3, bassAudioOriginal); // 使用原始数据，5%开始触发
+    float lightningTrigger = bassThreshold * (sin(time * 10.0 + bassAudioOriginal * 20.0) * 0.5 + 0.5);
     
-    // ===== 背景层：暗色电离层（简化）=====
-    float2 bgUV = uv * 3.0 + float2(time * 0.05, time * 0.03);
-    float background = fbmLightning(bgUV, time, 3) * 0.3; // 减少迭代，增加亮度
+    // ===== 简化背景：纯渐变（去掉复杂FBM，避免卡顿）=====
+    float background = 1.0 - smoothstep(0.0, 0.6, radius);
+    background *= 0.12; // 很暗的背景
     
-    // 径向渐变
-    float bgGradient = 1.0 - smoothstep(0.0, 0.7, radius);
-    background *= bgGradient;
+    // 音频让背景轻微变亮（不闪烁，只是变亮）
+    background *= (1.0 + musicIntensity * 0.3);
     
-    // ===== 主闪电层：分形闪电（大幅降低阈值）=====
+    // ===== 主闪电层：清晰的闪电纹理（不用模糊的分形）=====
     float mainLightning = 0.0;
     
-    // 分形噪声基础（减少迭代）
-    float2 lightningUV = uv * 12.0 + float2(time * 1.5, 0.0); // 降低频率
-    float n = fbmLightning(lightningUV, time, 3); // 减少迭代到3次
+    // 方法1：基于距离场的清晰闪电条纹
+    float2 lightningUV = uv * 8.0;
+    lightningUV.y += time * 0.5; // 向下流动
     
-    // 音频增强（使用musicIntensity）
-    float audioBoost = musicIntensity * 0.8 + bassResponse * 0.5;
+    // 创建垂直闪电条纹
+    float stripe = abs(sin(lightningUV.x * 3.14159 + time * 2.0));
+    stripe = pow(stripe, 3.0); // 锐化
     
-    // 闪电阈值（大幅降低基础阈值，从0.82降到0.45）
-    float threshold = 0.45 - audioBoost * 0.25; // 音频响应时阈值可降到0.2
-    threshold = max(threshold, 0.2); // 最低阈值0.2
-    mainLightning = smoothstep(threshold, threshold + 0.2, n);
+    // 添加一些扰动让闪电不规则
+    float distortion = sin(lightningUV.y * 2.0 + time) * 0.3;
+    stripe += distortion;
     
-    // 闪电强度（使用musicIntensity）
-    mainLightning *= (0.8 + musicIntensity * 1.5);
+    // 闪电强度（直接由音频控制，不用阈值）
+    mainLightning = stripe * (bassAudioOriginal * 2.0 + musicIntensity * 1.5);
+    mainLightning = clamp(mainLightning, 0.0, 1.0);
     
-    // 时间闪烁（模拟闪电瞬间）- 简化计算
-    float flicker = sin(time * 25.0 + n * 8.0) * 0.25 + 0.75;
-    flicker *= (0.7 + bassThreshold * 0.3);
-    mainLightning *= flicker;
-    
-    // ===== 主闪电脉冲（降低触发阈值，使用musicIntensity）=====
+    // ===== 主闪电脉冲：清晰的中心闪电束（简化，直接绘制）=====
     float centralBolt = 0.0;
     
-    // 大幅降低触发阈值，让闪电更容易出现
-    if (bassEnergy > 0.06 || musicIntensity > 0.3) { // 从0.12降到0.06
-        // 中心向外的主闪电
-        float2 boltStart = float2(0.5, 0.3);
-        float2 boltEnd = float2(0.5, 0.7);
-        
-        // 音频控制长度和位置（使用musicIntensity增强）
-        boltEnd.y = 0.7 + musicIntensity * 0.15;
-        boltEnd.x = 0.5 + sin(time * 5.0) * 0.08;
-        
-        float boltStrength = max(bassEnergy, musicIntensity * 0.6);
-        centralBolt = lightningBolt(uv, boltStart, boltEnd, 0.015, time, boltStrength);
-        
-        // 简化侧向闪电（只在高能量时出现）
-        if (musicIntensity > 0.5) {
-            float2 sideBolt1 = boltStart + float2(-0.15, 0.08);
-            float2 sideBolt2 = boltEnd + float2(-0.12, 0.0);
-            centralBolt += lightningBolt(uv, sideBolt1, sideBolt2, 0.008, time + 1.0, boltStrength * 0.6);
-            
-            float2 sideBolt3 = boltStart + float2(0.15, 0.08);
-            float2 sideBolt4 = boltEnd + float2(0.12, 0.0);
-            centralBolt += lightningBolt(uv, sideBolt3, sideBolt4, 0.008, time + 2.0, boltStrength * 0.6);
-        }
-    }
+    // 垂直闪电束（从中心向上下延伸）
+    float centerDist = abs(uv.x - 0.5); // 距离中心的横向距离
     
-    // ===== 闪电枝干（高频跳动 - 使用trebleResponse）=====
-    float branchDensity = trebleResponse * 0.8 + musicIntensity * 0.3;
-    float branches = lightningBranches(uv, time, trebleEnergy, branchDensity);
+    // 创建清晰的中心闪电线
+    float boltLine = exp(-centerDist * 60.0); // 很细的线
     
-    // ===== 电弧环（中频律动 - 使用midResponse）=====
-    float arc = electricArc(uv, time, midEnergy) * (0.6 + midResponse * 0.8);
+    // 添加一些左右摇摆
+    float sway = sin(uv.y * 8.0 + time * 3.0) * 0.02;
+    boltLine += exp(-(centerDist - sway) * 40.0) * 0.5;
     
-    // ===== 短暂的高亮闪烁光束（减少数量，优化性能）=====
-    float beamFlash = 0.0;
+    // 音频控制强度（低音越强，闪电越亮）
+    centralBolt = boltLine * (bassAudioOriginal * 3.0 + musicIntensity * 2.0);
+    centralBolt = clamp(centralBolt, 0.0, 1.0);
     
-    // 减少光束数量到3个，只在高能量时计算
-    if (musicIntensity > 0.4) {
-        for (int i = 0; i < 3; i++) { // 从6减到3
-            float beamTime = fract(time * 0.6 + float(i) * 0.333);
-            float beamTrigger = smoothstep(0.92, 1.0, beamTime) * smoothstep(0.08, 0.0, beamTime);
-            
-            if (beamTrigger > 0.01) {
-                float beamAngle = float(i) * 2.094 + time; // 120度间隔
-                float2 beamDir = float2(cos(beamAngle), sin(beamAngle));
-                float2 beamStart = center;
-                float2 beamEnd = center + beamDir * (0.35 + musicIntensity * 0.1);
-                
-                float beam = lightningBolt(uv, beamStart, beamEnd, 0.01, time * 8.0, musicIntensity);
-                beamFlash += beam * beamTrigger * (1.2 + musicIntensity * 0.8);
-            }
-        }
-    }
+    // ===== 闪电枝干：径向清晰线条（高音触发）=====
+    float branches = 0.0;
     
-    // ===== 细密的闪电网格（简化，降低计算复杂度）=====
-    float lightningGrid = 0.0;
+    // 创建从中心向外的径向线条（枝干）
+    float radialLines = abs(sin(angle * 6.0 + time * 2.0)); // 12条径向线
+    radialLines = pow(radialLines, 8.0); // 锐化成细线
     
-    // 只在中高能量时显示网格
-    if (musicIntensity > 0.3) {
-        float2 gridUV = uv * 20.0 + float2(time * 1.2, time * 0.8); // 降低密度
-        float gridNoise = fbmLightning(gridUV, time * 1.5, 2); // 减少迭代到2次
-        
-        // 创建网格线条
-        float gridX = abs(fract(gridUV.x) - 0.5);
-        float gridY = abs(fract(gridUV.y) - 0.5);
-        float grid = min(gridX, gridY);
-        
-        // 音频控制网格可见度（降低阈值）
-        float gridThreshold = 0.35 - musicIntensity * 0.15;
-        lightningGrid = smoothstep(gridThreshold, gridThreshold + 0.08, gridNoise) * exp(-grid * 80.0);
-        lightningGrid *= musicIntensity * 0.6;
-    }
+    // 只在一定半径范围内显示
+    float radialMask = smoothstep(0.15, 0.2, radius) * smoothstep(0.5, 0.45, radius);
     
-    // ===== 雷暴能量核心（使用musicIntensity）=====
+    // 高音控制枝干强度（高音越强，枝干越亮）
+    branches = radialLines * radialMask * (trebleAudioOriginal * 3.0 + musicIntensity * 1.5);
+    branches = clamp(branches, 0.0, 1.0);
+    
+    // ===== 电弧环：清晰的旋转圆环（中音控制大小）=====
+    float arc = 0.0;
+    
+    // 圆环半径（中音越强，圆环越大）
+    float arcRadius = 0.25 + midAudioOriginal * 0.15;
+    float arcDist = abs(radius - arcRadius);
+    
+    // 清晰的圆环
+    float arcRing = exp(-arcDist * 120.0); // 很细的环
+    
+    // 旋转的亮点（中音控制旋转速度）
+    float arcSpots = sin(angle * 8.0 - time * (2.0 + midAudioOriginal * 3.0)) * 0.5 + 0.5;
+    arcSpots = pow(arcSpots, 4.0); // 锐化成点
+    
+    // 中音控制强度和旋转速度
+    arc = (arcRing + arcSpots * arcRing * 2.0) * (midAudioOriginal * 2.5 + musicIntensity);
+    arc = clamp(arc, 0.0, 1.0);
+    
+    // ===== 去掉复杂的光束和网格（避免卡顿）=====
+    float beamFlash = 0.0; // 暂时关闭
+    float lightningGrid = 0.0; // 暂时关闭
+    
+    // ===== 雷暴能量核心：简单的中心光晕（音频控制大小）=====
     float core = 0.0;
-    float coreDist = radius;
     
-    // 核心脉冲（使用musicIntensity和bassResponse）
-    float corePulse = sin(time * 6.0 + musicIntensity * 12.0) * 0.25 + 0.75;
-    corePulse *= (0.5 + bassResponse * 0.8);
+    // 核心大小由总音频能量控制
+    float coreSize = 10.0 + totalEnergy * 20.0 + musicIntensity * 15.0;
+    core = exp(-radius * radius * coreSize);
     
-    core = exp(-coreDist * coreDist * 10.0) * corePulse;
-    core *= (0.8 + musicIntensity * 1.5); // 提升基础亮度
+    // 核心强度（音频越强，核心越亮）
+    core *= (0.5 + totalEnergy * 1.5 + musicIntensity * 2.0);
+    core = clamp(core, 0.0, 1.0);
     
-    // ===== 闪电颜色系统 =====
-    // 主色：明亮的青白色（主闪电）
-    float3 mainColor = float3(0.3, 0.7, 1.0);
+    // ===== ⚡️ 闪电粒子系统（覆盖整个屏幕）=====
+    float particles = 0.0;
     
-    // 次色：电蓝色（分支和电弧）
-    float3 secondaryColor = float3(0.2, 0.5, 0.9);
+    // 1️⃣ 飘动的电火花（使用noise生成伪随机粒子位置）
+    float2 sparkUV = uv * 15.0; // 15x15的网格
+    sparkUV.x += time * 0.3; // 横向飘动
+    sparkUV.y += sin(uv.x * 6.28 + time) * 0.2; // 波浪式移动
     
-    // 强调色：紫电（高频部分）
-    float3 accentColor = float3(0.6, 0.4, 1.0);
+    // 使用noise生成粒子
+    float sparkNoise = noise(sparkUV);
+    sparkNoise += noise(sparkUV * 2.3 + time * 0.5) * 0.5; // 多层次
     
-    // 核心色：纯白高亮
-    float3 coreColor = float3(1.0, 1.0, 1.0);
+    // 创建小的闪光点（阈值越高，粒子越少）
+    float sparkThreshold = 0.85 - musicIntensity * 0.15; // 音频越强，粒子越多
+    float sparks = smoothstep(sparkThreshold, sparkThreshold + 0.08, sparkNoise);
     
-    // 背景色：深紫蓝
-    float3 bgColor = float3(0.05, 0.08, 0.15);
+    // 音频控制粒子强度
+    sparks *= (0.3 + totalEnergy * 1.2 + trebleAudioOriginal * 0.8);
     
-    // ===== 组合所有层 =====
-    // 背景电离层
-    float3 finalColor = bgColor * (1.0 + background * 2.0);
+    // 2️⃣ 屏幕边缘的电弧放电
+    float edgeArc = 0.0;
     
-    // 主闪电（分形）
-    float3 lightningColor = mix(mainColor, coreColor, mainLightning * 0.5);
-    finalColor += lightningColor * mainLightning * 2.5;
+    // 四边的电弧（距离边缘越近越亮）
+    float distToEdge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)); // 到最近边缘的距离
+    float edgeMask = smoothstep(0.15, 0.0, distToEdge); // 边缘15%范围内
     
-    // 主闪电脉冲（低频）
-    finalColor += mainColor * centralBolt * 3.0;
+    // 边缘电弧纹理
+    float edgePattern = abs(sin((uv.x + uv.y) * 20.0 + time * 3.0));
+    edgePattern = pow(edgePattern, 6.0); // 锐化
     
-    // 闪电枝干（高频）
-    finalColor += mix(secondaryColor, accentColor, trebleEnergy) * branches * 2.0;
+    // 低音触发边缘放电
+    edgeArc = edgeMask * edgePattern * (bassAudioOriginal * 2.0 + musicIntensity * 0.8);
     
-    // 电弧环（中频）
-    finalColor += secondaryColor * arc * 1.5;
+    // 3️⃣ 漂浮的电光微粒（更密集，覆盖全屏）
+    float2 dustUV = uv * 25.0; // 25x25的网格（更密集）
+    dustUV += float2(time * 0.15, time * -0.1); // 慢速飘动
     
-    // 短暂闪烁光束
-    finalColor += coreColor * beamFlash * 2.5;
+    // 多层noise创建细小微粒
+    float dust = noise(dustUV);
+    dust += noise(dustUV * 1.7 + time * 0.3) * 0.6;
+    dust += noise(dustUV * 2.9 - time * 0.2) * 0.3;
     
-    // 闪电网格
-    finalColor += mainColor * lightningGrid * 1.2;
+    // 创建细小光点
+    float dustThreshold = 0.92 - musicIntensity * 0.1;
+    float dustParticles = smoothstep(dustThreshold, dustThreshold + 0.05, dust);
     
-    // 能量核心
-    finalColor += coreColor * core * 2.0;
+    // 微粒强度（受高音影响）
+    dustParticles *= (0.2 + trebleAudioOriginal * 0.8 + musicIntensity * 0.4);
     
-    // ===== 辉光增强 =====
-    float glowAmount = (mainLightning + centralBolt + branches + arc + beamFlash) * 0.3;
-    float3 glowColor = mix(mainColor, coreColor, glowAmount);
-    finalColor += glowColor * glow(glowAmount, radius) * 0.4;
+    // 4️⃣ 随机闪烁的能量球（中等大小）
+    float2 orbUV = uv * 6.0; // 6x6网格
+    float orbNoise = noise(orbUV + time * 0.4);
     
-    // ===== 模糊发光效果 =====
-    // 为所有闪电元素添加柔和发光
-    float blurGlow = (mainLightning + centralBolt + branches + arc) * 0.25;
-    float blurRadius = smoothstep(0.0, 0.5, radius);
-    finalColor += mainColor * blurGlow * (1.0 - blurRadius) * 0.6;
+    // 创建圆形光球
+    float2 cellPos = fract(orbUV) - 0.5; // 每个格子的中心坐标
+    float orbDist = length(cellPos);
+    float orb = exp(-orbDist * 15.0); // 圆形光晕
     
-    // ===== 闪烁强度调制（降低阈值，使用musicIntensity）=====
-    // 全局闪烁（模拟雷暴瞬间）
-    float globalFlicker = 0.9; // 降低基础值，增加对比度
+    // 使用noise控制哪些格子有光球
+    float orbMask = step(0.75 - musicIntensity * 0.2, orbNoise);
+    float energyOrbs = orb * orbMask * (midAudioOriginal * 1.5 + musicIntensity);
     
-    // 强烈的低频脉冲闪烁（大幅降低阈值）
-    if (bassEnergy > 0.06 || bassResponse > 0.3) { // 从0.15降到0.06
-        globalFlicker += sin(time * 20.0 + bassEnergy * 40.0) * bassResponse * 0.5; // 使用bassResponse
-    }
+    // 5️⃣ 合并所有粒子效果
+    particles = sparks * 0.6 + edgeArc * 0.8 + dustParticles * 0.3 + energyOrbs * 0.5;
+    particles = clamp(particles, 0.0, 1.0);
     
-    // 高频细微闪烁（降低阈值）
-    if (trebleEnergy > 0.05 || trebleResponse > 0.2) {
-        globalFlicker += sin(time * 50.0 + trebleEnergy * 80.0) * trebleResponse * 0.2; // 使用trebleResponse
-    }
+    // ===== 简化的颜色系统 =====
+    // 青白色闪电（主色调）
+    float3 lightningColor = float3(0.3, 0.7, 1.0);
     
-    // 音乐强度闪烁（整体律动）
-    globalFlicker += sin(time * 12.0 + musicIntensity * 15.0) * musicIntensity * 0.15;
+    // 紫色高光（高音部分）
+    float3 trebleColor = float3(0.6, 0.4, 1.0);
     
-    finalColor *= globalFlicker;
+    // 纯白核心
+    float3 whiteCore = float3(1.0, 1.0, 1.0);
     
-    // ===== 色彩增强（使用musicIntensity）=====
-    // 根据音频强度调整色彩
-    float colorShift = musicIntensity * 0.25;
-    finalColor.r += colorShift * 0.12;
-    finalColor.b += colorShift * 0.18;
+    // 深色背景
+    float3 bgColor = float3(0.02, 0.03, 0.08);
     
-    // ===== 亮度控制（提高上限）=====
-    float intensity = length(finalColor);
-    if (intensity > 2.5) { // 从2.0提高到2.5
-        finalColor *= 2.5 / intensity;
-    }
+    // ===== 简单清晰的颜色合成 =====
+    // 背景色
+    float3 finalColor = bgColor * (1.0 + background);
     
-    // 提升对比度（增强）
-    finalColor = pow(finalColor, float3(0.92)); // 从0.95降到0.92，增强对比度
+    // 边缘淡化（只影响中心效果）
+    float edgeFade = smoothstep(0.6, 0.3, radius);
     
-    // ===== 边缘淡化 =====
-    float edgeFade = smoothstep(0.65, 0.35, radius);
-    finalColor *= edgeFade;
+    // 中心效果（受边缘淡化影响）
+    float3 centerEffects = float3(0.0);
+    centerEffects += lightningColor * mainLightning * 2.0;        // 主闪电条纹（低音）
+    centerEffects += whiteCore * centralBolt * 2.5;               // 中心闪电束（低音）
+    centerEffects += trebleColor * branches * 1.8;                // 径向枝干（高音）
+    centerEffects += lightningColor * arc * 1.5;                  // 电弧环（中音）
+    centerEffects += whiteCore * core * 1.5;                      // 中心核心（总能量）
+    centerEffects *= edgeFade; // 应用淡化
     
-    // ===== 透明度（提升可见度）=====
-    float alpha = mainLightning + centralBolt + branches + arc + beamFlash + lightningGrid + core + background * 0.6;
+    // ⚡️ 粒子效果（覆盖全屏，不受中心淡化影响）
+    float3 particleColor = mix(lightningColor, trebleColor, particles * 0.5);
+    float3 particleLayer = particleColor * particles * 1.2;
     
-    // 添加基础可见度（即使没有音频也有微弱效果）
-    alpha += 0.1;
+    // 最终合成
+    finalColor = finalColor + centerEffects + particleLayer;
     
-    alpha *= edgeFade;
-    alpha = clamp(alpha * 1.0, 0.0, 0.98); // 从0.8提高到1.0，提高上限到0.98
+    // ===== 透明度（清晰可见，包含粒子）=====
+    float alpha = mainLightning * 0.5 + centralBolt * 0.8 + branches * 0.6 + arc * 0.5 + core * 0.7 + background * 0.3 + particles * 0.4;
+    alpha = clamp(alpha * 1.5, 0.1, 0.95);
     
     // 最终颜色限制
     finalColor = clamp(finalColor, 0.0, 1.0);

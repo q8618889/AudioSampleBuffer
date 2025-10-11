@@ -626,19 +626,26 @@
 
 - (void)cyberpunkControlButtonTapped:(UIButton *)sender {
     if (!self.cyberpunkControlPanel) {
-        self.cyberpunkControlPanel = [[CyberpunkControlPanel alloc] initWithFrame:CGRectMake(20, 150, 
+        // 增加高度以容纳新增的网格和背景控制
+        self.cyberpunkControlPanel = [[CyberpunkControlPanel alloc] initWithFrame:CGRectMake(20, 100, 
                                                                                              self.view.bounds.size.width - 40, 
-                                                                                             350)];
+                                                                                             550)];
         self.cyberpunkControlPanel.delegate = self;
         [self.view addSubview:self.cyberpunkControlPanel];
         
-        // 设置默认值（全部开启）
+        // 设置默认值（全部开启，包含新增的网格和背景控制）
         NSDictionary *defaultSettings = @{
             @"enableClimaxEffect": @(1.0),
             @"enableBassEffect": @(1.0),
             @"enableMidEffect": @(1.0),
             @"enableTrebleEffect": @(1.0),
-            @"showDebugBars": @(1.0)
+            @"showDebugBars": @(0.0),  // 调试条默认关闭
+            @"enableGrid": @(1.0),     // 网格默认开启
+            @"backgroundMode": @(0.0), // 默认网格背景模式
+            @"solidColorR": @(0.15),
+            @"solidColorG": @(0.1),
+            @"solidColorB": @(0.25),
+            @"backgroundIntensity": @(0.8)
         };
         [self.cyberpunkControlPanel setCurrentSettings:defaultSettings];
     }
