@@ -700,13 +700,13 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     float highTrebleCount = step(0.3, trebleAudio);
     float activeChannels = highBassCount + highMidCount + highTrebleCount;
     
-    // 根据活跃频段数量计算抑制因子
+    // 根据活跃频段数量计算抑制因子（加强版）
     // 1个频段：不抑制 (1.0)
-    // 2个频段：抑制30% (0.7)
-    // 3个频段：抑制50% (0.5)
+    // 2个频段：抑制35% (0.65)
+    // 3个频段：抑制60% (0.4)
     float multiChannelSuppression = 1.0;
     if (activeChannels >= 2.0) {
-        multiChannelSuppression = 1.0 - (activeChannels - 1.0) * 0.25; // 每增加1个频段，抑制25%
+        multiChannelSuppression = 1.0 - (activeChannels - 1.0) * 0.3; // 每增加1个频段，抑制30%
     }
     
     // 对用于视觉效果的音频数据应用抑制（调试显示不受影响）
@@ -876,18 +876,18 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
         float2 climaxCenter = float2(0.5, 0.5);
         float climaxDist = length(glitchUV - climaxCenter);
         
-        // 多层冲击波（快速扩散）- 使用压缩后的isClimax，低值明显，高值不刺眼
-        // 创建一个压缩因子：isClimax越高，压缩越多
-        float climaxSoftFactor = 1.0 / (1.0 + isClimax * 0.3); // 高值时降低强度系数
+        // 多层冲击波（快速扩散）- 降低强度版本
+        // 创建一个压缩因子：isClimax越高，压缩越多（加强压缩）
+        float climaxSoftFactor = 1.0 / (1.0 + isClimax * 0.5); // 提高压缩(0.3→0.5)
         
         float wave1 = sin(climaxDist * 15.0 - time * 20.0 - totalEnergy * 30.0);
-        wave1 = smoothstep(0.4, 1.0, wave1) * isClimax * 0.25 * climaxSoftFactor;
+        wave1 = smoothstep(0.4, 1.0, wave1) * isClimax * 0.15 * climaxSoftFactor; // 降低(0.25→0.15)
         
         float wave2 = sin(climaxDist * 25.0 - time * 25.0 - bassAudio * 40.0);
-        wave2 = smoothstep(0.5, 1.0, wave2) * isClimax * 0.22 * climaxSoftFactor;
+        wave2 = smoothstep(0.5, 1.0, wave2) * isClimax * 0.13 * climaxSoftFactor; // 降低(0.22→0.13)
         
         float wave3 = sin(climaxDist * 35.0 - time * 30.0 - midAudio * 35.0);
-        wave3 = smoothstep(0.6, 1.0, wave3) * isClimax * 0.18 * climaxSoftFactor;
+        wave3 = smoothstep(0.6, 1.0, wave3) * isClimax * 0.11 * climaxSoftFactor; // 降低(0.18→0.11)
         
         float radialPulse = (wave1 + wave2 + wave3) * (1.0 + totalEnergy * 0.4);
         
@@ -1051,24 +1051,24 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     float purpleIntensity = (scanWave + scanWave2 + trebleScan) * (1.2 + bassAudio * 2.5);
     float3 purpleNeon = float3(0.8, 0.0, 1.0) * purpleIntensity;
     
-    // 🔥 高潮时的特殊配色（使用压缩后的isClimax + 多频段抑制）
+    // 🔥 高潮时的特殊配色（降低强度版本 + 多频段抑制）
     float3 climaxColor = float3(0.0);
     
-    // 使用平方根软化 + 多频段抑制
-    float climaxColorFactor = sqrt(isClimax) * 0.6 * multiChannelSuppression; // 添加多频段抑制
+    // 使用平方根软化 + 多频段抑制 + 进一步降低系数
+    float climaxColorFactor = sqrt(isClimax) * 0.4 * multiChannelSuppression; // 降低(0.6→0.4)
     
-    // 柔和的金色光晕
-    float3 goldCore = float3(0.9, 0.8, 0.4) * climaxEffect * 0.35 * climaxColorFactor;
-    // 柔和的暖橙色
-    float3 orangeGlow = float3(0.8, 0.5, 0.2) * climaxEffect * 0.22 * climaxColorFactor;
+    // 柔和的金色光晕（降低强度）
+    float3 goldCore = float3(0.9, 0.8, 0.4) * climaxEffect * 0.22 * climaxColorFactor; // 降低(0.35→0.22)
+    // 柔和的暖橙色（降低强度）
+    float3 orangeGlow = float3(0.8, 0.5, 0.2) * climaxEffect * 0.15 * climaxColorFactor; // 降低(0.22→0.15)
     
     climaxColor = goldCore + orangeGlow;
     
-    // 霓虹颜色增强（使用压缩后的值 + 多频段抑制）
-    float neonBoost = sqrt(isClimax) * 0.45 * multiChannelSuppression; // 添加抑制
-    cyanNeon *= (1.0 + neonBoost);
-    magentaNeon *= (1.0 + neonBoost * 1.05);
-    purpleNeon *= (1.0 + neonBoost * 1.1);
+    // 霓虹颜色增强（使用压缩后的值 + 多频段抑制 + 降低系数）
+    float neonBoost = sqrt(isClimax) * 0.3 * multiChannelSuppression; // 降低(0.45→0.3)
+    cyanNeon *= (1.0 + neonBoost * 0.8); // 降低增益
+    magentaNeon *= (1.0 + neonBoost * 0.85);
+    purpleNeon *= (1.0 + neonBoost * 0.9);
     
     // 数字雨颜色（绿色到青色渐变）
     float3 digitColor = mix(
@@ -1094,37 +1094,28 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
         trebleAudio
     ) * particles;
     
-    // ===== 9. 音频驱动的边缘冲击波（主要由音频控制）=====
+    // ===== 9. 音频驱动的边缘冲击波（单频段响应版本）=====
     float edgeDist = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
     
-    // 边缘脉冲 - 极弱基础 + 强烈音频响应
-    float baseEdgeIntensity = 0.03; // 极弱基础，几乎不可见
-    float edgePulse = smoothstep(0.05, 0.35, bassAudio); // 音频驱动
-    float edgeGlow = exp(-edgeDist * 6.0) * (baseEdgeIntensity + edgePulse * 1.2);
-    edgeGlow *= (0.5 + bassAudio * 3.0); // 主要靠音频驱动亮度
+    // 🎯 只响应最强的单个频段（避免叠加）
+    float maxAudio = max(max(bassAudio, midAudio), trebleAudio);
     
-    // 边缘闪光效果 - 多频段触发
-    // 1. 低音触发（主要触发源）
-    float bassFlashTrigger = smoothstep(0.05, 0.35, bassAudio);
+    // 边缘脉冲 - 使用最强频段
+    float baseEdgeIntensity = 0.01; // 极低基础
+    float edgePulse = smoothstep(0.05, 0.35, maxAudio); // 只使用最强音频
+    float edgeGlow = exp(-edgeDist * 15.0) * (baseEdgeIntensity + edgePulse * 0.3);
+    edgeGlow *= (0.15 + maxAudio * 0.8); // 使用最强音频，移除抑制因子
     
-    // 2. 中音触发（让中频也能触发闪光）
-    float midFlashTrigger = smoothstep(0.08, 0.38, midAudio) * 0.85;
+    // 边缘闪光效果 - 只使用最强频段触发（避免叠加）
+    float maxFlashTrigger = smoothstep(0.05, 0.35, maxAudio) * 0.5;
     
-    // 3. 高音触发（高频音效时也闪烁）
-    float trebleFlashTrigger = smoothstep(0.1, 0.4, trebleAudio) * 0.7;
+    // 闪光效果（极致缩小范围，降低亮度）
+    float edgeFlash = exp(-edgeDist * 25.0) * maxFlashTrigger * (0.3 + maxAudio * 0.5);
     
-    // 4. 整体音频能量触发（任何频段有能量就能触发）
-    float totalAudioEnergy = (bassAudio + midAudio + trebleAudio) / 3.0;
-    float energyFlashTrigger = smoothstep(0.06, 0.32, totalAudioEnergy) * 0.75;
-    
-    // 组合所有触发源（取最大值，确保任意一个触发都能生效）
-    float combinedFlashTrigger = max(max(bassFlashTrigger, midFlashTrigger), 
-                                     max(trebleFlashTrigger, energyFlashTrigger));
-    
-    // 闪光效果（根据主要频段强度调整亮度）
-    float edgeFlash = exp(-edgeDist * 12.0) * combinedFlashTrigger * (1.0 + totalAudioEnergy * 2.5);
-    
-    float3 edgeColor = float3(1.0, 0.0, 0.5) * (edgeGlow + edgeFlash);
+    // 固定深紫蓝色（不随强度变白）- 始终保持颜色
+    float edgeIntensity = (edgeGlow + edgeFlash) * 0.45;
+    edgeIntensity = clamp(edgeIntensity, 0.0, 1.0); // 限制强度，防止过亮
+    float3 edgeColor = float3(0.4, 0.2, 0.8) * edgeIntensity; // 固定颜色 × 强度
     
     // ===== 10. RGB色差（Chromatic Aberration）=====
     float rgbSplit = bassAudio * 0.02;

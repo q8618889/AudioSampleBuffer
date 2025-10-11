@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4C49068E2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C49068D2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 */; };
+		4C4906902E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C49068F2E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 */; };
 		4C66E6D92E8A89E8003200DA /* Vicetone - Tremble (Original Mix).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6D42E8A89E8003200DA /* Vicetone - Tremble (Original Mix).mp3 */; };
 		4C66E6DA2E8A89E8003200DA /* ILLENIUM,Nevve - Fractures.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6CA2E8A89E8003200DA /* ILLENIUM,Nevve - Fractures.mp3 */; };
 		4C66E6DB2E8A89E8003200DA /* Alida - Feathers.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6C72E8A89E8003200DA /* Alida - Feathers.mp3 */; };
@@ -55,8 +57,12 @@
 		4C77CD152E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD0F2E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 */; };
 		4C77CD162E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD122E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 */; };
 		4C77CD172E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD0E2E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 */; };
-		4C77CD182E98F31B008EA7C6 /* 黑豹乐队 - 散，作鸟兽 2.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD0D2E98F31B008EA7C6 /* 黑豹乐队 - 散，作鸟兽 2.mp3 */; };
 		4C77CD1B2E990F61008EA7C6 /* CyberpunkControlPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C77CD1A2E990F61008EA7C6 /* CyberpunkControlPanel.m */; };
+		4C77CD242E9925A5008EA7C6 /* 痛仰乐队 - 为你唱首歌.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD212E9925A5008EA7C6 /* 痛仰乐队 - 为你唱首歌.mp3 */; };
+		4C77CD252E9925A5008EA7C6 /* DOUDOU - 南三环东路.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD232E9925A5008EA7C6 /* DOUDOU - 南三环东路.mp3 */; };
+		4C77CD262E9925A5008EA7C6 /* DOUDOU - 拂过沙的光.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD222E9925A5008EA7C6 /* DOUDOU - 拂过沙的光.mp3 */; };
+		4C77CD272E9925A5008EA7C6 /* 八仙 8Immortals - 单身旅记 (Live).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD1F2E9925A5008EA7C6 /* 八仙 8Immortals - 单身旅记 (Live).mp3 */; };
+		4C77CD282E9925A5008EA7C6 /* 华晨宇 - 向阳而生.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD202E9925A5008EA7C6 /* 华晨宇 - 向阳而生.mp3 */; };
 		64C5446228C838D100C23393 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5446128C838D100C23393 /* AppDelegate.m */; };
 		64C5446828C838D100C23393 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 64C5446728C838D100C23393 /* ViewController.m */; };
 		64C5446B28C838D100C23393 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 64C5446928C838D100C23393 /* Main.storyboard */; };
@@ -73,6 +79,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		4C49068D2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Imagine Dragons - Shots.mp3"; sourceTree = "<group>"; };
+		4C49068F2E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3"; sourceTree = "<group>"; };
 		4C66E6BA2E8A89E8003200DA /* 陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3"; sourceTree = "<group>"; };
 		4C66E6BB2E8A89E8003200DA /* 初音ミク,CosMo@暴走P - 初音未来的消失.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "初音ミク,CosMo@暴走P - 初音未来的消失.mp3"; sourceTree = "<group>"; };
 		4C66E6BE2E8A89E8003200DA /* 金骏植 - My Everthing.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "金骏植 - My Everthing.mp3"; sourceTree = "<group>"; };
@@ -127,7 +135,6 @@
 		4C66E71C2E8A98FB003200DA /* GalaxyControlPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GalaxyControlPanel.m; sourceTree = "<group>"; };
 		4C77CD092E98DB75008EA7C6 /* Jonah Kagen - God Needs The Devil.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Jonah Kagen - God Needs The Devil.mp3"; sourceTree = "<group>"; };
 		4C77CD0B2E98DC71008EA7C6 /* 黑豹乐队 - 散，作鸟兽.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "黑豹乐队 - 散，作鸟兽.mp3"; sourceTree = "<group>"; };
-		4C77CD0D2E98F31B008EA7C6 /* 黑豹乐队 - 散，作鸟兽 2.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "黑豹乐队 - 散，作鸟兽 2.mp3"; sourceTree = "<group>"; };
 		4C77CD0E2E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "梁博 - 出现又离开 (Live).mp3"; sourceTree = "<group>"; };
 		4C77CD0F2E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周深 - 光亮 (Live版).mp3"; sourceTree = "<group>"; };
 		4C77CD102E98F31B008EA7C6 /* A公馆 - 海浪回潮.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "A公馆 - 海浪回潮.mp3"; sourceTree = "<group>"; };
@@ -135,6 +142,11 @@
 		4C77CD122E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "LOVE PSYCHEDELICO - Last Smile.mp3"; sourceTree = "<group>"; };
 		4C77CD192E990F61008EA7C6 /* CyberpunkControlPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CyberpunkControlPanel.h; sourceTree = "<group>"; };
 		4C77CD1A2E990F61008EA7C6 /* CyberpunkControlPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CyberpunkControlPanel.m; sourceTree = "<group>"; };
+		4C77CD1F2E9925A5008EA7C6 /* 八仙 8Immortals - 单身旅记 (Live).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "八仙 8Immortals - 单身旅记 (Live).mp3"; sourceTree = "<group>"; };
+		4C77CD202E9925A5008EA7C6 /* 华晨宇 - 向阳而生.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "华晨宇 - 向阳而生.mp3"; sourceTree = "<group>"; };
+		4C77CD212E9925A5008EA7C6 /* 痛仰乐队 - 为你唱首歌.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "痛仰乐队 - 为你唱首歌.mp3"; sourceTree = "<group>"; };
+		4C77CD222E9925A5008EA7C6 /* DOUDOU - 拂过沙的光.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "DOUDOU - 拂过沙的光.mp3"; sourceTree = "<group>"; };
+		4C77CD232E9925A5008EA7C6 /* DOUDOU - 南三环东路.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "DOUDOU - 南三环东路.mp3"; sourceTree = "<group>"; };
 		64C5445D28C838D100C23393 /* AudioSampleBuffer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioSampleBuffer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		64C5446028C838D100C23393 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		64C5446128C838D100C23393 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -176,7 +188,7 @@
 		4C66E6D82E8A89E8003200DA /* Audio */ = {
 			isa = PBXGroup;
 			children = (
-				4C77CD0D2E98F31B008EA7C6 /* 黑豹乐队 - 散，作鸟兽 2.mp3 */,
+				4C49068D2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 */,
 				4C77CD0E2E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 */,
 				4C77CD0F2E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 */,
 				4C77CD102E98F31B008EA7C6 /* A公馆 - 海浪回潮.mp3 */,
@@ -212,6 +224,12 @@
 				4C66E6D62E8A89E8003200DA /* Zedd - Ignite.mp3 */,
 				4C66E6D72E8A89E8003200DA /* Zero Venture - Northern Skies (Original Mix).mp3 */,
 				4C77CD0B2E98DC71008EA7C6 /* 黑豹乐队 - 散，作鸟兽.mp3 */,
+				4C77CD1F2E9925A5008EA7C6 /* 八仙 8Immortals - 单身旅记 (Live).mp3 */,
+				4C77CD202E9925A5008EA7C6 /* 华晨宇 - 向阳而生.mp3 */,
+				4C77CD212E9925A5008EA7C6 /* 痛仰乐队 - 为你唱首歌.mp3 */,
+				4C77CD222E9925A5008EA7C6 /* DOUDOU - 拂过沙的光.mp3 */,
+				4C77CD232E9925A5008EA7C6 /* DOUDOU - 南三环东路.mp3 */,
+				4C49068F2E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -394,6 +412,7 @@
 				4C66E6E72E8A89E8003200DA /* Imagine Dragons - Warriors.mp3 in Resources */,
 				4C66E6E82E8A89E8003200DA /* Taylor Swift - I Knew You Were Trouble..mp3 in Resources */,
 				4C66E6E92E8A89E8003200DA /* 马頔 - 无畏.mp3 in Resources */,
+				4C49068E2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 in Resources */,
 				4C66E6EA2E8A89E8003200DA /* Lenka - Crystal Ball.mp3 in Resources */,
 				4C77CD0C2E98DC71008EA7C6 /* 黑豹乐队 - 散，作鸟兽.mp3 in Resources */,
 				4C66E6EB2E8A89E8003200DA /* Elektronomia - Vision.mp3 in Resources */,
@@ -406,10 +425,10 @@
 				4C77CD152E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 in Resources */,
 				4C77CD162E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 in Resources */,
 				4C77CD172E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 in Resources */,
-				4C77CD182E98F31B008EA7C6 /* 黑豹乐队 - 散，作鸟兽 2.mp3 in Resources */,
 				4C66E6F02E8A89E8003200DA /* CMA - You're Not Alone.mp3 in Resources */,
 				4C66E6F12E8A89E8003200DA /* Missio - I See You.mp3 in Resources */,
 				4C66E6F22E8A89E8003200DA /* 周深 - Rubia.mp3 in Resources */,
+				4C4906902E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 in Resources */,
 				4C66E6F32E8A89E8003200DA /* 岩崎琢 - Bang! Bang! Bang! Bang! Have a Nice Dream.mp3 in Resources */,
 				4C66E7052E8A8DBB003200DA /* README.md in Resources */,
 				4C66E6F42E8A89E8003200DA /* 鈴木瑛美子 - フロントメモリー.mp3 in Resources */,
@@ -417,6 +436,11 @@
 				4C66E6F62E8A89E8003200DA /* 陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3 in Resources */,
 				4C77CD0A2E98DB75008EA7C6 /* Jonah Kagen - God Needs The Devil.mp3 in Resources */,
 				64C5446D28C838D400C23393 /* Assets.xcassets in Resources */,
+				4C77CD242E9925A5008EA7C6 /* 痛仰乐队 - 为你唱首歌.mp3 in Resources */,
+				4C77CD252E9925A5008EA7C6 /* DOUDOU - 南三环东路.mp3 in Resources */,
+				4C77CD262E9925A5008EA7C6 /* DOUDOU - 拂过沙的光.mp3 in Resources */,
+				4C77CD272E9925A5008EA7C6 /* 八仙 8Immortals - 单身旅记 (Live).mp3 in Resources */,
+				4C77CD282E9925A5008EA7C6 /* 华晨宇 - 向阳而生.mp3 in Resources */,
 				64C5446B28C838D100C23393 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
