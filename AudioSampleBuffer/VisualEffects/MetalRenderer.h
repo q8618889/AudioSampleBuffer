@@ -145,6 +145,12 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 /**
+ * 闪电雷暴渲染器
+ */
+@interface LightningRenderer : BaseMetalRenderer
+@end
+
+/**
  * 默认效果渲染器
  */
 @interface DefaultEffectRenderer : BaseMetalRenderer

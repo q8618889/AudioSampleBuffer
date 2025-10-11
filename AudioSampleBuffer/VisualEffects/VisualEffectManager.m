@@ -186,6 +186,15 @@
             settings[@"audioSensitivity"] = @(1.5);
             break;
             
+        case VisualEffectTypeLightning:
+            settings[@"boltIntensity"] = @(1.5);
+            settings[@"branchDensity"] = @(0.8);
+            settings[@"flickerSpeed"] = @(2.0);
+            settings[@"electricArcRadius"] = @(0.25);
+            settings[@"bassResponse"] = @(1.5);
+            settings[@"trebleResponse"] = @(1.2);
+            break;
+            
         default:
             settings[@"intensity"] = @(1.0);
             break;
@@ -496,6 +505,7 @@
         case VisualEffectTypeCyberPunk:
         case VisualEffectTypeGalaxy:
         case VisualEffectTypeLiquidMetal:
+        case VisualEffectTypeLightning:
             return YES;
             
         case VisualEffectTypeClassicSpectrum:

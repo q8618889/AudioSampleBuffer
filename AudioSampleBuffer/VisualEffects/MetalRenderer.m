@@ -702,6 +702,52 @@ typedef struct {
 
 @end
 
+@implementation LightningRenderer
+
+- (void)setupPipeline {
+    // 创建闪电雷暴效果的渲染管线
+    MTLRenderPipelineDescriptor *pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+    pipelineDescriptor.label = @"Lightning";
+    pipelineDescriptor.vertexFunction = [self.defaultLibrary newFunctionWithName:@"neon_vertex"];
+    pipelineDescriptor.fragmentFunction = [self.defaultLibrary newFunctionWithName:@"lightning_fragment"];
+    pipelineDescriptor.colorAttachments[0].pixelFormat = self.metalView.colorPixelFormat;
+    
+    // 配置MSAA采样 - 匹配MTKView的设置
+    pipelineDescriptor.sampleCount = self.metalView.sampleCount;
+    
+    // 配置深度缓冲格式
+    pipelineDescriptor.depthAttachmentPixelFormat = self.metalView.depthStencilPixelFormat;
+    
+    // 启用混合
+    pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
+    pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
+    pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+    pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+    
+    NSError *error;
+    self.pipelineState = [self.device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+    
+    if (!self.pipelineState) {
+        NSLog(@"❌ 创建闪电雷暴管线失败: %@", error);
+        NSLog(@"❌ 顶点函数: %@", pipelineDescriptor.vertexFunction);
+        NSLog(@"❌ 片段函数: %@", pipelineDescriptor.fragmentFunction);
+        return;
+    }
+}
+
+- (void)encodeRenderCommands:(id<MTLRenderCommandEncoder>)encoder {
+    if (!self.pipelineState) return;
+    
+    [encoder setRenderPipelineState:self.pipelineState];
+    [encoder setVertexBuffer:self.uniformBuffer offset:0 atIndex:0];
+    [encoder setFragmentBuffer:self.uniformBuffer offset:0 atIndex:0];
+    
+    // 绘制全屏四边形
+    [encoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+}
+
+@end
+
 @implementation DefaultEffectRenderer
 
 - (void)setupPipeline {
@@ -787,6 +833,9 @@ typedef struct {
             
         case VisualEffectTypeLiquidMetal:
             return [[LiquidMetalRenderer alloc] initWithMetalView:metalView];
+            
+        case VisualEffectTypeLightning:
+            return [[LightningRenderer alloc] initWithMetalView:metalView];
             
         default:
             return [[DefaultEffectRenderer alloc] initWithMetalView:metalView];
