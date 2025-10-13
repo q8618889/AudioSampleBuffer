@@ -308,70 +308,67 @@ fragment float4 lightning_fragment(RasterizerData in [[stage_in]],
     core *= (0.5 + totalEnergy * 1.5 + musicIntensity * 2.0);
     core = clamp(core, 0.0, 1.0);
     
-    // ===== ⚡️ 闪电粒子系统（覆盖整个屏幕）=====
+    // ===== ⚡️ 闪电粒子系统（清晰大粒子，不是噪点）=====
     float particles = 0.0;
     
-    // 1️⃣ 飘动的电火花（使用noise生成伪随机粒子位置）
-    float2 sparkUV = uv * 15.0; // 15x15的网格
-    sparkUV.x += time * 0.3; // 横向飘动
-    sparkUV.y += sin(uv.x * 6.28 + time) * 0.2; // 波浪式移动
+    // 1️⃣ 清晰的大电火花（高音驱动）
+    float2 sparkUV = uv * 8.0; // 减少到8x8网格（更稀疏）
+    sparkUV.x += time * 0.4; // 横向飘动
+    sparkUV.y += sin(uv.x * 6.28 + time * 1.5) * 0.3; // 波浪式移动
     
-    // 使用noise生成粒子
-    float sparkNoise = noise(sparkUV);
-    sparkNoise += noise(sparkUV * 2.3 + time * 0.5) * 0.5; // 多层次
+    // 使用noise确定粒子位置
+    float sparkNoise = noise(sparkUV + time * 0.3);
     
-    // 创建小的闪光点（阈值越高，粒子越少）
-    float sparkThreshold = 0.85 - musicIntensity * 0.15; // 音频越强，粒子越多
-    float sparks = smoothstep(sparkThreshold, sparkThreshold + 0.08, sparkNoise);
+    // 大幅提高阈值，只留下少量明显的粒子
+    float sparkThreshold = 0.75 + (1.0 - musicIntensity) * 0.15; // 基础阈值0.75，音频弱时更高
+    float sparkMask = smoothstep(sparkThreshold, sparkThreshold + 0.1, sparkNoise);
     
-    // 音频控制粒子强度
-    sparks *= (0.3 + totalEnergy * 1.2 + trebleAudioOriginal * 0.8);
+    // 在每个格子中心创建大光晕（不是点）
+    float2 cellPos = fract(sparkUV) - 0.5;
+    float sparkDist = length(cellPos);
+    float sparkGlow = exp(-sparkDist * 8.0); // 大光晕（8.0比较柔和）
     
-    // 2️⃣ 屏幕边缘的电弧放电
+    // 只有被选中的格子才显示粒子
+    float sparks = sparkGlow * sparkMask;
+    
+    // 高音控制粒子亮度
+    sparks *= (trebleAudioOriginal * 2.5 + musicIntensity * 1.5);
+    sparks = clamp(sparks, 0.0, 1.0);
+    
+    // 2️⃣ 屏幕边缘的电弧放电（保持）
     float edgeArc = 0.0;
     
     // 四边的电弧（距离边缘越近越亮）
-    float distToEdge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)); // 到最近边缘的距离
-    float edgeMask = smoothstep(0.15, 0.0, distToEdge); // 边缘15%范围内
+    float distToEdge = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+    float edgeMask = smoothstep(0.15, 0.0, distToEdge);
     
-    // 边缘电弧纹理
-    float edgePattern = abs(sin((uv.x + uv.y) * 20.0 + time * 3.0));
-    edgePattern = pow(edgePattern, 6.0); // 锐化
+    // 边缘电弧纹理（更清晰）
+    float edgePattern = abs(sin((uv.x + uv.y) * 15.0 + time * 4.0));
+    edgePattern = pow(edgePattern, 8.0); // 更锐利的线条
     
     // 低音触发边缘放电
-    edgeArc = edgeMask * edgePattern * (bassAudioOriginal * 2.0 + musicIntensity * 0.8);
+    edgeArc = edgeMask * edgePattern * (bassAudioOriginal * 3.0 + musicIntensity * 1.5);
+    edgeArc = clamp(edgeArc, 0.0, 1.0);
     
-    // 3️⃣ 漂浮的电光微粒（更密集，覆盖全屏）
-    float2 dustUV = uv * 25.0; // 25x25的网格（更密集）
-    dustUV += float2(time * 0.15, time * -0.1); // 慢速飘动
+    // 3️⃣ 移除密集微粒（避免噪点）
+    // float dustParticles = 0.0; // 已移除
     
-    // 多层noise创建细小微粒
-    float dust = noise(dustUV);
-    dust += noise(dustUV * 1.7 + time * 0.3) * 0.6;
-    dust += noise(dustUV * 2.9 - time * 0.2) * 0.3;
-    
-    // 创建细小光点
-    float dustThreshold = 0.92 - musicIntensity * 0.1;
-    float dustParticles = smoothstep(dustThreshold, dustThreshold + 0.05, dust);
-    
-    // 微粒强度（受高音影响）
-    dustParticles *= (0.2 + trebleAudioOriginal * 0.8 + musicIntensity * 0.4);
-    
-    // 4️⃣ 随机闪烁的能量球（中等大小）
-    float2 orbUV = uv * 6.0; // 6x6网格
-    float orbNoise = noise(orbUV + time * 0.4);
+    // 4️⃣ 清晰的大能量球（中音驱动）
+    float2 orbUV = uv * 5.0; // 5x5网格
+    float orbNoise = noise(orbUV + time * 0.5);
     
     // 创建圆形光球
-    float2 cellPos = fract(orbUV) - 0.5; // 每个格子的中心坐标
-    float orbDist = length(cellPos);
-    float orb = exp(-orbDist * 15.0); // 圆形光晕
+    float2 orbCellPos = fract(orbUV) - 0.5;
+    float orbDist = length(orbCellPos);
+    float orb = exp(-orbDist * 10.0); // 大光晕
     
-    // 使用noise控制哪些格子有光球
-    float orbMask = step(0.75 - musicIntensity * 0.2, orbNoise);
-    float energyOrbs = orb * orbMask * (midAudioOriginal * 1.5 + musicIntensity);
+    // 提高阈值，只显示部分光球
+    float orbMask = step(0.65 - musicIntensity * 0.25, orbNoise);
+    float energyOrbs = orb * orbMask * (midAudioOriginal * 2.5 + musicIntensity * 1.5);
+    energyOrbs = clamp(energyOrbs, 0.0, 1.0);
     
-    // 5️⃣ 合并所有粒子效果
-    particles = sparks * 0.6 + edgeArc * 0.8 + dustParticles * 0.3 + energyOrbs * 0.5;
+    // 5️⃣ 合并清晰粒子效果（去掉噪点层）
+    particles = sparks * 0.8 + edgeArc * 1.0 + energyOrbs * 0.7;
     particles = clamp(particles, 0.0, 1.0);
     
     // ===== 简化的颜色系统 =====

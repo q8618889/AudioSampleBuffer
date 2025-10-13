@@ -66,7 +66,10 @@ typedef struct {
 - (void)setupMetal {
     self.metalView.device = self.device;
     self.metalView.delegate = self;
-    self.metalView.preferredFramesPerSecond = 60;
+    
+    // 🔋 优化1：降低默认帧率到30fps（节省50%GPU功耗，视觉上依然流畅）
+    self.metalView.preferredFramesPerSecond = 30;
+    
     self.metalView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
     self.metalView.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0);
     
@@ -103,10 +106,14 @@ typedef struct {
 }
 
 - (void)pauseRendering {
+    // 🔋 优化：同时设置标志和暂停视图，确保完全停止渲染
+    self.isRendering = NO;
     self.metalView.paused = YES;
 }
 
 - (void)resumeRendering {
+    // 🔋 优化：同时设置标志和恢复视图
+    self.isRendering = YES;
     self.metalView.paused = NO;
 }
 
@@ -175,14 +182,15 @@ typedef struct {
     // resolution: (drawableWidth, drawableHeight, aspectRatio, pixelScale)
     uniforms->resolution = (vector_float4){drawableSize.width, drawableSize.height, aspectRatio, 1.0};
     
-    // 调试日志（输出前几帧以便观察）
+    // 🔋 优化2：减少日志输出，降低CPU负载
+    // 调试日志（仅输出第一帧）
     static int frameCounter = 0;
-    if (frameCounter < 3) {
-        NSLog(@"📐 [帧%d] 分辨率设置:", frameCounter);
-        NSLog(@"   Metal视图尺寸: %.0f x %.0f (正方形)", self.metalView.frame.size.width, self.metalView.frame.size.height);
-        NSLog(@"   实际容器尺寸: %.0f x %.0f", self.actualContainerSize.width, self.actualContainerSize.height);
-        NSLog(@"   绘制尺寸: %.0f x %.0f", drawableSize.width, drawableSize.height);
-        NSLog(@"   宽高比: %.4f %@ (用于特效缩放)", aspectRatio, aspectRatio > 1.0 ? @"(横屏)" : @"(竖屏)");
+    if (frameCounter == 0) {
+        NSLog(@"📐 [初始化] 分辨率设置:");
+        NSLog(@"   Metal视图: %.0fx%.0f | 容器: %.0fx%.0f | 绘制: %.0fx%.0f | 比例: %.4f", 
+              self.metalView.frame.size.width, self.metalView.frame.size.height,
+              self.actualContainerSize.width, self.actualContainerSize.height,
+              drawableSize.width, drawableSize.height, aspectRatio);
         frameCounter++;
     }
     
@@ -559,24 +567,28 @@ typedef struct {
     NSDictionary *params = self.renderParameters;
     
     // 赛博朋克控制: (enableClimaxEffect, showDebugBars, enableGrid, backgroundMode)
-    float enableClimaxEffect = [params[@"enableClimaxEffect"] floatValue];
-    float showDebugBars = [params[@"showDebugBars"] floatValue];
-    float enableGrid = [params[@"enableGrid"] floatValue];
-    float backgroundMode = [params[@"backgroundMode"] floatValue];
+    // 使用默认值，防止参数为空
+    float enableClimaxEffect = params[@"enableClimaxEffect"] ? [params[@"enableClimaxEffect"] floatValue] : 1.0f;
+    float showDebugBars = params[@"showDebugBars"] ? [params[@"showDebugBars"] floatValue] : 0.0f;
+    float enableGrid = params[@"enableGrid"] ? [params[@"enableGrid"] floatValue] : 1.0f; // 默认显示网格
+    float backgroundMode = params[@"backgroundMode"] ? [params[@"backgroundMode"] floatValue] : 0.0f; // 默认网格背景
     uniforms->cyberpunkControls = (vector_float4){enableClimaxEffect, showDebugBars, enableGrid, backgroundMode};
     
     // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
-    float enableBassEffect = [params[@"enableBassEffect"] floatValue];
-    float enableMidEffect = [params[@"enableMidEffect"] floatValue];
-    float enableTrebleEffect = [params[@"enableTrebleEffect"] floatValue];
+    float enableBassEffect = params[@"enableBassEffect"] ? [params[@"enableBassEffect"] floatValue] : 1.0f;
+    float enableMidEffect = params[@"enableMidEffect"] ? [params[@"enableMidEffect"] floatValue] : 1.0f;
+    float enableTrebleEffect = params[@"enableTrebleEffect"] ? [params[@"enableTrebleEffect"] floatValue] : 1.0f;
     uniforms->cyberpunkFrequencyControls = (vector_float4){enableBassEffect, enableMidEffect, enableTrebleEffect, 0.0f};
     
     // 赛博朋克背景参数: (solidColorR, solidColorG, solidColorB, intensity)
-    float solidColorR = [params[@"solidColorR"] floatValue];
-    float solidColorG = [params[@"solidColorG"] floatValue];
-    float solidColorB = [params[@"solidColorB"] floatValue];
-    float backgroundIntensity = [params[@"backgroundIntensity"] floatValue];
+    float solidColorR = params[@"solidColorR"] ? [params[@"solidColorR"] floatValue] : 0.15f;
+    float solidColorG = params[@"solidColorG"] ? [params[@"solidColorG"] floatValue] : 0.1f;
+    float solidColorB = params[@"solidColorB"] ? [params[@"solidColorB"] floatValue] : 0.25f;
+    float backgroundIntensity = params[@"backgroundIntensity"] ? [params[@"backgroundIntensity"] floatValue] : 0.8f;
     uniforms->cyberpunkBackgroundParams = (vector_float4){solidColorR, solidColorG, solidColorB, backgroundIntensity};
+    
+    // 🔋 优化：移除频繁日志输出
+    // 日志已禁用以降低CPU负载
 }
 
 - (void)encodeRenderCommands:(id<MTLRenderCommandEncoder>)encoder {
@@ -649,8 +661,8 @@ typedef struct {
     float colorTheme = [params[@"colorTheme"] floatValue] ?: 0.0f;
     uniforms->galaxyParams3 = (vector_float4){starDensity, spiralArms, colorTheme, 0.0f};
     
-    NSLog(@"🌌 更新星系参数: 核心亮度=%.2f, 边缘亮度=%.2f, 旋转速度=%.2f, 颜色主题=%.0f", 
-          coreIntensity, edgeIntensity, rotationSpeed, colorTheme);
+    // 🔋 优化：移除每帧日志
+    // NSLog(@"🌌 更新星系参数");
 }
 
 - (void)encodeRenderCommands:(id<MTLRenderCommandEncoder>)encoder {

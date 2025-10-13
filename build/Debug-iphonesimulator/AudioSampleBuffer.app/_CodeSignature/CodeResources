@@ -4,10 +4,6 @@
 <dict>
 	<key>files</key>
 	<dict>
-		<key>Akeboshi - wind (ワインド).mp3</key>
-		<data>
-		UuOqJu7z3h5aY+He+z5yeE+HeSo=
-		</data>
 		<key>Alex Aiono,Feder,MDZN - Lordly (MDZN Remix).mp3</key>
 		<data>
 		BJ170Ike23P0y68g0XavTi47abk=
@@ -59,6 +55,10 @@
 		<key>DOUDOU - 拂过沙的光.mp3</key>
 		<data>
 		8PUvLi1DjM8s0UV37dvMp2yDGcs=
+		</data>
+		<key>DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3</key>
+		<data>
+		h2ivUrvmej+71NN64PFjMM2LzEw=
 		</data>
 		<key>Elektronomia - Vision.mp3</key>
 		<data>
@@ -146,7 +146,7 @@
 		</data>
 		<key>default.metallib</key>
 		<data>
-		RIKvnLcjjjSyqJyA4P8ZlYd1NeU=
+		J+AObs8iv7IIZ0CwgWY+GVOMBmc=
 		</data>
 		<key>八仙 8Immortals - 单身旅记 (Live).mp3</key>
 		<data>
@@ -159,6 +159,10 @@
 		<key>华晨宇 - 向阳而生.mp3</key>
 		<data>
 		EX0fTVrgR9j8pbmB0+j5Jt8gL0M=
+		</data>
+		<key>吴垚滔,DOUDOU - 暮野荒原.mp3</key>
+		<data>
+		5xXCsEBuZT+nnVjBfm9JBQjMuMY=
 		</data>
 		<key>周深 - Rubia.mp3</key>
 		<data>
@@ -176,13 +180,13 @@
 		<data>
 		xnC3cy+w/rVBofD7iyW9P89x9FI=
 		</data>
-		<key>心要野.mp3</key>
-		<data>
-		+wK9ZRgbYjsTYWWpSHjK+0TzQEA=
-		</data>
 		<key>梁博 - 出现又离开 (Live).mp3</key>
 		<data>
 		fBjNFItve9tmG7zhYKQAqxgG4N8=
+		</data>
+		<key>爱宝 - bangbang.mp3</key>
+		<data>
+		vif/eSHKtGwpQ3G9u5raAmL6jok=
 		</data>
 		<key>痛仰乐队 - 为你唱首歌.mp3</key>
 		<data>
@@ -211,17 +215,6 @@
 	</dict>
 	<key>files2</key>
 	<dict>
-		<key>Akeboshi - wind (ワインド).mp3</key>
-		<dict>
-			<key>hash</key>
-			<data>
-			UuOqJu7z3h5aY+He+z5yeE+HeSo=
-			</data>
-			<key>hash2</key>
-			<data>
-			GAEN67opDL2pRJsHX1tpzQctInVH0x5EIQIEkNuboDY=
-			</data>
-		</dict>
 		<key>Alex Aiono,Feder,MDZN - Lordly (MDZN Remix).mp3</key>
 		<dict>
 			<key>hash</key>
@@ -363,6 +356,17 @@
 			<key>hash2</key>
 			<data>
 			6nv4BLEzMC31AuS0i8UA9zCi6X3BXQ2sMPdt57s5UK8=
+			</data>
+		</dict>
+		<key>DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			h2ivUrvmej+71NN64PFjMM2LzEw=
+			</data>
+			<key>hash2</key>
+			<data>
+			/9aOAXqAHSF3X+59rNTUyLZjYpyi2HwP1sNvom5y2gM=
 			</data>
 		</dict>
 		<key>Elektronomia - Vision.mp3</key>
@@ -578,11 +582,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			RIKvnLcjjjSyqJyA4P8ZlYd1NeU=
+			J+AObs8iv7IIZ0CwgWY+GVOMBmc=
 			</data>
 			<key>hash2</key>
 			<data>
-			GpPfZXFME/cSB3nShE91uptDpXiwQAipHWqPLsuoMSM=
+			7RVMHCInDqSzx5hJBvJ5+8UxxB+ekltS29XiGUGHvSE=
 			</data>
 		</dict>
 		<key>八仙 8Immortals - 单身旅记 (Live).mp3</key>
@@ -616,6 +620,17 @@
 			<key>hash2</key>
 			<data>
 			MVKXj3UQPHFLrXGlWvKO6sAWYSqZYXwBMtphFPEG7KM=
+			</data>
+		</dict>
+		<key>吴垚滔,DOUDOU - 暮野荒原.mp3</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			5xXCsEBuZT+nnVjBfm9JBQjMuMY=
+			</data>
+			<key>hash2</key>
+			<data>
+			I2MYX/kDQf2uhhzrJu8kvagbI1uoI2brVEdHwxe24pI=
 			</data>
 		</dict>
 		<key>周深 - Rubia.mp3</key>
@@ -662,17 +677,6 @@
 			wkS3D8C0+4rPGYltNYdycLHgGG4NqR7wDju03TbEcgc=
 			</data>
 		</dict>
-		<key>心要野.mp3</key>
-		<dict>
-			<key>hash</key>
-			<data>
-			+wK9ZRgbYjsTYWWpSHjK+0TzQEA=
-			</data>
-			<key>hash2</key>
-			<data>
-			k5lQU4Qqb6BLiTPEOmLvvGWVFAeuFoB8Bxk0Evhcj3A=
-			</data>
-		</dict>
 		<key>梁博 - 出现又离开 (Live).mp3</key>
 		<dict>
 			<key>hash</key>
@@ -682,6 +686,17 @@
 			<key>hash2</key>
 			<data>
 			D9pCwoQ4net7r+JtkdN6JfmldeVWdDTMU/TpzNmfPP4=
+			</data>
+		</dict>
+		<key>爱宝 - bangbang.mp3</key>
+		<dict>
+			<key>hash</key>
+			<data>
+			vif/eSHKtGwpQ3G9u5raAmL6jok=
+			</data>
+			<key>hash2</key>
+			<data>
+			yZMURFQD3kVh9PbWJyYbpWFb7XsW8ugbK1Ya/gn+Ur0=
 			</data>
 		</dict>
 		<key>痛仰乐队 - 为你唱首歌.mp3</key>

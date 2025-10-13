@@ -183,14 +183,15 @@ fragment float4 holographic_fragment(RasterizerData in [[stage_in]],
     float fogPulse = energyPulse(time, 0.8, totalEnergy * 2.0) * 0.1 + 0.9;
     fogIntensity *= fogPulse;
     
-    // 全屏漂浮粒子系统（多尺度，圆形粒子）- 低音时粒子变大变多
+    // 全屏漂浮粒子系统（多尺度，圆形粒子）- 中音主导，低音辅助
     float bgParticles = 0.0;
     
-    // 粒子尺寸控制：低音时减小衰减系数，让粒子变大
-    float particleSizeBoost = 1.0 - bassResponse * 0.5; // 低音时衰减系数降低50%
+    // 粒子尺寸控制：中音时减小衰减系数，让粒子变大（主要效果）
+    float particleSizeBoost = 1.0 - midResponse * 0.6; // 中音响应时衰减降低60%（主要）
+    particleSizeBoost *= 1.0 - bassResponse * 0.3; // 低音响应时额外降低30%（辅助）
     
-    // 粒子密度控制：低音时降低阈值，让更多粒子出现
-    float densityBoost = bassResponse * 0.05; // 低音时阈值降低5%
+    // 粒子密度控制：中音时降低阈值，让更多粒子出现
+    float densityBoost = midResponse * 0.06 + bassResponse * 0.03; // 中音6%，低音3%
     
     // 大粒子（明亮圆形）- 低音时变得更大更多
     float2 particleUV1 = uv * 6.0 + float2(time * 0.03, time * 0.02);
@@ -256,26 +257,33 @@ fragment float4 holographic_fragment(RasterizerData in [[stage_in]],
         bgParticles += particles4;
     }
     
-    // 粒子闪烁效果（纯音频驱动，移除周期性闪烁）
-    // 移除规律的 sin(time) 闪烁，改为纯音频响应
+    // 粒子闪烁效果（强化中音响应，让粒子主要表现中音）
+    // 中音 = 人声、旋律、和声的主要频段，应该让粒子主要响应这个频段
     
-    // 基础亮度（跟随总能量，而不是时间）
-    float baseFlicker = 0.85 + totalEnergy * 0.15; // 音乐弱时 85%，强时 100%
+    // 基础亮度（跟随总能量）
+    float baseFlicker = 0.85 + totalEnergy * 0.15;
     
-    // 低音冲击闪烁（主要效果）
-    float bassFlicker = 1.0 + bassResponse * 1.0; // 低音时亮度提升100%（增强）
+    // 🎵 中音闪烁（主要效果 - 大幅增强）
+    float midFlicker = 1.0 + midResponse * 1.2; // 中音响应时亮度提升120%（最强）
+    float midEnergyFlicker = 1.0 + midEnergy * 1.0; // 中音能量持续影响（强）
     
-    // 低音能量闪烁（持续响应）
-    float bassEnergyFlicker = 1.0 + bassEnergy * 0.8; // 低音能量持续影响
+    // 🥁 低音冲击闪烁（辅助效果 - 降低）
+    float bassFlicker = 1.0 + bassResponse * 0.6; // 低音时亮度提升60%（降低）
+    float bassEnergyFlicker = 1.0 + bassEnergy * 0.4; // 低音能量辅助影响（降低）
     
-    // 中音高音响应（让粒子对不同频段都有响应）
-    float midTrebleFlicker = 1.0 + (midEnergy + trebleEnergy) * 0.3;
+    // 🎸 高音响应（轻微辅助）
+    float trebleFlicker = 1.0 + trebleResponse * 0.5; // 高音响应提升50%
+    float trebleEnergyFlicker = 1.0 + trebleEnergy * 0.3; // 高音能量轻微影响
     
-    // 音乐强度闪烁（整体律动）
-    float musicFlicker = 1.0 + musicIntensity * 0.4; // 高潮时亮度提升40%
+    // 🎶 音乐强度闪烁（整体律动）
+    float musicFlicker = 1.0 + musicIntensity * 0.3;
     
-    // 组合所有闪烁效果（纯音频驱动）
-    float particleFlicker = baseFlicker * bassFlicker * bassEnergyFlicker * midTrebleFlicker * musicFlicker;
+    // 组合所有闪烁效果（中音为主）
+    float particleFlicker = baseFlicker * 
+                           midFlicker * midEnergyFlicker *        // 中音主导
+                           bassFlicker * bassEnergyFlicker *      // 低音辅助
+                           trebleFlicker * trebleEnergyFlicker *  // 高音辅助
+                           musicFlicker;
     
     bgParticles *= particleFlicker;
     
@@ -384,9 +392,9 @@ fragment float4 holographic_fragment(RasterizerData in [[stage_in]],
         // 粒子形状（模糊圆）
         float particle = exp(-particleDist * 15.0);
         
-        // 粒子亮度：跟随音频数据，不再使用周期性闪烁
-        // 基础亮度 + 音乐强度 + 低音响应
-        float particleBrightness = 0.6 + totalEnergy * 0.3 + bassResponse * 0.4;
+        // 粒子亮度：主要响应中音，辅助响应低音
+        // 基础亮度 + 中音响应（主要）+ 低音响应（辅助）
+        float particleBrightness = 0.6 + totalEnergy * 0.2 + midResponse * 0.6 + bassResponse * 0.3;
         particle *= particleBrightness;
         
         // 粒子透明度
@@ -508,11 +516,12 @@ fragment float4 holographic_fragment(RasterizerData in [[stage_in]],
     // 增加粒子对比度和亮度
     float particleBrightness = bgParticles * 2.5;
     
-    // 为粒子添加柔和光晕效果（圆形，低音时变大）
+    // 为粒子添加柔和光晕效果（圆形，中音时变大）
     float glowTotal = 0.0;
     
-    // 光晕尺寸控制：低音时光晕也变大
-    float glowSizeBoost = 1.0 - bassResponse * 0.6; // 低音时光晕衰减降低60%
+    // 光晕尺寸控制：中音时光晕变大（主要），低音辅助
+    float glowSizeBoost = 1.0 - midResponse * 0.7; // 中音响应时光晕衰减降低70%（主要）
+    glowSizeBoost *= 1.0 - bassResponse * 0.4; // 低音响应时额外降低40%（辅助）
     
     // 大粒子光晕（柔和扩散）- 低音时范围扩大
     float2 particleGlow1UV = uv * 6.0 + float2(time * 0.03, time * 0.02);
@@ -544,9 +553,9 @@ fragment float4 holographic_fragment(RasterizerData in [[stage_in]],
         glowTotal += glow2;
     }
     
-    // 叠加粒子和光晕（低音时光晕强度也增强）
+    // 叠加粒子和光晕（中音时光晕强度增强）
     finalColor += bgParticleColor * particleBrightness;
-    finalColor += bgParticleColor * glowTotal * (2.0 + bassResponse * 1.5); // 低音时光晕更亮
+    finalColor += bgParticleColor * glowTotal * (2.0 + midResponse * 2.0 + bassResponse * 0.8); // 中音时光晕更亮（主要）
     
     // 中景层（主频谱）
     float3 midColor = baseColor * spectrumLayer;
@@ -580,7 +589,7 @@ fragment float4 holographic_fragment(RasterizerData in [[stage_in]],
     
     // ===== 柔和处理 =====
     // 保存粒子贡献（不应被过度柔化）
-    float3 particleContribution = bgParticleColor * particleBrightness + bgParticleColor * glowTotal * (2.0 + bassResponse * 1.5);
+    float3 particleContribution = bgParticleColor * particleBrightness + bgParticleColor * glowTotal * (2.0 + midResponse * 2.0 + bassResponse * 0.8);
     
     // 对其他层应用柔和处理
     float3 nonParticleColor = finalColor - particleContribution;

@@ -31,6 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign, readonly) VisualEffectType currentEffectType;
 @property (nonatomic, assign, readonly) BOOL isEffectActive;
 @property (nonatomic, strong, readonly) UIView *effectContainerView;
+@property (nonatomic, strong, readonly) MTKView *metalView;  // Metal视图，用于FPS监控
+@property (nonatomic, assign, readonly) CGFloat actualFPS;  // 实际渲染FPS
 
 /**
  * 初始化管理器
@@ -107,6 +109,12 @@ NS_ASSUME_NONNULL_BEGIN
  * 获取推荐的特效设置
  */
 - (NSDictionary *)recommendedSettingsForCurrentDevice;
+
+/**
+ * 应用性能设置（帧率、MSAA、Shader复杂度）
+ * @param settings 性能设置字典
+ */
+- (void)applyPerformanceSettings:(NSDictionary *)settings;
 
 @end
 

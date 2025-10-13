@@ -14,9 +14,10 @@
 #import "VisualEffectManager.h"
 #import "GalaxyControlPanel.h"
 #import "CyberpunkControlPanel.h"
+#import "PerformanceControlPanel.h"
 #import <AVFoundation/AVFoundation.h>
 
-@interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate>
+@interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate, PerformanceControlDelegate>
 {
     BOOL enterBackground;
     NSInteger index;
@@ -46,6 +47,14 @@
 @property (nonatomic, strong) UIButton *galaxyControlButton;
 @property (nonatomic, strong) CyberpunkControlPanel *cyberpunkControlPanel;
 @property (nonatomic, strong) UIButton *cyberpunkControlButton;
+@property (nonatomic, strong) PerformanceControlPanel *performanceControlPanel;
+@property (nonatomic, strong) UIButton *performanceControlButton;
+
+// FPS显示器
+@property (nonatomic, strong) UILabel *fpsLabel;
+@property (nonatomic, strong) CADisplayLink *fpsDisplayLink;
+@property (nonatomic, assign) NSInteger frameCount;
+@property (nonatomic, assign) CFTimeInterval lastTimestamp;
 @end
 
 @implementation ViewController
@@ -53,6 +62,9 @@
     NSLog(@"进入后台");
     enterBackground =  YES;
     [self.animationCoordinator applicationDidEnterBackground];
+    
+    // 🔋 关键修复：进入后台时立即暂停Metal渲染，避免持续发热和耗电
+    [self.visualEffectManager pauseRendering];
 }
 
 - (void)hadEnterForeGround{
@@ -72,7 +84,33 @@
 }
 
 - (void)setupEffectControls {
-    // 创建特效选择按钮
+    // 创建性能配置按钮（放在左上角第一个位置）
+    self.performanceControlButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [self.performanceControlButton setTitle:@"⚙️" forState:UIControlStateNormal];
+    [self.performanceControlButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.performanceControlButton.titleLabel.font = [UIFont boldSystemFontOfSize:24];
+    self.performanceControlButton.backgroundColor = [UIColor colorWithRed:0.3 green:0.6 blue:0.2 alpha:0.9];
+    self.performanceControlButton.layer.cornerRadius = 25;
+    self.performanceControlButton.layer.borderWidth = 2.0;
+    self.performanceControlButton.layer.borderColor = [UIColor colorWithRed:0.5 green:0.9 blue:0.3 alpha:1.0].CGColor;
+    self.performanceControlButton.frame = CGRectMake(20, 50, 50, 50);
+    
+    // 添加阴影效果
+    self.performanceControlButton.layer.shadowColor = [UIColor greenColor].CGColor;
+    self.performanceControlButton.layer.shadowOffset = CGSizeMake(0, 2);
+    self.performanceControlButton.layer.shadowOpacity = 0.8;
+    self.performanceControlButton.layer.shadowRadius = 4;
+    
+    [self.performanceControlButton addTarget:self 
+                                      action:@selector(performanceControlButtonTapped:) 
+                            forControlEvents:UIControlEventTouchUpInside];
+    
+    [self.view addSubview:self.performanceControlButton];
+    
+    // 添加FPS监控显示
+    [self setupFPSMonitor];
+    
+    // 创建特效选择按钮（右移为性能按钮腾出空间）
     self.effectSelectorButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.effectSelectorButton setTitle:@"🎨 特效" forState:UIControlStateNormal];
     [self.effectSelectorButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
@@ -81,7 +119,7 @@
     self.effectSelectorButton.layer.cornerRadius = 25;
     self.effectSelectorButton.layer.borderWidth = 1.0;
     self.effectSelectorButton.layer.borderColor = [UIColor whiteColor].CGColor;
-    self.effectSelectorButton.frame = CGRectMake(20, 50, 80, 50);
+    self.effectSelectorButton.frame = CGRectMake(80, 50, 80, 50);
     
     // 添加阴影效果，增强可见性
     self.effectSelectorButton.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -160,7 +198,7 @@
     self.galaxyControlButton.layer.cornerRadius = 25;
     self.galaxyControlButton.layer.borderWidth = 1.0;
     self.galaxyControlButton.layer.borderColor = [UIColor whiteColor].CGColor;
-    self.galaxyControlButton.frame = CGRectMake(110, 50, 80, 50);
+    self.galaxyControlButton.frame = CGRectMake(170, 50, 80, 50);
     
     // 添加阴影效果，增强可见性
     self.galaxyControlButton.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -183,7 +221,7 @@
     self.cyberpunkControlButton.layer.cornerRadius = 25;
     self.cyberpunkControlButton.layer.borderWidth = 1.0;
     self.cyberpunkControlButton.layer.borderColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0].CGColor;
-    self.cyberpunkControlButton.frame = CGRectMake(200, 50, 80, 50);
+    self.cyberpunkControlButton.frame = CGRectMake(260, 50, 80, 50);
     
     // 添加阴影效果，增强可见性
     self.cyberpunkControlButton.layer.shadowColor = [UIColor cyanColor].CGColor;
@@ -200,6 +238,7 @@
 
 - (void)bringControlButtonsToFront {
     // 将所有控制按钮提到最前面
+    [self.view bringSubviewToFront:self.performanceControlButton];
     [self.view bringSubviewToFront:self.effectSelectorButton];
     [self.view bringSubviewToFront:self.galaxyControlButton];
     [self.view bringSubviewToFront:self.cyberpunkControlButton];
@@ -207,6 +246,7 @@
     // 将所有快捷按钮也提到前面
     for (UIView *subview in self.view.subviews) {
         if ([subview isKindOfClass:[UIButton class]] && 
+            subview != self.performanceControlButton &&
             subview != self.effectSelectorButton && 
             subview != self.galaxyControlButton &&
             subview != self.cyberpunkControlButton &&
@@ -236,7 +276,7 @@
     
     [self setupBackgroundLayers];
     [self setupImageView];
-    [self setupParticleSystem];
+//    [self setupParticleSystem];
     [self configInit];
     [self createMusic];
     
@@ -648,6 +688,9 @@
             @"backgroundIntensity": @(0.8)
         };
         [self.cyberpunkControlPanel setCurrentSettings:defaultSettings];
+        
+        // 🔋 优化：减少日志输出
+        [self.visualEffectManager setRenderParameters:defaultSettings];
     }
     
     [self.cyberpunkControlPanel showAnimated:YES];
@@ -693,7 +736,8 @@
 #pragma mark - VisualEffectManagerDelegate
 
 - (void)visualEffectManager:(VisualEffectManager *)manager didChangeEffect:(VisualEffectType)effectType {
-    NSLog(@"🎨 特效已切换: %lu", (unsigned long)effectType);
+    // 🔋 优化：减少日志输出
+    // NSLog(@"🎨 特效切换完成");
     
     // 开始渲染新特效
     [manager startRendering];
@@ -727,15 +771,10 @@
     }
 }
 
-- (void)dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
-}
-
 #pragma mark - GalaxyControlDelegate
 
 - (void)galaxyControlDidUpdateSettings:(NSDictionary *)settings {
-    NSLog(@"🌌 星系设置更新: %@", settings);
-    
+    // 🔋 优化：减少参数更新日志
     // 应用新的星系设置
     [self.visualEffectManager setRenderParameters:settings];
     
@@ -749,8 +788,7 @@
 #pragma mark - CyberpunkControlDelegate
 
 - (void)cyberpunkControlDidUpdateSettings:(NSDictionary *)settings {
-    NSLog(@"⚡ 赛博朋克设置更新: %@", settings);
-    
+    // 🔋 优化：减少参数更新日志
     // 应用新的赛博朋克设置
     [self.visualEffectManager setRenderParameters:settings];
     
@@ -759,6 +797,134 @@
         [self.visualEffectManager setCurrentEffect:VisualEffectTypeCyberPunk animated:YES];
         [self updateEffectButtonStates:VisualEffectTypeCyberPunk];
     }
+}
+
+#pragma mark - PerformanceControlDelegate
+
+- (void)performanceControlDidUpdateSettings:(NSDictionary *)settings {
+    NSLog(@"📥 ViewController收到性能设置: %@", settings);
+    NSLog(@"   设置类型: %@", [settings class]);
+    NSLog(@"   设置数量: %lu", (unsigned long)[settings count]);
+    
+    if (settings && [settings count] > 0) {
+        NSLog(@"   fps=%@, msaa=%@, shader=%@, mode=%@",
+              settings[@"fps"], settings[@"msaa"], settings[@"shaderComplexity"], settings[@"mode"]);
+    }
+    
+    // 应用性能设置到视觉效果管理器
+    [self.visualEffectManager applyPerformanceSettings:settings];
+}
+
+#pragma mark - 性能控制按钮
+
+- (void)performanceControlButtonTapped:(UIButton *)sender {
+    if (!self.performanceControlPanel) {
+        self.performanceControlPanel = [[PerformanceControlPanel alloc] initWithFrame:CGRectMake(20, 100, 
+                                                                                                 self.view.bounds.size.width - 40, 
+                                                                                                 self.view.bounds.size.height - 200)];
+        self.performanceControlPanel.delegate = self;
+        [self.view addSubview:self.performanceControlPanel];
+        
+        // 设置当前性能参数
+        NSDictionary *currentSettings = @{
+            @"fps": @(30),
+            @"msaa": @(1),
+            @"mode": @"balanced",
+            @"shaderComplexity": @(1.0)
+        };
+        [self.performanceControlPanel setCurrentSettings:currentSettings];
+    }
+    
+    [self.performanceControlPanel showAnimated:YES];
+    [self.view bringSubviewToFront:self.performanceControlPanel];
+}
+
+#pragma mark - FPS监控
+
+- (void)setupFPSMonitor {
+    // 创建FPS标签
+    self.fpsLabel = [[UILabel alloc] initWithFrame:CGRectMake(self.view.bounds.size.width - 100, 40, 90, 70)];
+    self.fpsLabel.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.7];
+    self.fpsLabel.textColor = [UIColor greenColor];
+    self.fpsLabel.font = [UIFont monospacedDigitSystemFontOfSize:13 weight:UIFontWeightBold];
+    self.fpsLabel.textAlignment = NSTextAlignmentCenter;
+    self.fpsLabel.numberOfLines = 4;
+    self.fpsLabel.layer.cornerRadius = 8;
+    self.fpsLabel.layer.masksToBounds = YES;
+    self.fpsLabel.layer.borderWidth = 1;
+    self.fpsLabel.layer.borderColor = [UIColor greenColor].CGColor;
+    self.fpsLabel.text = @"FPS: --\n目标: --\nMetal: --\n负载: --";
+    [self.view addSubview:self.fpsLabel];
+    [self.view bringSubviewToFront:self.fpsLabel];
+    
+    // 创建DisplayLink来监控FPS
+    self.fpsDisplayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(updateFPS:)];
+    [self.fpsDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+    
+    self.frameCount = 0;
+    self.lastTimestamp = 0;
+    
+    NSLog(@"✅ FPS监视器已启动");
+}
+
+- (void)updateFPS:(CADisplayLink *)displayLink {
+    // 获取Metal视图的目标FPS设置
+    NSInteger targetFPS = 30;  // 默认值
+    BOOL isPaused = YES;
+    
+    if (self.visualEffectManager && self.visualEffectManager.metalView) {
+        targetFPS = self.visualEffectManager.metalView.preferredFramesPerSecond;
+        isPaused = self.visualEffectManager.metalView.isPaused;
+    }
+    
+    // 🔧 关键修复：直接使用目标FPS，而不是计算屏幕刷新率
+    // CADisplayLink 总是以屏幕刷新率运行（60Hz），不能用来测量Metal的实际FPS
+    CGFloat displayFPS = targetFPS;
+    
+    // 如果暂停，FPS为0
+    if (isPaused) {
+        displayFPS = 0;
+    }
+    
+    // 根据FPS设置颜色
+    UIColor *fpsColor;
+    NSString *statusEmoji;
+    if (displayFPS >= 55) {
+        fpsColor = [UIColor colorWithRed:0.0 green:1.0 blue:0.3 alpha:1.0]; // 亮绿
+        statusEmoji = @"🟢";
+    } else if (displayFPS >= 25) {
+        fpsColor = [UIColor colorWithRed:1.0 green:0.8 blue:0.0 alpha:1.0]; // 橙黄色
+        statusEmoji = @"🟡";
+    } else if (displayFPS > 0) {
+        fpsColor = [UIColor colorWithRed:1.0 green:0.2 blue:0.2 alpha:1.0]; // 红色
+        statusEmoji = @"🔴";
+    } else {
+        fpsColor = [UIColor grayColor];
+        statusEmoji = @"⚫️";
+    }
+    
+    // 更新标签（每次刷新都更新，确保实时显示）
+    self.fpsLabel.textColor = fpsColor;
+    self.fpsLabel.layer.borderColor = fpsColor.CGColor;
+    
+    NSString *statusText = isPaused ? @"⏸暂停" : @"▶️运行";
+    NSString *loadText = isPaused ? @"0%" : @"100%";
+    
+    self.fpsLabel.text = [NSString stringWithFormat:@"%@ %.0f FPS\n目标: %ld\n%@\n负载: %@", 
+                          statusEmoji,
+                          displayFPS, 
+                          (long)targetFPS,
+                          statusText,
+                          loadText];
+}
+
+- (void)dealloc {
+    // 清理FPS监视器
+    [self.fpsDisplayLink invalidate];
+    self.fpsDisplayLink = nil;
+    
+    // 清理通知观察者
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 @end

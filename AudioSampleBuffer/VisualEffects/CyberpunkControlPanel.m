@@ -249,8 +249,13 @@
     settings[@"solidColorB"] = @(0.25);
     settings[@"backgroundIntensity"] = @(0.8);
     
+    NSLog(@"🎛️ 控制面板发送设置: grid=%@, bgMode=%@, 完整设置=%@", 
+          settings[@"enableGrid"], settings[@"backgroundMode"], settings);
+    
     if ([self.delegate respondsToSelector:@selector(cyberpunkControlDidUpdateSettings:)]) {
         [self.delegate cyberpunkControlDidUpdateSettings:settings];
+    } else {
+        NSLog(@"⚠️ delegate未设置或不响应cyberpunkControlDidUpdateSettings方法！");
     }
 }
 
@@ -271,7 +276,11 @@
                      animations:^{
         self.alpha = 1.0;
         self.transform = CGAffineTransformIdentity;
-    } completion:nil];
+    } completion:^(BOOL finished) {
+        // 面板显示完成后，立即应用一次当前设置，确保shader接收到参数
+        [self updateSettings];
+        NSLog(@"⚡ 赛博朋克控制面板显示完成，已应用初始设置");
+    }];
 }
 
 - (void)hideAnimated:(BOOL)animated {

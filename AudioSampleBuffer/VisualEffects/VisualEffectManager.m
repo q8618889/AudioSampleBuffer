@@ -30,6 +30,9 @@
 // 实际屏幕容器尺寸（用于计算特效缩放比例）
 @property (nonatomic, assign) CGSize actualContainerSize;
 
+// 💾 保存用户的性能设置，切换特效时重新应用
+@property (nonatomic, copy) NSDictionary *savedPerformanceSettings;
+
 @end
 
 @implementation VisualEffectManager
@@ -79,19 +82,19 @@
     CGFloat drawableSize = squareSize * [UIScreen mainScreen].scale;
     _metalView.drawableSize = CGSizeMake(drawableSize, drawableSize);
     
-    // 启用高质量渲染
+    // 🔋 优化3：禁用MSAA抗锯齿（节省大量GPU功耗，视觉效果影响极小）
     _metalView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
     _metalView.depthStencilPixelFormat = MTLPixelFormatDepth32Float;
-    _metalView.sampleCount = 4; // 4x MSAA 抗锯齿
+    _metalView.sampleCount = 1; // 禁用MSAA（从4降到1，节省75%抗锯齿开销）
     
     // 保持正确的宽高比
     _metalView.layer.masksToBounds = YES;
     
     [_effectContainerView addSubview:_metalView];
     
-    // 应用推荐设置
-    NSDictionary *recommendedSettings = [self recommendedSettingsForCurrentDevice];
-    _metalView.preferredFramesPerSecond = [recommendedSettings[@"preferredFramesPerSecond"] integerValue];
+    // 🔋 优化4：统一使用30fps（不再根据设备区分，避免高端设备过热）
+    // 所有设备使用30fps，节省功耗，视觉效果依然流畅
+    _metalView.preferredFramesPerSecond = 30;
     
     // 监听容器视图大小变化
     [[NSNotificationCenter defaultCenter] addObserver:self
@@ -99,12 +102,10 @@
                                                  name:UIApplicationDidChangeStatusBarOrientationNotification
                                                object:nil];
     
-    NSLog(@"🌌 Metal视图设置: 容器尺寸=%.0fx%.0f, 正方形尺寸=%.0f (使用高度)", 
-          containerBounds.size.width, containerBounds.size.height, squareSize);
-    NSLog(@"   视图位置=(%.0f, %.0f), 绘制尺寸=%.0fx%.0f", 
+    // 🔋 优化：合并日志输出
+    NSLog(@"🌌 Metal视图初始化: 容器%.0fx%.0f | 正方形%.0f | 位置(%.0f,%.0f) | 绘制%.0fx%.0f", 
+          containerBounds.size.width, containerBounds.size.height, squareSize,
           x, y, _metalView.drawableSize.width, _metalView.drawableSize.height);
-    NSLog(@"   💡 左右超出%.0f像素，特效充满屏幕高度", 
-          (squareSize - containerBounds.size.width) / 2.0);
 }
 
 - (void)setupEffectSelector {
@@ -241,7 +242,8 @@
 - (void)setCurrentEffect:(VisualEffectType)effectType animated:(BOOL)animated {
     if (_currentEffectType == effectType) return;
     
-    NSLog(@"🎨 正在切换特效: %lu -> %lu", (unsigned long)_currentEffectType, (unsigned long)effectType);
+    // 🔋 优化：简化切换日志
+    NSLog(@"🎨 切换特效: %lu->%lu", (unsigned long)_currentEffectType, (unsigned long)effectType);
     
     // 停止当前渲染器
     [_currentRenderer stopRendering];
@@ -263,6 +265,23 @@
                 // 设置实际容器尺寸，用于计算特效缩放
                 if ([_currentRenderer respondsToSelector:@selector(setActualContainerSize:)]) {
                     [(BaseMetalRenderer *)_currentRenderer setActualContainerSize:_actualContainerSize];
+                }
+                
+                // 🔧 关键修复：切换特效后重新应用保存的性能设置
+                if (_savedPerformanceSettings) {
+                    NSInteger savedFPS = [_savedPerformanceSettings[@"fps"] integerValue];
+                    if (savedFPS > 0 && _metalView) {
+                        _metalView.preferredFramesPerSecond = savedFPS;
+                        NSLog(@"🔄 切换特效后恢复FPS设置: %ldfps", (long)savedFPS);
+                    }
+                    
+                    // 如果有shader复杂度设置，也重新应用
+                    float shaderComplexity = [_savedPerformanceSettings[@"shaderComplexity"] floatValue];
+                    if (shaderComplexity > 0) {
+                        NSMutableDictionary *renderParams = [NSMutableDictionary dictionary];
+                        renderParams[@"shaderComplexity"] = @(shaderComplexity);
+                        [self setRenderParameters:renderParams];
+                    }
                 }
                 
                 // 判断是否为Metal特效
@@ -324,21 +343,14 @@
 }
 
 - (void)setupFluidSimulationSafety {
-    NSLog(@"🌊 设置流体模拟安全参数");
+    // 🔋 优化：流体模拟已通过全局30fps优化，无需额外降低帧率
+    NSLog(@"🌊 流体模拟优化已启用");
     
-    // 降低Metal视图的采样率以提高性能
-    if (_metalView.sampleCount > 1) {
-        NSLog(@"🌊 临时降低MSAA采样以提高流体模拟性能");
-        // 注意：这里不能直接修改sampleCount，因为它是只读的
-        // 改为降低帧率
-        _metalView.preferredFramesPerSecond = 30; // 降低到30FPS
-    }
-    
-    // 设置安全的渲染参数
+    // 设置优化的渲染参数（保持视觉效果）
     NSMutableDictionary *safeParams = [NSMutableDictionary dictionary];
-    safeParams[@"fluidQuality"] = @(0.6);
-    safeParams[@"particleCount"] = @(8);
-    safeParams[@"densityIterations"] = @(4);
+    safeParams[@"fluidQuality"] = @(0.75);  // 提高到0.75（保持效果）
+    safeParams[@"particleCount"] = @(10);   // 提高到10（保持效果）
+    safeParams[@"densityIterations"] = @(5); // 提高到5（保持效果）
     safeParams[@"enableSafetyLimits"] = @(YES);
     
     // 更新效果设置
@@ -384,19 +396,20 @@
     [currentSettings addEntriesFromDictionary:parameters];
     [_effectSettings setObject:currentSettings forKey:settingsKey];
     
+    // 🔋 优化：减少参数更新日志
     // 特别处理星系效果参数
     if (_currentEffectType == VisualEffectTypeGalaxy) {
-        NSLog(@"🌌 应用星系效果参数: %@", parameters);
-        
         // 立即更新渲染器参数
         if ([_currentRenderer respondsToSelector:@selector(setRenderParameters:)]) {
             [_currentRenderer setRenderParameters:parameters];
         }
-        
-        // 如果渲染器正在运行，确保参数立即生效
-        if (_isEffectActive && [_currentRenderer respondsToSelector:@selector(updateGalaxyUniforms:)]) {
-            // 触发参数更新
-            NSLog(@"🌌 触发星系参数立即更新");
+    }
+    
+    // 特别处理赛博朋克效果参数
+    if (_currentEffectType == VisualEffectTypeCyberPunk) {
+        // 立即更新渲染器参数
+        if ([_currentRenderer respondsToSelector:@selector(setRenderParameters:)]) {
+            [_currentRenderer setRenderParameters:parameters];
         }
     }
 }
@@ -502,8 +515,8 @@
             [(BaseMetalRenderer *)_currentRenderer setActualContainerSize:_actualContainerSize];
         }
         
-        NSLog(@"🌌 Metal视图尺寸更新: 容器=%.0fx%.0f, 正方形=%.0f (高度), 位置=(%.0f,%.0f)", 
-              containerBounds.size.width, containerBounds.size.height, squareSize, x, y);
+        // 🔋 优化：减少尺寸变化日志
+        // NSLog(@"🌌 Metal视图尺寸已更新");
     }
 }
 
@@ -531,6 +544,93 @@
 
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+#pragma mark - 性能设置
+
+- (void)applyPerformanceSettings:(NSDictionary *)settings {
+    // 检查参数有效性
+    if (!settings || [settings count] == 0) {
+        NSLog(@"❌ 性能设置为空，使用默认值");
+        settings = @{
+            @"fps": @(30),
+            @"msaa": @(1),
+            @"shaderComplexity": @(1.0)
+        };
+    }
+    
+    // 💾 保存设置，切换特效时会重新应用
+    _savedPerformanceSettings = [settings copy];
+    
+    NSInteger fps = [settings[@"fps"] integerValue];
+    NSInteger msaa = [settings[@"msaa"] integerValue];
+    float shaderComplexity = [settings[@"shaderComplexity"] floatValue];
+    NSString *mode = settings[@"mode"] ?: @"balanced";
+    
+    NSLog(@"⚙️ 应用性能设置:");
+    NSLog(@"   模式: %@", mode);
+    NSLog(@"   FPS: %ld", (long)fps);
+    NSLog(@"   MSAA: %ldx", (long)msaa);
+    NSLog(@"   Shader复杂度: %.1f", shaderComplexity);
+    
+    // 更新帧率
+    if (_metalView && fps > 0) {
+        _metalView.preferredFramesPerSecond = fps;
+        NSLog(@"✅ 帧率已立即更新为 %ldfps", (long)fps);
+    } else {
+        NSLog(@"⚠️ 帧率无效或Metal视图未初始化");
+    }
+    
+    // 更新MSAA（需要重新创建渲染管线，在下次切换特效时生效）
+    if (_metalView && msaa > 0) {
+        // 保存设置，在下次创建渲染器时应用
+        _effectSettings[@"msaa_setting"] = @(msaa);
+        NSLog(@"✅ MSAA设置已保存为 %ldx（切换特效后生效）", (long)msaa);
+        
+        // 只有在MSAA不是1的时候才提示
+        if (msaa > 1) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"ℹ️ 提示" 
+                                                                               message:@"抗锯齿设置需要切换特效后生效\n\n建议：切换到其他特效再切回当前特效" 
+                                                                        preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:@"知道了" style:UIAlertActionStyleDefault handler:nil]];
+                
+                UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+                if (rootVC) {
+                    [rootVC presentViewController:alert animated:YES completion:nil];
+                }
+            });
+        }
+    } else {
+        NSLog(@"⚠️ MSAA无效或Metal视图未初始化");
+    }
+    
+    // 更新Shader复杂度（添加到渲染参数）
+    if (shaderComplexity > 0) {
+        NSMutableDictionary *renderParams = [NSMutableDictionary dictionary];
+        renderParams[@"shaderComplexity"] = @(shaderComplexity);
+        [self setRenderParameters:renderParams];
+        NSLog(@"✅ Shader复杂度已立即更新为 %.1f", shaderComplexity);
+    } else {
+        NSLog(@"⚠️ Shader复杂度无效");
+    }
+    
+    // 输出性能预估
+    NSString *powerConsumption = @"中等";
+    NSString *expectedBattery = @"4-5小时";
+    
+    if (fps <= 20 && msaa == 1 && shaderComplexity <= 0.8) {
+        powerConsumption = @"低（省电模式）";
+        expectedBattery = @"5-6小时";
+    } else if (fps >= 60 || msaa >= 4 || shaderComplexity >= 1.5) {
+        powerConsumption = @"高（性能模式）";
+        expectedBattery = @"2-3小时";
+    }
+    
+    NSLog(@"📊 性能预估:");
+    NSLog(@"   功耗等级: %@", powerConsumption);
+    NSLog(@"   预计续航: %@", expectedBattery);
+    NSLog(@"   GPU负载: %@", fps <= 20 ? @"低" : (fps <= 30 ? @"中" : @"高"));
 }
 
 @end

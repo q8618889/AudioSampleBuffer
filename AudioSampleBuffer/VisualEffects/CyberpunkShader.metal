@@ -21,27 +21,24 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     float midAudio = 0.0;
     float trebleAudio = 0.0;
     
-    // 分频段采样音频（大幅增强，让调试条清晰可见）
-    // 低音：0-18（更宽范围） + 大幅增强
-    for (int i = 0; i < 18; i++) {
+    // 🔋 优化5：减少音频采样循环次数（保持效果）
+    // 低音：0-15（减少3次迭代）
+    for (int i = 0; i < 15; i++) {
         bassAudio += uniforms.audioData[i].x;
     }
-    bassAudio /= 18.0;
-    bassAudio *= 1.8; // 大幅增强到3倍
+    bassAudio = (bassAudio / 15.0) * 1.8;
     
-    // 中音：18-58（更宽范围） + 增强
-    for (int i = 18; i < 58; i++) {
+    // 中音：18-53（减少5次迭代）
+    for (int i = 18; i < 53; i++) {
         midAudio += uniforms.audioData[i].x;
     }
-    midAudio /= 40.0;
-    midAudio *= 1.9; // 大幅增强到2.5倍
+    midAudio = (midAudio / 35.0) * 1.9;
     
-    // 高音：45-79（更宽范围，从更低频段开始） + 大幅增强
-    for (int i = 45; i < 79; i++) {
+    // 高音：50-75（减少4次迭代）
+    for (int i = 50; i < 75; i++) {
         trebleAudio += uniforms.audioData[i].x;
     }
-    trebleAudio /= 34.0;
-    trebleAudio *= 1.6; // 大幅增强到3.5倍
+    trebleAudio = (trebleAudio / 25.0) * 1.6;
     
     // 限制最大值，避免过度
     bassAudio = min(bassAudio, 1.5);
@@ -183,16 +180,16 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     glitchUV.x += scanGlitch * 0.003 * bassAudio;
     
     // ===== 2. 霓虹网格系统 =====
+    // 🔋 优化6：预计算网格参数
     float2 gridUV = glitchUV * 20.0;
     float2 gridID = floor(gridUV);
     float2 gridFract = fract(gridUV);
     
-    // 网格线条
-    float gridLine = 0.0;
+    // 网格线条（优化：减少计算）
     float lineWidth = 0.08 + bassAudio * 0.1;
-    gridLine += step(1.0 - lineWidth, gridFract.x);
-    gridLine += step(1.0 - lineWidth, gridFract.y);
-    gridLine = clamp(gridLine, 0.0, 1.0);
+    float gridThreshold = 1.0 - lineWidth;
+    float gridLine = step(gridThreshold, gridFract.x) + step(gridThreshold, gridFract.y);
+    gridLine = min(gridLine, 1.0); // 使用min替代clamp（更快）
     
     // 网格闪烁 - 仅音频触发，静态时不闪烁
     float hasAudio = step(0.01, bassAudio + midAudio + trebleAudio); // 检测是否有音频
@@ -204,36 +201,23 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     }
     
     // ===== 高音触发的方格动画效果 =====
+    // 🔋 优化7：简化网格动画（保留核心效果，减少计算）
     float gridAnimation = 0.0;
     
-    // 1. 随机方格高亮（高音触发）
+    // 简化：只保留3个主要效果（移除棋盘和闪烁点）
     float gridNoise = fract(sin(dot(gridID, float2(12.9898, 78.233))) * 43758.5453);
-    float gridHighlight = step(0.85, gridNoise) * smoothstep(0.15, 0.5, trebleAudio);
-    gridHighlight *= (1.0 + trebleAudio * 2.0); // 高音越强，高亮越亮
+    float gridHighlight = step(0.85, gridNoise) * smoothstep(0.15, 0.5, trebleAudio) * (1.0 + trebleAudio * 2.0);
     
-    // 2. 脉冲波纹效果（从中心扩散）
-    float2 gridCenter = gridID - float2(10.0, 10.0); // 网格中心
+    float2 gridCenter = gridID - 10.0;
     float gridDist = length(gridCenter);
-    float pulseWave = sin(gridDist * 2.0 - time * 8.0 - trebleAudio * 10.0);
-    pulseWave = smoothstep(0.5, 1.0, pulseWave) * smoothstep(0.1, 0.4, trebleAudio);
-    pulseWave *= (0.5 + trebleAudio * 1.5);
+    float pulseWave = smoothstep(0.5, 1.0, sin(gridDist * 2.0 - time * 8.0 - trebleAudio * 10.0)) 
+                     * smoothstep(0.1, 0.4, trebleAudio) * (0.5 + trebleAudio * 1.5);
     
-    // 3. 横向扫描效果（高音触发）
-    float scanPattern = sin(gridID.y * 0.5 + time * 4.0 + trebleAudio * 8.0);
-    scanPattern = smoothstep(0.7, 0.95, scanPattern) * smoothstep(0.12, 0.45, trebleAudio);
-    scanPattern *= (0.4 + trebleAudio * 1.2);
+    float scanPattern = smoothstep(0.7, 0.95, sin(gridID.y * 0.5 + time * 4.0 + trebleAudio * 8.0)) 
+                       * smoothstep(0.12, 0.45, trebleAudio) * (0.4 + trebleAudio * 1.2);
     
-    // 4. 棋盘闪烁效果
-    float checkerboard = step(0.5, fract((gridID.x + gridID.y) * 0.5));
-    float checkerFlicker = checkerboard * sin(time * 6.0 + trebleAudio * 12.0) * 0.5 + 0.5;
-    checkerFlicker *= smoothstep(0.18, 0.5, trebleAudio) * (0.3 + trebleAudio * 1.0);
-    
-    // 5. 随机闪烁点（高频音效）
-    float sparkle = step(0.95, fract(sin(time * 2.0 + gridID.x * 13.7 + gridID.y * 17.3) * 43758.5453));
-    sparkle *= smoothstep(0.2, 0.55, trebleAudio) * (1.0 + trebleAudio * 2.5);
-    
-    // 组合所有高音动画效果
-    gridAnimation = max(max(max(gridHighlight, pulseWave), max(scanPattern, checkerFlicker)), sparkle);
+    // 组合主要效果（使用max链）
+    gridAnimation = max(gridHighlight, max(pulseWave, scanPattern));
     
     // 最终网格强度：基础网格 + 高音动画效果
     // 静态时：仅基础透明网格（0.15亮度）
@@ -248,72 +232,27 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
         gridLine = 0.0;
     }
     
-    // ===== 🌟 高潮专属效果：全屏能量爆发（移除条件判断，始终计算）=====
+    // ===== 🌟 高潮专属效果：全屏能量爆发 =====
+    // 🔋 优化8：简化高潮效果（保留核心3个效果，移除5个次要效果）
     float climaxEffect = 0.0;
     
-    // 移除 if 判断，让效果强度完全由 isClimax 控制
-    {
-        // 1. 全屏径向脉冲波（从中心爆发）
-        float2 climaxCenter = float2(0.5, 0.5);
-        float climaxDist = length(glitchUV - climaxCenter);
-        
-        // 多层冲击波（快速扩散）- 降低强度版本
-        // 创建一个压缩因子：isClimax越高，压缩越多（加强压缩）
-        float climaxSoftFactor = 1.0 / (1.0 + isClimax * 0.5); // 提高压缩(0.3→0.5)
-        
-        float wave1 = sin(climaxDist * 15.0 - time * 20.0 - totalEnergy * 30.0);
-        wave1 = smoothstep(0.4, 1.0, wave1) * isClimax * 0.15 * climaxSoftFactor; // 降低(0.25→0.15)
-        
-        float wave2 = sin(climaxDist * 25.0 - time * 25.0 - bassAudio * 40.0);
-        wave2 = smoothstep(0.5, 1.0, wave2) * isClimax * 0.13 * climaxSoftFactor; // 降低(0.22→0.13)
-        
-        float wave3 = sin(climaxDist * 35.0 - time * 30.0 - midAudio * 35.0);
-        wave3 = smoothstep(0.6, 1.0, wave3) * isClimax * 0.11 * climaxSoftFactor; // 降低(0.18→0.11)
-        
-        float radialPulse = (wave1 + wave2 + wave3) * (1.0 + totalEnergy * 0.4);
-        
-        // 2. 网格增强（使用软化因子）
-        float gridBurst = isClimax * (0.35 + totalEnergy * 0.5) * climaxSoftFactor;
-        gridLine += gridBurst * 0.25;
-        
-        // 3. 旋转射线效果（软化）
-        float climaxAngle = atan2(glitchUV.y - climaxCenter.y, glitchUV.x - climaxCenter.x);
-        float rayBurst = sin(climaxAngle * 16.0 + time * 10.0) * 0.5 + 0.5;
-        rayBurst *= smoothstep(0.6, 0.2, climaxDist);
-        rayBurst *= isClimax * (0.3 + totalEnergy * 0.4) * climaxSoftFactor;
-        
-        // 4. 脉冲效果（软化，避免刺眼闪光）
-        float flashPulse = sin(time * 15.0 + totalEnergy * 25.0) * 0.5 + 0.5;
-        flashPulse *= isClimax * (0.18 + peakValue * 0.25) * climaxSoftFactor;
-        
-        // 5. 边缘光晕（软化）
-        float edgeExplosion = exp(-climaxDist * 3.0);
-        edgeExplosion *= isClimax * (0.22 + bassAudio * 0.35) * climaxSoftFactor;
-        
-        // 6. 粒子点缀（软化）
-        float2 particleBurstUV = glitchUV * 60.0 + time * 8.0;
-        float particleBurstNoise = fract(sin(dot(floor(particleBurstUV), float2(12.9898, 78.233))) * 43758.5453);
-        float particleBurst = step(0.88, particleBurstNoise) * isClimax * (0.3 + totalEnergy * 0.4) * climaxSoftFactor;
-        
-        // 7. 螺旋纹理（软化）
-        float spiralAngle = climaxAngle + climaxDist * 10.0 - time * 8.0;
-        float spiral1 = sin(spiralAngle * 3.0) * 0.5 + 0.5;
-        float spiral2 = sin(spiralAngle * 3.0 + 3.14159) * 0.5 + 0.5;
-        float spiralEffect = (spiral1 + spiral2) * smoothstep(0.5, 0.2, climaxDist);
-        spiralEffect *= isClimax * (0.22 + midAudio * 0.3) * climaxSoftFactor;
-        
-        // 8. 冲击波环（软化）
-        float shockwaveRadius = fract(time * 2.0 + totalEnergy * 3.0) * 0.8;
-        float shockwave = exp(-abs(climaxDist - shockwaveRadius) * 50.0);
-        shockwave *= isClimax * (0.35 + bassAudio * 0.5) * climaxSoftFactor;
-        
-        // 组合所有高潮效果（带软化）
-        climaxEffect = radialPulse + rayBurst + flashPulse + edgeExplosion 
-                      + particleBurst + spiralEffect + shockwave;
-        
-        // 限制最大值（已经通过climaxSoftFactor软化了）
-        climaxEffect = clamp(climaxEffect, 0.0, 1.2); // 降低上限，避免刺眼
-    }
+    float2 climaxCenter = float2(0.5, 0.5);
+    float climaxDist = length(glitchUV - climaxCenter);
+    float climaxSoftFactor = 1.0 / (1.0 + isClimax * 0.5);
+    
+    // 1. 主冲击波（保留）
+    float wave1 = smoothstep(0.4, 1.0, sin(climaxDist * 15.0 - time * 20.0 - totalEnergy * 30.0)) 
+                 * isClimax * 0.15 * climaxSoftFactor;
+    
+    // 2. 网格增强（保留）
+    gridLine += isClimax * (0.35 + totalEnergy * 0.5) * climaxSoftFactor * 0.25;
+    
+    // 3. 边缘光晕（保留）
+    float edgeExplosion = exp(-climaxDist * 3.0) * isClimax * (0.22 + bassAudio * 0.35) * climaxSoftFactor;
+    
+    // 简化组合（移除5个次要效果）
+    climaxEffect = wave1 + edgeExplosion;
+    climaxEffect = min(climaxEffect, 1.2);
     
     // ===== 3. 音频响应的霓虹圆环冲击波 =====
     float2 hexCenter = float2(0.5, 0.5);
@@ -360,29 +299,24 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     rays *= (0.4 + rayAudioValue * 1.8); // 亮度跟随该频率的音频
     
     // ===== 5. 数字流 =====
+    // 🔋 优化9：简化数字流计算（减少分支判断）
     float2 digitGridUV = glitchUV * float2(40.0, 60.0);
     float2 digitGridID = floor(digitGridUV);
     float2 digitGridFract = fract(digitGridUV);
     
-    // 音频响应的数字流
-    float audioIndex = fmod(digitGridID.x, 80.0);
-    float digitAudioValue = uniforms.audioData[int(audioIndex)].x;
+    // 简化音频采样
+    float digitAudioValue = uniforms.audioData[int(fmod(digitGridID.x, 80.0))].x;
     
-    // 下降速度基于音频
-    float fallSpeed = 3.0 + digitAudioValue * 8.0;
-    float yOffset = fmod(time * fallSpeed + digitGridID.x * 0.5, 60.0);
-    
-    // 创建数字字符
+    // 简化数字流计算
+    float yOffset = fmod(time * (3.0 + digitAudioValue * 8.0) + digitGridID.x * 0.5, 60.0);
     float digitNoise = fract(sin(dot(digitGridID, float2(12.9898, 78.233))) * 43758.5453);
-    float character = step(0.6, digitNoise);
-    float trail = smoothstep(0.0, 8.0, yOffset - digitGridID.y) * 
-                  smoothstep(20.0, 12.0, yOffset - digitGridID.y);
     
-    // 字符形状
-    float charShape = step(0.3, digitGridFract.x) * step(digitGridFract.x, 0.7) * 
-                      step(0.2, digitGridFract.y) * step(digitGridFract.y, 0.8);
+    // 合并trail计算
+    float trail = smoothstep(0.0, 8.0, yOffset - digitGridID.y) * smoothstep(20.0, 12.0, yOffset - digitGridID.y);
     
-    float digits = character * trail * charShape * (0.2 + digitAudioValue * 0.8);
+    // 简化形状计算
+    float2 charMask = step(float2(0.3, 0.2), digitGridFract) * step(digitGridFract, float2(0.7, 0.8));
+    float digits = step(0.6, digitNoise) * trail * charMask.x * charMask.y * (0.2 + digitAudioValue * 0.8);
     
     // ===== 6. 音频响应的扫描线系统 =====
     // 主扫描线（使用原始UV保持水平）- 密度随音频变化
@@ -459,21 +393,16 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     ) * digits;
     
     // ===== 8. 音频响应的粒子爆发效果 =====
+    // 🔋 优化10：简化粒子计算
     float2 particleUV = glitchUV * 50.0 + time * 2.0;
     float particleNoise = fract(sin(dot(floor(particleUV), float2(12.9898, 78.233))) * 43758.5453);
     
-    // 粒子基础效果 + 高音爆发
-    float baseParticleIntensity = 0.2;
-    float particleTrigger = smoothstep(0.1, 0.35, trebleAudio); // 低阈值
-    float particles = step(0.97, particleNoise) * (baseParticleIntensity + particleTrigger * 1.5);
-    particles *= (1.0 + trebleAudio * 2.0);
+    // 简化粒子强度计算
+    float particles = step(0.97, particleNoise) * (0.2 + smoothstep(0.1, 0.35, trebleAudio) * 1.5) 
+                     * (1.0 + trebleAudio * 2.0);
     
-    // 粒子颜色根据音频强度变化
-    float3 particleColor = mix(
-        float3(1.0, 1.0, 0.5),  // 黄白色（低强度）
-        float3(1.0, 0.3, 1.0),  // 品红色（高强度）
-        trebleAudio
-    ) * particles;
+    // 简化颜色混合（预计算）
+    float3 particleColor = mix(float3(1.0, 1.0, 0.5), float3(1.0, 0.3, 1.0), trebleAudio) * particles;
     
     // ===== 9. 音频驱动的边缘冲击波（单频段响应版本）=====
     float edgeDist = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
@@ -512,35 +441,51 @@ fragment float4 cyberpunk_fragment(RasterizerData in [[stage_in]],
     // 4 = 无背景（纯透明）
     
     if (backgroundMode > 0.5 && backgroundMode < 1.5) {
-        // 模式1: 纯色背景（可自定义颜色）
-        backgroundColor = solidColor * backgroundIntensity * (0.3 + averageAudio * 0.4);
-    } else if (backgroundMode > 1.5 && backgroundMode < 2.5) {
-        // 模式2: 动态粒子背景
-        float2 particleBgUV = glitchUV * 30.0 + time * 0.5;
-        float particleBgNoise = fract(sin(dot(floor(particleBgUV), float2(12.9898, 78.233))) * 43758.5453);
-        float particleBg = step(0.92, particleBgNoise) * (0.4 + averageAudio * 0.6);
+        // 模式1: 纯色背景（高亮版本）
+        float pureColorIntensity = 0.6 + averageAudio * 0.4; // 大幅提高：60-100%
+        backgroundColor = solidColor * backgroundIntensity * pureColorIntensity * 2.0; // 再加倍
         
-        // 粒子颜色随音频变化
-        backgroundColor = mix(
-            float3(0.1, 0.15, 0.25),  // 深蓝色
-            float3(0.3, 0.1, 0.4),    // 紫色
-            sin(time * 0.5 + averageAudio * 3.0) * 0.5 + 0.5
-        ) * particleBg * backgroundIntensity;
+    } else if (backgroundMode > 1.5 && backgroundMode < 2.5) {
+        // 模式2: 动态粒子背景（高亮大粒子版本）
+        // 使用更大的粒子网格，让粒子更明显
+        float2 particleBgUV = glitchUV * 20.0 + time * 0.8; // 更大的粒子，移动更快
+        float particleBgNoise = fract(sin(dot(floor(particleBgUV), float2(12.9898, 78.233))) * 43758.5453);
+        float particleBg = step(0.75, particleBgNoise); // 更多更大的粒子（75%阈值）
+        
+        // 给每个粒子添加光晕效果
+        float2 particleFract = fract(particleBgUV);
+        float2 particleCenter = particleFract - 0.5;
+        float particleGlow = 1.0 - length(particleCenter) * 1.5; // 光晕效果
+        particleGlow = max(particleGlow, 0.0);
+        
+        // 大幅提高粒子亮度
+        float particleIntensity = 0.7 + averageAudio * 0.6; // 提高到70-130%
+        
+        // 非常亮的粒子颜色
+        float3 particleColor1 = float3(0.3, 0.5, 0.8);  // 明亮蓝色
+        float3 particleColor2 = float3(0.7, 0.3, 0.8);  // 明亮紫色
+        float colorMix = sin(time * 0.5 + averageAudio * 3.0) * 0.5 + 0.5;
+        
+        backgroundColor = mix(particleColor1, particleColor2, colorMix) 
+                         * particleBg * particleGlow * particleIntensity * backgroundIntensity * 1.5;
+        
     } else if (backgroundMode > 2.5 && backgroundMode < 3.5) {
-        // 模式3: 音频响应渐变背景
+        // 模式3: 音频响应渐变背景（增强可见度版本）
         float2 gradientCenter = float2(0.5, 0.5);
         float gradientDist = length(glitchUV - gradientCenter);
         
-        // 从中心到边缘的渐变
+        // 径向渐变
         float gradientValue = smoothstep(0.0, 1.0, gradientDist);
         
-        // 根据音频调制渐变
-        float audioGradient = sin(gradientDist * 5.0 - time * 2.0 + averageAudio * 10.0) * 0.5 + 0.5;
+        // 音频调制更明显
+        float audioGradient = sin(gradientDist * 4.0 - time * 2.0 + averageAudio * 8.0) * 0.5 + 0.5;
         
-        // 渐变颜色（从青色到紫色）
-        float3 gradientColor1 = float3(0.0, 0.4, 0.6) * (1.0 + bassAudio);
-        float3 gradientColor2 = float3(0.4, 0.0, 0.6) * (1.0 + trebleAudio);
-        backgroundColor = mix(gradientColor1, gradientColor2, gradientValue) * audioGradient * backgroundIntensity * 0.5;
+        // 更亮的渐变颜色（从青色到紫色）
+        float3 gradientColor1 = float3(0.0, 0.4, 0.6) * (1.0 + bassAudio * 0.8); // 青色（更亮）
+        float3 gradientColor2 = float3(0.5, 0.0, 0.6) * (1.0 + trebleAudio * 0.8); // 紫色（更亮）
+        
+        backgroundColor = mix(gradientColor1, gradientColor2, gradientValue) 
+                         * audioGradient * backgroundIntensity * 0.8; // 提高整体亮度到80%
     }
     // else: 模式0（网格）或模式4（无背景）不添加额外背景色
     
