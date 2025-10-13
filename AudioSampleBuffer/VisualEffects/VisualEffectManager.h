@@ -14,6 +14,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class SpectrumView;  // 前向声明
+
 @protocol VisualEffectManagerDelegate <NSObject>
 @optional
 - (void)visualEffectManager:(id)manager didChangeEffect:(VisualEffectType)effectType;
@@ -44,7 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
  * 设置原有的频谱视图引用（用于在Metal特效时暂停）
  * @param spectrumView 频谱视图
  */
-- (void)setOriginalSpectrumView:(UIView *)spectrumView;
+- (void)setOriginalSpectrumView:(SpectrumView *)spectrumView;
 
 /**
  * 显示特效选择界面

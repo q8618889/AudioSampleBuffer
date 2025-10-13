@@ -4,6 +4,8 @@
 #import <AVFoundation/AVFoundation.h>
 #import <Accelerate/Accelerate.h>
 #import "RealtimeAnalyzer.h"
+#import "LyricsManager.h"
+#import "LRCParser.h"
 
 @interface AudioSpectrumPlayer ()
 {
@@ -15,9 +17,11 @@
 @property (nonatomic, strong) AVAudioPlayerNode *player;
 @property (nonatomic, strong) RealtimeAnalyzer *analyzer;
 @property (nonatomic, assign) int bufferSize;
-@property (nonatomic,strong) AVAudioFile *file;
-@property(nonatomic,assign)NSTimeInterval currentTime;
-@property(nonatomic,assign)BOOL timeBegining;
+@property (nonatomic, strong) AVAudioFile *file;
+@property (nonatomic, assign) NSTimeInterval currentTime;
+@property (nonatomic, assign) BOOL timeBegining;
+@property (nonatomic, strong) NSString *currentFilePath;  // 当前播放文件路径
+@property (nonatomic, strong, readwrite) LRCParser *lyricsParser;  // 歌词解析器
 
 @end
 
@@ -34,6 +38,7 @@
 - (void)configInit {
     self.bufferSize = 2048;
     self.analyzer = [[RealtimeAnalyzer alloc] initWithFFTSize:self.bufferSize];
+    self.enableLyrics = YES;  // 默认启用歌词
 }
 
 - (void)setupPlayer {
@@ -85,6 +90,12 @@
 //    }
 //}
 - (void)playWithFileName:(NSString *)fileName {
+    // 立即清空旧歌词，避免短暂显示上一首歌的歌词
+    self.lyricsParser = nil;
+    if ([self.delegate respondsToSelector:@selector(playerDidLoadLyrics:)]) {
+        [self.delegate playerDidLoadLyrics:nil];
+    }
+    
     NSURL *fileUrl = [[NSBundle mainBundle] URLForResource:fileName withExtension:nil];
     NSError *error = nil;
     self.file = [[AVAudioFile alloc] initForReading:fileUrl error:&error];
@@ -92,6 +103,10 @@
         NSLog(@"create AVAudioFile error: %@", error);
         return;
     }
+    
+    // 保存当前文件路径
+    self.currentFilePath = fileUrl.path;
+    
     [self.player stop];
     [self.player scheduleFile:self.file atTime:nil completionHandler:nil];
     if (self.engine.isRunning == YES)
@@ -130,6 +145,11 @@
     }
  
     [self countDownBegin:(NSInteger)self.duration];
+    
+    // 加载歌词
+    if (self.enableLyrics) {
+        [self loadLyricsForCurrentTrack];
+    }
 }
 
 //开始倒计时
@@ -141,34 +161,36 @@
         _sometimer= dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER,0,0, _queue);
         
     }
-    __block int time = (int)sender;
-    dispatch_source_set_timer(_sometimer, dispatch_walltime(NULL,0),1.0*NSEC_PER_SEC,0);// 每秒执行一次
+    __block NSTimeInterval totalDuration = (NSTimeInterval)sender;
+    __block NSTimeInterval elapsedTime = 0;
+    
+    // 🔧 关键修复：改为每0.1秒更新一次，提高歌词同步精度（10倍于原来）
+    dispatch_source_set_timer(_sometimer, dispatch_walltime(NULL,0), 0.1*NSEC_PER_SEC, 0);
+    
     dispatch_source_set_event_handler(_sometimer, ^{
-        int interval = (int)time;
-        if(interval >0) {// 更新倒计时
-      
-           
-            int minutes = (time%3600)/60;
-            int seconds = time % 60;
-            NSString *strTime;
-           strTime= [NSString stringWithFormat:@"%.2d:%.2d",minutes,seconds];
+        if(elapsedTime < totalDuration) {// 继续播放
             dispatch_async(dispatch_get_main_queue(), ^{
-                 
+                // 更新当前播放时间（更精确，0.1秒级别）
+                self->_currentTime = elapsedTime;
+                
+                // 通知代理时间更新（用于歌词同步）
+                if ([self.delegate respondsToSelector:@selector(playerDidUpdateTime:)]) {
+                    [self.delegate playerDidUpdateTime:elapsedTime];
+                }
             });
+            
+            // 以0.1秒为单位递增
+            elapsedTime += 0.1;
         }else{
             // 倒计时结束，关闭
             dispatch_source_cancel(self->_sometimer);
             self->_queue = nil;
             self->_sometimer = nil;
             dispatch_async(dispatch_get_main_queue(), ^{
-                
                 self->_timeBegining = NO;
                 [self.delegate didFinishPlay];
-
             });
         }
-                           time--;
-                    
     });
     
     dispatch_resume(_sometimer);
@@ -176,6 +198,42 @@
 }
 - (void)stop {
     [self.player stop];
+    
+    // 停止时清除歌词
+    self.lyricsParser = nil;
+}
+
+#pragma mark - Lyrics
+
+- (void)loadLyricsForCurrentTrack {
+    if (!self.currentFilePath) {
+        return;
+    }
+    
+    __weak typeof(self) weakSelf = self;
+    [[LyricsManager sharedManager] fetchLyricsForAudioFile:self.currentFilePath
+                                                completion:^(LRCParser *parser, NSError *error) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        
+        if (error) {
+            NSLog(@"加载歌词失败: %@", error);
+            strongSelf.lyricsParser = nil;
+            
+            // 通知代理歌词加载失败（传入nil），以便界面显示"暂无lrc文件歌词"
+            if ([strongSelf.delegate respondsToSelector:@selector(playerDidLoadLyrics:)]) {
+                [strongSelf.delegate playerDidLoadLyrics:nil];
+            }
+        } else {
+            strongSelf.lyricsParser = parser;
+            NSLog(@"歌词加载成功，共 %lu 行", (unsigned long)parser.lyrics.count);
+            
+            // 通知代理歌词加载完成
+            if ([strongSelf.delegate respondsToSelector:@selector(playerDidLoadLyrics:)]) {
+                [strongSelf.delegate playerDidLoadLyrics:parser];
+            }
+        }
+    }];
 }
 
 - (AVAudioEngine *)engine {

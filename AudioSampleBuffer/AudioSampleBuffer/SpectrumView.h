@@ -16,6 +16,10 @@ typedef NS_ENUM(NSUInteger, ADSpectraStyle) {
 
 - (void)updateSpectra:(NSArray *)spectra withStype:(ADSpectraStyle)style;
 
+// 控制频谱视图的暂停和恢复
+- (void)pauseRendering;
+- (void)resumeRendering;
+
 @end
 
 NS_ASSUME_NONNULL_END

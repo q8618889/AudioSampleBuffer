@@ -155,6 +155,33 @@
     [self drawSpectrumPaths:spectra withStyle:style];
 }
 
+- (void)pauseRendering {
+    NSLog(@"⏸ SpectrumView: 暂停渲染，停止所有动画");
+    
+    // 暂停所有动画协调器的动画
+    [self.animationCoordinator stopAllAnimations];
+    
+    // 暂停layer上的所有动画
+    CFTimeInterval pausedTime = [self.layer convertTime:CACurrentMediaTime() fromLayer:nil];
+    self.layer.speed = 0.0;
+    self.layer.timeOffset = pausedTime;
+}
+
+- (void)resumeRendering {
+    NSLog(@"▶️ SpectrumView: 恢复渲染，重启所有动画");
+    
+    // 恢复layer上的动画
+    CFTimeInterval pausedTime = [self.layer timeOffset];
+    self.layer.speed = 1.0;
+    self.layer.timeOffset = 0.0;
+    self.layer.beginTime = 0.0;
+    CFTimeInterval timeSincePause = [self.layer convertTime:CACurrentMediaTime() fromLayer:nil] - pausedTime;
+    self.layer.beginTime = timeSincePause;
+    
+    // 重启所有动画协调器的动画
+    [self.animationCoordinator startAllAnimations];
+}
+
 - (void)drawSpectrumPaths:(NSArray *)spectra withStyle:(ADSpectraStyle)style {
     [CATransaction begin];
     [CATransaction setDisableActions:YES];

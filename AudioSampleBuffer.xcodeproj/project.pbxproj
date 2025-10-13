@@ -13,6 +13,36 @@
 		4C5C27AA2E9CB0A400D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27A82E9CB0A400D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3 */; };
 		4C5C27AB2E9CB0A400D9AEA9 /* 爱宝 - bangbang.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27A62E9CB0A400D9AEA9 /* 爱宝 - bangbang.mp3 */; };
 		4C5C27AE2E9CC24D00D9AEA9 /* PerformanceControlPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5C27AD2E9CC24D00D9AEA9 /* PerformanceControlPanel.m */; };
+		4C5C27B72E9CFE7F00D9AEA9 /* LyricsView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5C27B42E9CFE7F00D9AEA9 /* LyricsView.m */; };
+		4C5C27B82E9CFE7F00D9AEA9 /* LyricsManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5C27B22E9CFE7F00D9AEA9 /* LyricsManager.m */; };
+		4C5C27B92E9CFE7F00D9AEA9 /* LRCParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5C27B02E9CFE7F00D9AEA9 /* LRCParser.m */; };
+		4C5C27EE2E9D123A00D9AEA9 /* 初音ミク,cosMo@暴走P - 初音ミクの消失.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27D02E9D123A00D9AEA9 /* 初音ミク,cosMo@暴走P - 初音ミクの消失.mp3 */; };
+		4C5C28152E9D12C300D9AEA9 /* Zedd - Ignite.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28142E9D12C300D9AEA9 /* Zedd - Ignite.lrc */; };
+		4C5C28162E9D12C300D9AEA9 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28112E9D12C300D9AEA9 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).lrc */; };
+		4C5C28172E9D12C300D9AEA9 /* Jonah Kagen - God Needs The Devil.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C280F2E9D12C300D9AEA9 /* Jonah Kagen - God Needs The Devil.lrc */; };
+		4C5C28182E9D12C300D9AEA9 /* Imagine Dragons - Shots.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C280C2E9D12C300D9AEA9 /* Imagine Dragons - Shots.lrc */; };
+		4C5C28192E9D12C300D9AEA9 /* A公馆 - 放漾.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28032E9D12C300D9AEA9 /* A公馆 - 放漾.lrc */; };
+		4C5C281A2E9D12C300D9AEA9 /* DOUDOU - 拂过沙的光.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28082E9D12C300D9AEA9 /* DOUDOU - 拂过沙的光.lrc */; };
+		4C5C281B2E9D12C300D9AEA9 /* DOUDOU - 南三环东路.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28092E9D12C300D9AEA9 /* DOUDOU - 南三环东路.lrc */; };
+		4C5C281C2E9D12C300D9AEA9 /* 痛仰乐队 - 为你唱首歌.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27FF2E9D12C300D9AEA9 /* 痛仰乐队 - 为你唱首歌.lrc */; };
+		4C5C281D2E9D12C300D9AEA9 /* LOVE PSYCHEDELICO - Last Smile.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28122E9D12C300D9AEA9 /* LOVE PSYCHEDELICO - Last Smile.lrc */; };
+		4C5C281E2E9D12C300D9AEA9 /* Elektronomia - Vision.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C280A2E9D12C300D9AEA9 /* Elektronomia - Vision.lrc */; };
+		4C5C281F2E9D12C300D9AEA9 /* ILLENIUM,Nevve - Fractures.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C280B2E9D12C300D9AEA9 /* ILLENIUM,Nevve - Fractures.lrc */; };
+		4C5C28202E9D12C300D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28072E9D12C300D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.lrc */; };
+		4C5C28212E9D12C300D9AEA9 /* Lenka - Crystal Ball.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28102E9D12C300D9AEA9 /* Lenka - Crystal Ball.lrc */; };
+		4C5C28222E9D12C300D9AEA9 /* Missio - I See You.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28132E9D12C300D9AEA9 /* Missio - I See You.lrc */; };
+		4C5C28232E9D12C300D9AEA9 /* 周深 - Rubia.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28022E9D12C300D9AEA9 /* 周深 - Rubia.lrc */; };
+		4C5C28242E9D12C300D9AEA9 /* 八仙 8Immortals - 单身旅记 (Live).lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27FB2E9D12C300D9AEA9 /* 八仙 8Immortals - 单身旅记 (Live).lrc */; };
+		4C5C28252E9D12C300D9AEA9 /* Alida - Feathers.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28062E9D12C300D9AEA9 /* Alida - Feathers.lrc */; };
+		4C5C28262E9D12C300D9AEA9 /* 华晨宇 - 向阳而生.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27FD2E9D12C300D9AEA9 /* 华晨宇 - 向阳而生.lrc */; };
+		4C5C28272E9D12C300D9AEA9 /* 梁博 - 出现又离开 (Live).lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27FE2E9D12C300D9AEA9 /* 梁博 - 出现又离开 (Live).lrc */; };
+		4C5C28282E9D12C300D9AEA9 /* 周深 - 光亮 (Live版).lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28012E9D12C300D9AEA9 /* 周深 - 光亮 (Live版).lrc */; };
+		4C5C28292E9D12C300D9AEA9 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C280E2E9D12C300D9AEA9 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).lrc */; };
+		4C5C282A2E9D12C300D9AEA9 /* A公馆 - 与时间赛跑的人.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28052E9D12C300D9AEA9 /* A公馆 - 与时间赛跑的人.lrc */; };
+		4C5C282B2E9D12C300D9AEA9 /* Imagine Dragons - Warriors.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C280D2E9D12C300D9AEA9 /* Imagine Dragons - Warriors.lrc */; };
+		4C5C282C2E9D12C300D9AEA9 /* A公馆 - 海浪回潮.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28042E9D12C300D9AEA9 /* A公馆 - 海浪回潮.lrc */; };
+		4C5C282D2E9D12C300D9AEA9 /* 黑豹乐队 - 散，作鸟兽.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27FC2E9D12C300D9AEA9 /* 黑豹乐队 - 散，作鸟兽.lrc */; };
+		4C5C282E2E9D12C300D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.lrc in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C28002E9D12C300D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.lrc */; };
 		4C66E6D92E8A89E8003200DA /* Vicetone - Tremble (Original Mix).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6D42E8A89E8003200DA /* Vicetone - Tremble (Original Mix).mp3 */; };
 		4C66E6DA2E8A89E8003200DA /* ILLENIUM,Nevve - Fractures.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6CA2E8A89E8003200DA /* ILLENIUM,Nevve - Fractures.mp3 */; };
 		4C66E6DB2E8A89E8003200DA /* Alida - Feathers.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6C72E8A89E8003200DA /* Alida - Feathers.mp3 */; };
@@ -25,13 +55,11 @@
 		4C66E6E42E8A89E8003200DA /* 金骏植 - My Everthing.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6BE2E8A89E8003200DA /* 金骏植 - My Everthing.mp3 */; };
 		4C66E6E62E8A89E8003200DA /* Varien - Future Funk.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6D32E8A89E8003200DA /* Varien - Future Funk.mp3 */; };
 		4C66E6E72E8A89E8003200DA /* Imagine Dragons - Warriors.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6CB2E8A89E8003200DA /* Imagine Dragons - Warriors.mp3 */; };
-		4C66E6E82E8A89E8003200DA /* Taylor Swift - I Knew You Were Trouble..mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6D22E8A89E8003200DA /* Taylor Swift - I Knew You Were Trouble..mp3 */; };
 		4C66E6E92E8A89E8003200DA /* 马頔 - 无畏.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6C02E8A89E8003200DA /* 马頔 - 无畏.mp3 */; };
 		4C66E6EA2E8A89E8003200DA /* Lenka - Crystal Ball.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6CD2E8A89E8003200DA /* Lenka - Crystal Ball.mp3 */; };
 		4C66E6EB2E8A89E8003200DA /* Elektronomia - Vision.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6C92E8A89E8003200DA /* Elektronomia - Vision.mp3 */; };
 		4C66E6EC2E8A89E8003200DA /* Zero Venture - Northern Skies (Original Mix).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6D72E8A89E8003200DA /* Zero Venture - Northern Skies (Original Mix).mp3 */; };
 		4C66E6EE2E8A89E8003200DA /* Kingsfoil - Grapevine Valentine(Nrdo bootleg)-Nrdo.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6CC2E8A89E8003200DA /* Kingsfoil - Grapevine Valentine(Nrdo bootleg)-Nrdo.mp3 */; };
-		4C66E6EF2E8A89E8003200DA /* SPYAIR - My Friend.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6D02E8A89E8003200DA /* SPYAIR - My Friend.mp3 */; };
 		4C66E6F02E8A89E8003200DA /* CMA - You're Not Alone.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6C82E8A89E8003200DA /* CMA - You're Not Alone.mp3 */; };
 		4C66E6F12E8A89E8003200DA /* Missio - I See You.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6CF2E8A89E8003200DA /* Missio - I See You.mp3 */; };
 		4C66E6F22E8A89E8003200DA /* 周深 - Rubia.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C66E6C42E8A89E8003200DA /* 周深 - Rubia.mp3 */; };
@@ -96,6 +124,39 @@
 		4C5C27A82E9CB0A400D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3"; sourceTree = "<group>"; };
 		4C5C27AC2E9CC24D00D9AEA9 /* PerformanceControlPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PerformanceControlPanel.h; sourceTree = "<group>"; };
 		4C5C27AD2E9CC24D00D9AEA9 /* PerformanceControlPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PerformanceControlPanel.m; sourceTree = "<group>"; };
+		4C5C27AF2E9CFE7F00D9AEA9 /* LRCParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LRCParser.h; sourceTree = "<group>"; };
+		4C5C27B02E9CFE7F00D9AEA9 /* LRCParser.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LRCParser.m; sourceTree = "<group>"; };
+		4C5C27B12E9CFE7F00D9AEA9 /* LyricsManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LyricsManager.h; sourceTree = "<group>"; };
+		4C5C27B22E9CFE7F00D9AEA9 /* LyricsManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LyricsManager.m; sourceTree = "<group>"; };
+		4C5C27B32E9CFE7F00D9AEA9 /* LyricsView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LyricsView.h; sourceTree = "<group>"; };
+		4C5C27B42E9CFE7F00D9AEA9 /* LyricsView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LyricsView.m; sourceTree = "<group>"; };
+		4C5C27D02E9D123A00D9AEA9 /* 初音ミク,cosMo@暴走P - 初音ミクの消失.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "初音ミク,cosMo@暴走P - 初音ミクの消失.mp3"; sourceTree = "<group>"; };
+		4C5C27FB2E9D12C300D9AEA9 /* 八仙 8Immortals - 单身旅记 (Live).lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "八仙 8Immortals - 单身旅记 (Live).lrc"; sourceTree = "<group>"; };
+		4C5C27FC2E9D12C300D9AEA9 /* 黑豹乐队 - 散，作鸟兽.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "黑豹乐队 - 散，作鸟兽.lrc"; sourceTree = "<group>"; };
+		4C5C27FD2E9D12C300D9AEA9 /* 华晨宇 - 向阳而生.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "华晨宇 - 向阳而生.lrc"; sourceTree = "<group>"; };
+		4C5C27FE2E9D12C300D9AEA9 /* 梁博 - 出现又离开 (Live).lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "梁博 - 出现又离开 (Live).lrc"; sourceTree = "<group>"; };
+		4C5C27FF2E9D12C300D9AEA9 /* 痛仰乐队 - 为你唱首歌.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "痛仰乐队 - 为你唱首歌.lrc"; sourceTree = "<group>"; };
+		4C5C28002E9D12C300D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "吴垚滔,DOUDOU - 暮野荒原.lrc"; sourceTree = "<group>"; };
+		4C5C28012E9D12C300D9AEA9 /* 周深 - 光亮 (Live版).lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "周深 - 光亮 (Live版).lrc"; sourceTree = "<group>"; };
+		4C5C28022E9D12C300D9AEA9 /* 周深 - Rubia.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "周深 - Rubia.lrc"; sourceTree = "<group>"; };
+		4C5C28032E9D12C300D9AEA9 /* A公馆 - 放漾.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "A公馆 - 放漾.lrc"; sourceTree = "<group>"; };
+		4C5C28042E9D12C300D9AEA9 /* A公馆 - 海浪回潮.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "A公馆 - 海浪回潮.lrc"; sourceTree = "<group>"; };
+		4C5C28052E9D12C300D9AEA9 /* A公馆 - 与时间赛跑的人.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "A公馆 - 与时间赛跑的人.lrc"; sourceTree = "<group>"; };
+		4C5C28062E9D12C300D9AEA9 /* Alida - Feathers.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Alida - Feathers.lrc"; sourceTree = "<group>"; };
+		4C5C28072E9D12C300D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "DOUDOU - 春夏秋冬（Live in 昆明 20231210）.lrc"; sourceTree = "<group>"; };
+		4C5C28082E9D12C300D9AEA9 /* DOUDOU - 拂过沙的光.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "DOUDOU - 拂过沙的光.lrc"; sourceTree = "<group>"; };
+		4C5C28092E9D12C300D9AEA9 /* DOUDOU - 南三环东路.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "DOUDOU - 南三环东路.lrc"; sourceTree = "<group>"; };
+		4C5C280A2E9D12C300D9AEA9 /* Elektronomia - Vision.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Elektronomia - Vision.lrc"; sourceTree = "<group>"; };
+		4C5C280B2E9D12C300D9AEA9 /* ILLENIUM,Nevve - Fractures.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ILLENIUM,Nevve - Fractures.lrc"; sourceTree = "<group>"; };
+		4C5C280C2E9D12C300D9AEA9 /* Imagine Dragons - Shots.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Imagine Dragons - Shots.lrc"; sourceTree = "<group>"; };
+		4C5C280D2E9D12C300D9AEA9 /* Imagine Dragons - Warriors.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Imagine Dragons - Warriors.lrc"; sourceTree = "<group>"; };
+		4C5C280E2E9D12C300D9AEA9 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).lrc"; sourceTree = "<group>"; };
+		4C5C280F2E9D12C300D9AEA9 /* Jonah Kagen - God Needs The Devil.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Jonah Kagen - God Needs The Devil.lrc"; sourceTree = "<group>"; };
+		4C5C28102E9D12C300D9AEA9 /* Lenka - Crystal Ball.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Lenka - Crystal Ball.lrc"; sourceTree = "<group>"; };
+		4C5C28112E9D12C300D9AEA9 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Little Mix,Steve Void - Break Up Song (Steve Void Remix).lrc"; sourceTree = "<group>"; };
+		4C5C28122E9D12C300D9AEA9 /* LOVE PSYCHEDELICO - Last Smile.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "LOVE PSYCHEDELICO - Last Smile.lrc"; sourceTree = "<group>"; };
+		4C5C28132E9D12C300D9AEA9 /* Missio - I See You.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Missio - I See You.lrc"; sourceTree = "<group>"; };
+		4C5C28142E9D12C300D9AEA9 /* Zedd - Ignite.lrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Zedd - Ignite.lrc"; sourceTree = "<group>"; };
 		4C66E6BA2E8A89E8003200DA /* 陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3"; sourceTree = "<group>"; };
 		4C66E6BB2E8A89E8003200DA /* 初音ミク,CosMo@暴走P - 初音未来的消失.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "初音ミク,CosMo@暴走P - 初音未来的消失.mp3"; sourceTree = "<group>"; };
 		4C66E6BE2E8A89E8003200DA /* 金骏植 - My Everthing.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "金骏植 - My Everthing.mp3"; sourceTree = "<group>"; };
@@ -114,9 +175,7 @@
 		4C66E6CD2E8A89E8003200DA /* Lenka - Crystal Ball.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Lenka - Crystal Ball.mp3"; sourceTree = "<group>"; };
 		4C66E6CE2E8A89E8003200DA /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Little Mix,Steve Void - Break Up Song (Steve Void Remix).mp3"; sourceTree = "<group>"; };
 		4C66E6CF2E8A89E8003200DA /* Missio - I See You.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Missio - I See You.mp3"; sourceTree = "<group>"; };
-		4C66E6D02E8A89E8003200DA /* SPYAIR - My Friend.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "SPYAIR - My Friend.mp3"; sourceTree = "<group>"; };
 		4C66E6D12E8A89E8003200DA /* Sub Urban - Cradles.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Sub Urban - Cradles.mp3"; sourceTree = "<group>"; };
-		4C66E6D22E8A89E8003200DA /* Taylor Swift - I Knew You Were Trouble..mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Taylor Swift - I Knew You Were Trouble..mp3"; sourceTree = "<group>"; };
 		4C66E6D32E8A89E8003200DA /* Varien - Future Funk.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Varien - Future Funk.mp3"; sourceTree = "<group>"; };
 		4C66E6D42E8A89E8003200DA /* Vicetone - Tremble (Original Mix).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Vicetone - Tremble (Original Mix).mp3"; sourceTree = "<group>"; };
 		4C66E6D52E8A89E8003200DA /* Xeuphoria - Sky City.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Xeuphoria - Sky City.mp3"; sourceTree = "<group>"; };
@@ -206,6 +265,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4C5C27B62E9CFE7F00D9AEA9 /* Lyrics */ = {
+			isa = PBXGroup;
+			children = (
+				4C5C27AF2E9CFE7F00D9AEA9 /* LRCParser.h */,
+				4C5C27B02E9CFE7F00D9AEA9 /* LRCParser.m */,
+				4C5C27B12E9CFE7F00D9AEA9 /* LyricsManager.h */,
+				4C5C27B22E9CFE7F00D9AEA9 /* LyricsManager.m */,
+				4C5C27B32E9CFE7F00D9AEA9 /* LyricsView.h */,
+				4C5C27B42E9CFE7F00D9AEA9 /* LyricsView.m */,
+			);
+			path = Lyrics;
+			sourceTree = "<group>";
+		};
 		4C66E6D82E8A89E8003200DA /* Audio */ = {
 			isa = PBXGroup;
 			children = (
@@ -234,9 +306,7 @@
 				4C66E6CD2E8A89E8003200DA /* Lenka - Crystal Ball.mp3 */,
 				4C66E6CE2E8A89E8003200DA /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).mp3 */,
 				4C66E6CF2E8A89E8003200DA /* Missio - I See You.mp3 */,
-				4C66E6D02E8A89E8003200DA /* SPYAIR - My Friend.mp3 */,
 				4C66E6D12E8A89E8003200DA /* Sub Urban - Cradles.mp3 */,
-				4C66E6D22E8A89E8003200DA /* Taylor Swift - I Knew You Were Trouble..mp3 */,
 				4C66E6D32E8A89E8003200DA /* Varien - Future Funk.mp3 */,
 				4C66E6D42E8A89E8003200DA /* Vicetone - Tremble (Original Mix).mp3 */,
 				4C66E6D52E8A89E8003200DA /* Xeuphoria - Sky City.mp3 */,
@@ -252,6 +322,33 @@
 				4C5C27A62E9CB0A400D9AEA9 /* 爱宝 - bangbang.mp3 */,
 				4C5C27A72E9CB0A400D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.mp3 */,
 				4C5C27A82E9CB0A400D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3 */,
+				4C5C27D02E9D123A00D9AEA9 /* 初音ミク,cosMo@暴走P - 初音ミクの消失.mp3 */,
+				4C5C27FB2E9D12C300D9AEA9 /* 八仙 8Immortals - 单身旅记 (Live).lrc */,
+				4C5C27FC2E9D12C300D9AEA9 /* 黑豹乐队 - 散，作鸟兽.lrc */,
+				4C5C27FD2E9D12C300D9AEA9 /* 华晨宇 - 向阳而生.lrc */,
+				4C5C27FE2E9D12C300D9AEA9 /* 梁博 - 出现又离开 (Live).lrc */,
+				4C5C27FF2E9D12C300D9AEA9 /* 痛仰乐队 - 为你唱首歌.lrc */,
+				4C5C28002E9D12C300D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.lrc */,
+				4C5C28012E9D12C300D9AEA9 /* 周深 - 光亮 (Live版).lrc */,
+				4C5C28022E9D12C300D9AEA9 /* 周深 - Rubia.lrc */,
+				4C5C28032E9D12C300D9AEA9 /* A公馆 - 放漾.lrc */,
+				4C5C28042E9D12C300D9AEA9 /* A公馆 - 海浪回潮.lrc */,
+				4C5C28052E9D12C300D9AEA9 /* A公馆 - 与时间赛跑的人.lrc */,
+				4C5C28062E9D12C300D9AEA9 /* Alida - Feathers.lrc */,
+				4C5C28072E9D12C300D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.lrc */,
+				4C5C28082E9D12C300D9AEA9 /* DOUDOU - 拂过沙的光.lrc */,
+				4C5C28092E9D12C300D9AEA9 /* DOUDOU - 南三环东路.lrc */,
+				4C5C280A2E9D12C300D9AEA9 /* Elektronomia - Vision.lrc */,
+				4C5C280B2E9D12C300D9AEA9 /* ILLENIUM,Nevve - Fractures.lrc */,
+				4C5C280C2E9D12C300D9AEA9 /* Imagine Dragons - Shots.lrc */,
+				4C5C280D2E9D12C300D9AEA9 /* Imagine Dragons - Warriors.lrc */,
+				4C5C280E2E9D12C300D9AEA9 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).lrc */,
+				4C5C280F2E9D12C300D9AEA9 /* Jonah Kagen - God Needs The Devil.lrc */,
+				4C5C28102E9D12C300D9AEA9 /* Lenka - Crystal Ball.lrc */,
+				4C5C28112E9D12C300D9AEA9 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).lrc */,
+				4C5C28122E9D12C300D9AEA9 /* LOVE PSYCHEDELICO - Last Smile.lrc */,
+				4C5C28132E9D12C300D9AEA9 /* Missio - I See You.lrc */,
+				4C5C28142E9D12C300D9AEA9 /* Zedd - Ignite.lrc */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -344,6 +441,7 @@
 				64C5447228C838D400C23393 /* main.m */,
 				4C66E7042E8A8DBB003200DA /* Animations */,
 				4C66E7152E8A9255003200DA /* VisualEffects */,
+				4C5C27B62E9CFE7F00D9AEA9 /* Lyrics */,
 			);
 			path = AudioSampleBuffer;
 			sourceTree = "<group>";
@@ -441,18 +539,43 @@
 				4C66E6E42E8A89E8003200DA /* 金骏植 - My Everthing.mp3 in Resources */,
 				4C66E6E62E8A89E8003200DA /* Varien - Future Funk.mp3 in Resources */,
 				4C66E6E72E8A89E8003200DA /* Imagine Dragons - Warriors.mp3 in Resources */,
-				4C66E6E82E8A89E8003200DA /* Taylor Swift - I Knew You Were Trouble..mp3 in Resources */,
 				4C66E6E92E8A89E8003200DA /* 马頔 - 无畏.mp3 in Resources */,
 				4C49068E2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 in Resources */,
+				4C5C27EE2E9D123A00D9AEA9 /* 初音ミク,cosMo@暴走P - 初音ミクの消失.mp3 in Resources */,
 				4C66E6EA2E8A89E8003200DA /* Lenka - Crystal Ball.mp3 in Resources */,
 				4C77CD0C2E98DC71008EA7C6 /* 黑豹乐队 - 散，作鸟兽.mp3 in Resources */,
 				4C66E6EB2E8A89E8003200DA /* Elektronomia - Vision.mp3 in Resources */,
 				4C66E6EC2E8A89E8003200DA /* Zero Venture - Northern Skies (Original Mix).mp3 in Resources */,
 				4C66E6EE2E8A89E8003200DA /* Kingsfoil - Grapevine Valentine(Nrdo bootleg)-Nrdo.mp3 in Resources */,
-				4C66E6EF2E8A89E8003200DA /* SPYAIR - My Friend.mp3 in Resources */,
 				4C77CD132E98F31B008EA7C6 /* A公馆 - 与时间赛跑的人.mp3 in Resources */,
 				4C77CD142E98F31B008EA7C6 /* A公馆 - 海浪回潮.mp3 in Resources */,
 				4C77CD152E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 in Resources */,
+				4C5C28152E9D12C300D9AEA9 /* Zedd - Ignite.lrc in Resources */,
+				4C5C28162E9D12C300D9AEA9 /* Little Mix,Steve Void - Break Up Song (Steve Void Remix).lrc in Resources */,
+				4C5C28172E9D12C300D9AEA9 /* Jonah Kagen - God Needs The Devil.lrc in Resources */,
+				4C5C28182E9D12C300D9AEA9 /* Imagine Dragons - Shots.lrc in Resources */,
+				4C5C28192E9D12C300D9AEA9 /* A公馆 - 放漾.lrc in Resources */,
+				4C5C281A2E9D12C300D9AEA9 /* DOUDOU - 拂过沙的光.lrc in Resources */,
+				4C5C281B2E9D12C300D9AEA9 /* DOUDOU - 南三环东路.lrc in Resources */,
+				4C5C281C2E9D12C300D9AEA9 /* 痛仰乐队 - 为你唱首歌.lrc in Resources */,
+				4C5C281D2E9D12C300D9AEA9 /* LOVE PSYCHEDELICO - Last Smile.lrc in Resources */,
+				4C5C281E2E9D12C300D9AEA9 /* Elektronomia - Vision.lrc in Resources */,
+				4C5C281F2E9D12C300D9AEA9 /* ILLENIUM,Nevve - Fractures.lrc in Resources */,
+				4C5C28202E9D12C300D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.lrc in Resources */,
+				4C5C28212E9D12C300D9AEA9 /* Lenka - Crystal Ball.lrc in Resources */,
+				4C5C28222E9D12C300D9AEA9 /* Missio - I See You.lrc in Resources */,
+				4C5C28232E9D12C300D9AEA9 /* 周深 - Rubia.lrc in Resources */,
+				4C5C28242E9D12C300D9AEA9 /* 八仙 8Immortals - 单身旅记 (Live).lrc in Resources */,
+				4C5C28252E9D12C300D9AEA9 /* Alida - Feathers.lrc in Resources */,
+				4C5C28262E9D12C300D9AEA9 /* 华晨宇 - 向阳而生.lrc in Resources */,
+				4C5C28272E9D12C300D9AEA9 /* 梁博 - 出现又离开 (Live).lrc in Resources */,
+				4C5C28282E9D12C300D9AEA9 /* 周深 - 光亮 (Live版).lrc in Resources */,
+				4C5C28292E9D12C300D9AEA9 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).lrc in Resources */,
+				4C5C282A2E9D12C300D9AEA9 /* A公馆 - 与时间赛跑的人.lrc in Resources */,
+				4C5C282B2E9D12C300D9AEA9 /* Imagine Dragons - Warriors.lrc in Resources */,
+				4C5C282C2E9D12C300D9AEA9 /* A公馆 - 海浪回潮.lrc in Resources */,
+				4C5C282D2E9D12C300D9AEA9 /* 黑豹乐队 - 散，作鸟兽.lrc in Resources */,
+				4C5C282E2E9D12C300D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.lrc in Resources */,
 				4C77CD162E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 in Resources */,
 				4C77CD172E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 in Resources */,
 				4C66E6F02E8A89E8003200DA /* CMA - You're Not Alone.mp3 in Resources */,
@@ -487,6 +610,9 @@
 				4C66E7162E8A9255003200DA /* EffectSelectorView.m in Sources */,
 				4C66E7172E8A9255003200DA /* VisualEffectType.m in Sources */,
 				4C66E7302E8A9255003200DA /* ShaderCommon.metal in Sources */,
+				4C5C27B72E9CFE7F00D9AEA9 /* LyricsView.m in Sources */,
+				4C5C27B82E9CFE7F00D9AEA9 /* LyricsManager.m in Sources */,
+				4C5C27B92E9CFE7F00D9AEA9 /* LRCParser.m in Sources */,
 				4C66E7402E8A9255003200DA /* CommonVertexShader.metal in Sources */,
 				4C66E7312E8A9255003200DA /* NeonShader.metal in Sources */,
 				4C66E7322E8A9255003200DA /* Waveform3DShader.metal in Sources */,

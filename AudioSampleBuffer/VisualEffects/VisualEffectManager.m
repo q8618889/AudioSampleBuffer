@@ -6,6 +6,7 @@
 //
 
 #import "VisualEffectManager.h"
+#import "../AudioSampleBuffer/SpectrumView.h"
 
 @interface VisualEffectManager () <MetalRendererDelegate>
 
@@ -17,7 +18,7 @@
 @property (nonatomic, assign) BOOL isEffectActive;
 
 // 原有频谱视图引用
-@property (nonatomic, weak) UIView *originalSpectrumView;
+@property (nonatomic, weak) SpectrumView *originalSpectrumView;
 
 // 性能统计
 @property (nonatomic, assign) NSTimeInterval lastFrameTime;
@@ -235,7 +236,7 @@
     [_effectSelector hideWithAnimation:YES];
 }
 
-- (void)setOriginalSpectrumView:(UIView *)spectrumView {
+- (void)setOriginalSpectrumView:(SpectrumView *)spectrumView {
     _originalSpectrumView = spectrumView;
 }
 
@@ -291,11 +292,15 @@
                 if (isMetalEffect && _originalSpectrumView) {
                     NSLog(@"🎭 暂停原有频谱特效，启用Metal特效");
                     _originalSpectrumView.hidden = YES;
+                    [_originalSpectrumView pauseRendering];  // 🔧 真正停止原生特效的渲染
                     _metalView.hidden = NO;
                 } else {
                     // 如果不是Metal特效，显示原有频谱特效
                     NSLog(@"🎵 启用原有频谱特效，暂停Metal特效");
-                    if (_originalSpectrumView) _originalSpectrumView.hidden = NO;
+                    if (_originalSpectrumView) {
+                        _originalSpectrumView.hidden = NO;
+                        [_originalSpectrumView resumeRendering];  // 🔧 恢复原生特效的渲染
+                    }
                     if (_metalView) _metalView.hidden = YES;
                 }
                 
@@ -381,10 +386,20 @@
 
 - (void)pauseRendering {
     [_currentRenderer pauseRendering];
+    
+    // 🔧 如果当前不是Metal特效，也要暂停原生频谱视图
+    if (![self isMetalEffect:_currentEffectType] && _originalSpectrumView) {
+        [_originalSpectrumView pauseRendering];
+    }
 }
 
 - (void)resumeRendering {
     [_currentRenderer resumeRendering];
+    
+    // 🔧 如果当前不是Metal特效，也要恢复原生频谱视图
+    if (![self isMetalEffect:_currentEffectType] && _originalSpectrumView) {
+        [_originalSpectrumView resumeRendering];
+    }
 }
 
 - (void)setRenderParameters:(NSDictionary *)parameters {

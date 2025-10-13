@@ -15,6 +15,8 @@
 #import "GalaxyControlPanel.h"
 #import "CyberpunkControlPanel.h"
 #import "PerformanceControlPanel.h"
+#import "LyricsView.h"
+#import "LRCParser.h"
 #import <AVFoundation/AVFoundation.h>
 
 @interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate, PerformanceControlDelegate>
@@ -55,6 +57,10 @@
 @property (nonatomic, strong) CADisplayLink *fpsDisplayLink;
 @property (nonatomic, assign) NSInteger frameCount;
 @property (nonatomic, assign) CFTimeInterval lastTimestamp;
+
+// 歌词视图
+@property (nonatomic, strong) LyricsView *lyricsView;
+@property (nonatomic, strong) UIView *lyricsContainer;
 @end
 
 @implementation ViewController
@@ -285,6 +291,9 @@
     
     // 最后创建控制按钮，确保在最上层
     [self setupEffectControls];
+    
+    // 添加歌词视图
+    [self setupLyricsView];
 }
 
 - (void)setupBackgroundLayers {
@@ -560,6 +569,33 @@
     }
     [self updateAudioSelection];
     [self.player playWithFileName:self.audioArray[index]];
+}
+
+#pragma mark - 歌词代理方法
+
+- (void)playerDidLoadLyrics:(LRCParser *)parser {
+    if (parser) {
+        NSLog(@"✅ 歌词加载成功: %@ - %@", parser.artist ?: @"未知", parser.title ?: @"未知");
+        NSLog(@"   歌词行数: %lu", (unsigned long)parser.lyrics.count);
+        
+        // 显示歌词容器
+        self.lyricsContainer.hidden = NO;
+        
+        // 更新歌词视图
+        self.lyricsView.parser = parser;
+    } else {
+        NSLog(@"⚠️ 未找到歌词");
+        // 显示歌词容器（显示"暂无lrc文件歌词"提示）
+        self.lyricsContainer.hidden = NO;
+        
+        // 清空歌词视图，触发显示"暂无lrc文件歌词"消息
+        self.lyricsView.parser = nil;
+    }
+}
+
+- (void)playerDidUpdateTime:(NSTimeInterval)currentTime {
+    // 更新歌词显示
+    [self.lyricsView updateWithTime:currentTime];
 }
 - (NSMutableArray *)audioArray {
     if (!_audioArray) {
@@ -837,6 +873,62 @@
     
     [self.performanceControlPanel showAnimated:YES];
     [self.view bringSubviewToFront:self.performanceControlPanel];
+}
+
+#pragma mark - 歌词视图设置
+
+- (void)setupLyricsView {
+    // 创建歌词容器（半透明背景，带圆角）
+    CGFloat containerWidth = self.view.bounds.size.width - 40;
+    CGFloat containerHeight = 300;
+    CGFloat containerY = self.view.bounds.size.height - containerHeight - 120; // 在底部但不遮挡列表
+    
+    self.lyricsContainer = [[UIView alloc] initWithFrame:CGRectMake(20, 
+                                                                     containerY, 
+                                                                     containerWidth, 
+                                                                     containerHeight)];
+    self.lyricsContainer.backgroundColor = [UIColor clearColor];
+    self.lyricsContainer.layer.cornerRadius = 15;
+    self.lyricsContainer.clipsToBounds = YES;
+    
+    // 将歌词容器添加到歌单view的下面（层级调整）
+    if (self.tableView) {
+        [self.view insertSubview:self.lyricsContainer belowSubview:self.tableView];
+    } else {
+        [self.view addSubview:self.lyricsContainer];
+    }
+    
+    // 创建歌词视图
+    self.lyricsView = [[LyricsView alloc] initWithFrame:self.lyricsContainer.bounds];
+    self.lyricsView.backgroundColor = [UIColor clearColor];
+    
+    // 自定义歌词样式 - 适配你的酷炫界面
+    self.lyricsView.highlightColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0];  // 青色高亮，匹配赛博朋克风格
+    self.lyricsView.normalColor = [UIColor colorWithWhite:1.0 alpha:0.5];
+    self.lyricsView.highlightFont = [UIFont boldSystemFontOfSize:18];
+    self.lyricsView.lyricsFont = [UIFont systemFontOfSize:15];
+    self.lyricsView.lineSpacing = 25;
+    self.lyricsView.autoScroll = YES;
+    
+    [self.lyricsContainer addSubview:self.lyricsView];
+    
+    // 默认隐藏，等歌词加载后再显示
+    self.lyricsContainer.hidden = YES;
+    
+    // 添加点击手势 - 点击歌词容器可以切换显示/隐藏
+    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self 
+                                                                                 action:@selector(toggleLyricsView:)];
+    tapGesture.numberOfTapsRequired = 2; // 双击切换
+    [self.lyricsContainer addGestureRecognizer:tapGesture];
+    
+    NSLog(@"🎵 歌词视图已创建");
+}
+
+- (void)toggleLyricsView:(UITapGestureRecognizer *)gesture {
+    // 双击切换歌词容器的显示状态
+    [UIView animateWithDuration:0.3 animations:^{
+        self.lyricsContainer.alpha = self.lyricsContainer.alpha > 0.5 ? 0.3 : 1.0;
+    }];
 }
 
 #pragma mark - FPS监控
