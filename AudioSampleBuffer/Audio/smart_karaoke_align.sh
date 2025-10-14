@@ -1,12 +1,17 @@
 #!/bin/bash
 # ===============================================
-# 🎧 智能卡拉OK逐字 LRC 生成器 v5.2
+# 🎧 智能卡拉OK逐字 LRC 生成器 v5.3
 # 自动匹配 .mp3 + 同名 .lrc 文件，生成逐字 LRC
 # ===============================================
 
 PYTHON="/opt/homebrew/bin/python3.11"
 
-convert_script=$(cat << 'EOF'
+# 设置 UTF-8 编码
+export PYTHONIOENCODING=UTF-8
+
+# 创建 Python 转换脚本
+convert_py="/tmp/convert_to_enhanced_lrc_$$.py"
+cat > "$convert_py" << 'EOF'
 import sys, json, re
 
 def clean_lrc_text(text):
@@ -18,6 +23,7 @@ def clean_lrc_text(text):
     text = re.sub(r'作曲\s*[:：].*', '', text)
     text = re.sub(r'编曲\s*[:：].*', '', text)
     text = re.sub(r'演唱\s*[:：].*', '', text)
+    text = re.sub(r'制作人\s*[:：].*', '', text)
     return text.strip()
 
 def to_lrc(json_file, output_file):
@@ -46,18 +52,21 @@ def to_lrc(json_file, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write('\n'.join(lrc_lines))
     
-    print(f"✅ 成功生成: {output_file} (共 {len(lrc_lines)} 行)")
+    print("✅ 成功生成: {} (共 {} 行)".format(output_file, len(lrc_lines)))
 
 if __name__ == "__main__":
-    if len(sys.argv)!=3:
+    if len(sys.argv) != 3:
         print("Usage: python convert_to_enhanced_lrc.py input.json output.lrc")
         sys.exit(1)
     to_lrc(sys.argv[1], sys.argv[2])
 EOF
-)
 
-convert_py=$(mktemp /tmp/convert_to_enhanced_lrc_XXXX.py)
-echo "$convert_script" > "$convert_py"
+echo "🎵 开始批量处理..."
+echo "================================"
+
+processed=0
+skipped=0
+failed=0
 
 for audio in *.mp3; do
     [ -f "$audio" ] || continue
@@ -65,29 +74,62 @@ for audio in *.mp3; do
     text_file="$base.txt"
     lrc_input="$base.lrc"
 
-    if [ -f "$lrc_input" ]; then
-        text_file="$lrc_input"
-    elif [ ! -f "$text_file" ]; then
-        echo "⚠️ 未找到对应文本或 LRC 文件: $base"
+    # 检查是否已经有 enhanced.lrc
+    enhanced_lrc="$base.enhanced.lrc"
+    if [ -f "$enhanced_lrc" ]; then
+        echo "⏭️  已存在，跳过: $enhanced_lrc"
+        ((skipped++))
         continue
     fi
 
+    # 优先使用 .lrc 文件，否则使用 .txt
+    if [ -f "$lrc_input" ]; then
+        text_file="$lrc_input"
+    elif [ ! -f "$text_file" ]; then
+        echo "⚠️  未找到对应文本或 LRC 文件: $base"
+        ((skipped++))
+        continue
+    fi
+
+    echo ""
     echo "🎶 处理: $audio + $text_file"
 
     json_file="$base.json"
-    lrc_file="$base.enhanced.lrc"
 
-    # aeneas 对齐生成 JSON
-    $PYTHON -m aeneas.tools.execute_task \
-        "$audio" "$text_file" "task_language=zh|is_text_type=plain|os_task_file_format=json" "$json_file" --verbose
+    # 检测语言（简单判断：如果文件名包含中文字符则用 zh，否则用 en）
+    if echo "$audio" | LC_ALL=C grep -q '[^[:print:]]'; then
+        lang="zh"
+    else
+        lang="en"
+    fi
 
-    # JSON -> 逐字 LRC
-    $PYTHON "$convert_py" "$json_file" "$lrc_file"
-
-    echo "✅ 已生成逐字 LRC: $lrc_file"
+    # aeneas 对齐生成 JSON（减少输出）
+    if $PYTHON -m aeneas.tools.execute_task \
+        "$audio" "$text_file" \
+        "task_language=$lang|is_text_type=plain|os_task_file_format=json" \
+        "$json_file" > /dev/null 2>&1; then
+        
+        # JSON -> 逐字 LRC
+        if $PYTHON "$convert_py" "$json_file" "$enhanced_lrc" 2>&1; then
+            # 清理临时 JSON 文件
+            rm -f "$json_file"
+            ((processed++))
+        else
+            echo "❌ 转换失败: $json_file"
+            ((failed++))
+        fi
+    else
+        echo "❌ 对齐失败: $audio"
+        ((failed++))
+    fi
 done
 
+# 清理 Python 脚本
 rm -f "$convert_py"
 
-echo "🎉 全部处理完成！"
-
+echo ""
+echo "================================"
+echo "🎉 处理完成！"
+echo "   ✅ 成功: $processed 个"
+echo "   ⏭️  跳过: $skipped 个"
+echo "   ❌ 失败: $failed 个"

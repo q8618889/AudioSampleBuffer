@@ -6,6 +6,7 @@
 //
 
 #import "LyricsView.h"
+#import "LyricsEffectCell.h"
 
 @interface LyricsView () <UITableViewDelegate, UITableViewDataSource>
 
@@ -74,6 +75,7 @@
     _lyricsFont = [UIFont systemFontOfSize:15];
     _highlightFont = [UIFont boldSystemFontOfSize:17];
     _lineSpacing = 20;
+    _currentEffect = LyricsEffectTypeNone;
 }
 
 - (void)layoutSubviews {
@@ -114,15 +116,28 @@
         NSInteger oldIndex = _currentIndex;
         _currentIndex = newIndex;
         
-        // 刷新旧的和新的行
+        // 🔧 刷新旧的、新的和周围的行（用于更新透明度渐变效果）
         NSMutableArray *indexPaths = [NSMutableArray array];
         
+        // 添加旧索引及其周围的行
         if (oldIndex >= 0 && oldIndex < _parser.lyrics.count) {
-            [indexPaths addObject:[NSIndexPath indexPathForRow:oldIndex inSection:0]];
+            for (NSInteger i = oldIndex - 3; i <= oldIndex + 3; i++) {
+                if (i >= 0 && i < _parser.lyrics.count) {
+                    [indexPaths addObject:[NSIndexPath indexPathForRow:i inSection:0]];
+                }
+            }
         }
         
+        // 添加新索引及其周围的行
         if (newIndex >= 0 && newIndex < _parser.lyrics.count) {
-            [indexPaths addObject:[NSIndexPath indexPathForRow:newIndex inSection:0]];
+            for (NSInteger i = newIndex - 3; i <= newIndex + 3; i++) {
+                if (i >= 0 && i < _parser.lyrics.count) {
+                    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:i inSection:0];
+                    if (![indexPaths containsObject:indexPath]) {
+                        [indexPaths addObject:indexPath];
+                    }
+                }
+            }
         }
         
         if (indexPaths.count > 0) {
@@ -160,29 +175,47 @@
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    static NSString *identifier = @"LyricsCell";
+    static NSString *identifier = @"LyricsEffectCell";
     
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+    LyricsEffectCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
     if (!cell) {
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
-        cell.backgroundColor = [UIColor clearColor];
-        cell.selectionStyle = UITableViewCellSelectionStyleNone;
-        cell.textLabel.textAlignment = NSTextAlignmentCenter;
-        cell.textLabel.numberOfLines = 0;
+        cell = [[LyricsEffectCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
     }
     
     LRCLine *line = _parser.lyrics[indexPath.row];
     BOOL isCurrentLine = (indexPath.row == _currentIndex);
     
-    cell.textLabel.text = line.text;
-    cell.textLabel.textColor = isCurrentLine ? _highlightColor : _normalColor;
-    cell.textLabel.font = isCurrentLine ? _highlightFont : _lyricsFont;
+    cell.lyricsText = line.text;
+    cell.isHighlighted = isCurrentLine;
+    cell.effectType = _currentEffect;
+    cell.highlightColor = _highlightColor;
+    cell.normalColor = _normalColor;
+    cell.highlightFont = _highlightFont;
+    cell.normalFont = _lyricsFont;
     
-    // 添加动画效果
-    if (isCurrentLine) {
-        cell.transform = CGAffineTransformMakeScale(1.05, 1.05);
+    // 🎨 计算距离当前行的距离，实现渐进渐出效果
+    NSInteger distance = labs(indexPath.row - _currentIndex);
+    CGFloat alpha = 1.0;
+    
+    if (distance == 0) {
+        alpha = 1.0; // 当前行完全不透明
+    } else if (distance == 1) {
+        alpha = 0.8; // 相邻行
+    } else if (distance == 2) {
+        alpha = 0.6; // 第二行
+    } else if (distance == 3) {
+        alpha = 0.4; // 第三行
     } else {
-        cell.transform = CGAffineTransformIdentity;
+        alpha = 0.2; // 更远的行，几乎透明
+    }
+    
+    cell.alpha = alpha;
+    
+    // 应用特效
+    if (isCurrentLine) {
+        [cell applyEffect:YES];
+    } else {
+        [cell resetEffect];
     }
     
     return cell;
@@ -212,6 +245,13 @@
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         self.autoScroll = YES;
     });
+}
+
+#pragma mark - Public Methods - Effect
+
+- (void)setLyricsEffect:(LyricsEffectType)effectType {
+    _currentEffect = effectType;
+    [_tableView reloadData];
 }
 
 @end

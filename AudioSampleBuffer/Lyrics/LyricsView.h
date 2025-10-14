@@ -7,6 +7,7 @@
 
 #import <UIKit/UIKit.h>
 #import "LRCParser.h"
+#import "LyricsEffectType.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -34,6 +35,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// 是否启用自动滚动（默认YES）
 @property (nonatomic, assign) BOOL autoScroll;
 
+/// 当前特效类型
+@property (nonatomic, assign) LyricsEffectType currentEffect;
+
 /**
  * 更新当前播放时间，自动高亮并滚动到对应歌词
  * @param currentTime 当前播放时间（秒）
@@ -51,6 +55,12 @@ NS_ASSUME_NONNULL_BEGIN
  * @param animated 是否动画
  */
 - (void)scrollToIndex:(NSInteger)index animated:(BOOL)animated;
+
+/**
+ * 设置歌词特效
+ * @param effectType 特效类型
+ */
+- (void)setLyricsEffect:(LyricsEffectType)effectType;
 
 @end
 

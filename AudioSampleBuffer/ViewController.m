@@ -17,10 +17,11 @@
 #import "PerformanceControlPanel.h"
 #import "LyricsView.h"
 #import "LRCParser.h"
+#import "LyricsEffectControlPanel.h"
 #import "KaraokeViewController.h"
 #import <AVFoundation/AVFoundation.h>
 
-@interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate, PerformanceControlDelegate>
+@interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate, PerformanceControlDelegate, LyricsEffectControlDelegate>
 {
     BOOL enterBackground;
     NSInteger index;
@@ -65,6 +66,10 @@
 
 // 卡拉OK按钮
 @property (nonatomic, strong) UIButton *karaokeButton;
+
+// 歌词特效控制
+@property (nonatomic, strong) LyricsEffectControlPanel *lyricsEffectPanel;
+@property (nonatomic, strong) UIButton *lyricsEffectButton;
 @end
 
 @implementation ViewController
@@ -112,6 +117,17 @@
 }
 
 - (void)setupEffectControls {
+    // 🔧 修复导航栏遮挡问题：考虑安全区域和导航栏高度
+    CGFloat safeTop = 0;
+    if (@available(iOS 11.0, *)) {
+        safeTop = self.view.safeAreaInsets.top;
+    }
+    
+    // 如果有导航栏，从导航栏下方开始布局
+    CGFloat navigationBarHeight = self.navigationController.navigationBar.frame.size.height;
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
+    CGFloat topOffset = MAX(safeTop, statusBarHeight + navigationBarHeight) + 10; // 额外10px间距
+    
     // 创建性能配置按钮（放在左上角第一个位置）
     self.performanceControlButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.performanceControlButton setTitle:@"⚙️" forState:UIControlStateNormal];
@@ -121,7 +137,7 @@
     self.performanceControlButton.layer.cornerRadius = 25;
     self.performanceControlButton.layer.borderWidth = 2.0;
     self.performanceControlButton.layer.borderColor = [UIColor colorWithRed:0.5 green:0.9 blue:0.3 alpha:1.0].CGColor;
-    self.performanceControlButton.frame = CGRectMake(20, 50, 50, 50);
+    self.performanceControlButton.frame = CGRectMake(20, topOffset, 50, 50);
     
     // 添加阴影效果
     self.performanceControlButton.layer.shadowColor = [UIColor greenColor].CGColor;
@@ -147,7 +163,7 @@
     self.effectSelectorButton.layer.cornerRadius = 25;
     self.effectSelectorButton.layer.borderWidth = 1.0;
     self.effectSelectorButton.layer.borderColor = [UIColor whiteColor].CGColor;
-    self.effectSelectorButton.frame = CGRectMake(80, 50, 80, 50);
+    self.effectSelectorButton.frame = CGRectMake(80, topOffset, 80, 50);
     
     // 添加阴影效果，增强可见性
     self.effectSelectorButton.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -172,6 +188,15 @@
 }
 
 - (void)createQuickEffectButtons {
+    // 🔧 计算顶部偏移量（避免导航栏遮挡）
+    CGFloat safeTop = 0;
+    if (@available(iOS 11.0, *)) {
+        safeTop = self.view.safeAreaInsets.top;
+    }
+    CGFloat navigationBarHeight = self.navigationController.navigationBar.frame.size.height;
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
+    CGFloat topOffset = MAX(safeTop, statusBarHeight + navigationBarHeight) + 70; // 在第一行按钮下方
+    
     NSArray *quickEffects = @[
         @{@"title": @"🌈", @"effect": @(VisualEffectTypeNeonGlow)},
         @{@"title": @"🌊", @"effect": @(VisualEffectType3DWaveform)},
@@ -199,12 +224,11 @@
         button.layer.shadowOpacity = 0.8;
         button.layer.shadowRadius = 3;
         
-        // 计算位置（右侧垂直排列）
+        // 计算位置（右侧垂直排列，从topOffset开始）
         CGFloat buttonSize = 40;
         CGFloat spacing = 10;
-        CGFloat startY = 120;
         button.frame = CGRectMake(self.view.bounds.size.width - buttonSize - 20, 
-                                 startY + i * (buttonSize + spacing), 
+                                 topOffset + i * (buttonSize + spacing), 
                                  buttonSize, buttonSize);
         
         [button addTarget:self 
@@ -222,6 +246,15 @@
 }
 
 - (void)createGalaxyControlButton {
+    // 🔧 计算顶部偏移量
+    CGFloat safeTop = 0;
+    if (@available(iOS 11.0, *)) {
+        safeTop = self.view.safeAreaInsets.top;
+    }
+    CGFloat navigationBarHeight = self.navigationController.navigationBar.frame.size.height;
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
+    CGFloat topOffset = MAX(safeTop, statusBarHeight + navigationBarHeight) + 10;
+    
     self.galaxyControlButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.galaxyControlButton setTitle:@"🌌⚙️" forState:UIControlStateNormal];
     self.galaxyControlButton.titleLabel.font = [UIFont systemFontOfSize:16];
@@ -229,7 +262,7 @@
     self.galaxyControlButton.layer.cornerRadius = 25;
     self.galaxyControlButton.layer.borderWidth = 1.0;
     self.galaxyControlButton.layer.borderColor = [UIColor whiteColor].CGColor;
-    self.galaxyControlButton.frame = CGRectMake(170, 50, 80, 50);
+    self.galaxyControlButton.frame = CGRectMake(170, topOffset, 80, 50);
     
     // 添加阴影效果，增强可见性
     self.galaxyControlButton.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -245,6 +278,15 @@
 }
 
 - (void)createCyberpunkControlButton {
+    // 🔧 计算顶部偏移量
+    CGFloat safeTop = 0;
+    if (@available(iOS 11.0, *)) {
+        safeTop = self.view.safeAreaInsets.top;
+    }
+    CGFloat navigationBarHeight = self.navigationController.navigationBar.frame.size.height;
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
+    CGFloat topOffset = MAX(safeTop, statusBarHeight + navigationBarHeight) + 10;
+    
     self.cyberpunkControlButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.cyberpunkControlButton setTitle:@"⚡⚙️" forState:UIControlStateNormal];
     self.cyberpunkControlButton.titleLabel.font = [UIFont systemFontOfSize:16];
@@ -252,7 +294,7 @@
     self.cyberpunkControlButton.layer.cornerRadius = 25;
     self.cyberpunkControlButton.layer.borderWidth = 1.0;
     self.cyberpunkControlButton.layer.borderColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0].CGColor;
-    self.cyberpunkControlButton.frame = CGRectMake(260, 50, 80, 50);
+    self.cyberpunkControlButton.frame = CGRectMake(260, topOffset, 80, 50);
     
     // 添加阴影效果，增强可见性
     self.cyberpunkControlButton.layer.shadowColor = [UIColor cyanColor].CGColor;
@@ -268,6 +310,15 @@
 }
 
 - (void)createKaraokeButton {
+    // 🔧 计算顶部偏移量
+    CGFloat safeTop = 0;
+    if (@available(iOS 11.0, *)) {
+        safeTop = self.view.safeAreaInsets.top;
+    }
+    CGFloat navigationBarHeight = self.navigationController.navigationBar.frame.size.height;
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
+    CGFloat topOffset = MAX(safeTop, statusBarHeight + navigationBarHeight) + 70; // 在第一行按钮下方
+    
     self.karaokeButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.karaokeButton setTitle:@"🎤 卡拉OK" forState:UIControlStateNormal];
     [self.karaokeButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
@@ -276,7 +327,7 @@
     self.karaokeButton.layer.cornerRadius = 25;
     self.karaokeButton.layer.borderWidth = 2.0;
     self.karaokeButton.layer.borderColor = [UIColor colorWithRed:1.0 green:0.3 blue:0.3 alpha:1.0].CGColor;
-    self.karaokeButton.frame = CGRectMake(20, 110, 120, 50);
+    self.karaokeButton.frame = CGRectMake(20, topOffset, 120, 50);
     
     // 添加阴影效果
     self.karaokeButton.layer.shadowColor = [UIColor redColor].CGColor;
@@ -289,6 +340,42 @@
                  forControlEvents:UIControlEventTouchUpInside];
     
     [self.view addSubview:self.karaokeButton];
+    
+    // 🎭 添加歌词特效按钮
+    [self createLyricsEffectButton];
+}
+
+- (void)createLyricsEffectButton {
+    // 🔧 计算顶部偏移量
+    CGFloat safeTop = 0;
+    if (@available(iOS 11.0, *)) {
+        safeTop = self.view.safeAreaInsets.top;
+    }
+    CGFloat navigationBarHeight = self.navigationController.navigationBar.frame.size.height;
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
+    CGFloat topOffset = MAX(safeTop, statusBarHeight + navigationBarHeight) + 70; // 在第一行按钮下方
+    
+    self.lyricsEffectButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [self.lyricsEffectButton setTitle:@"🎭 歌词" forState:UIControlStateNormal];
+    [self.lyricsEffectButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.lyricsEffectButton.titleLabel.font = [UIFont boldSystemFontOfSize:16];
+    self.lyricsEffectButton.backgroundColor = [UIColor colorWithRed:0.5 green:0.2 blue:0.8 alpha:0.9];
+    self.lyricsEffectButton.layer.cornerRadius = 25;
+    self.lyricsEffectButton.layer.borderWidth = 2.0;
+    self.lyricsEffectButton.layer.borderColor = [UIColor colorWithRed:0.7 green:0.4 blue:1.0 alpha:1.0].CGColor;
+    self.lyricsEffectButton.frame = CGRectMake(150, topOffset, 100, 50);
+    
+    // 添加阴影效果
+    self.lyricsEffectButton.layer.shadowColor = [UIColor purpleColor].CGColor;
+    self.lyricsEffectButton.layer.shadowOffset = CGSizeMake(0, 2);
+    self.lyricsEffectButton.layer.shadowOpacity = 0.8;
+    self.lyricsEffectButton.layer.shadowRadius = 4;
+    
+    [self.lyricsEffectButton addTarget:self 
+                                action:@selector(lyricsEffectButtonTapped:) 
+                      forControlEvents:UIControlEventTouchUpInside];
+    
+    [self.view addSubview:self.lyricsEffectButton];
 }
 
 - (void)bringControlButtonsToFront {
@@ -298,6 +385,7 @@
     [self.view bringSubviewToFront:self.galaxyControlButton];
     [self.view bringSubviewToFront:self.cyberpunkControlButton];
     [self.view bringSubviewToFront:self.karaokeButton];
+    [self.view bringSubviewToFront:self.lyricsEffectButton];
     
     // 将所有快捷按钮也提到前面
     for (UIView *subview in self.view.subviews) {
@@ -306,6 +394,8 @@
             subview != self.effectSelectorButton && 
             subview != self.galaxyControlButton &&
             subview != self.cyberpunkControlButton &&
+            subview != self.karaokeButton &&
+            subview != self.lyricsEffectButton &&
             subview.tag >= 0 && subview.tag < VisualEffectTypeCount) {
             [self.view bringSubviewToFront:subview];
         }
@@ -954,12 +1044,30 @@
     NSLog(@"🎤 进入卡拉OK模式: %@", self.audioArray[index]);
 }
 
+- (void)lyricsEffectButtonTapped:(UIButton *)sender {
+    if (!self.lyricsEffectPanel) {
+        self.lyricsEffectPanel = [[LyricsEffectControlPanel alloc] initWithFrame:self.view.bounds];
+        self.lyricsEffectPanel.delegate = self;
+        [self.view addSubview:self.lyricsEffectPanel];
+        
+        // 设置当前特效
+        if (self.lyricsView) {
+            self.lyricsEffectPanel.currentEffect = self.lyricsView.currentEffect;
+        }
+    }
+    
+    [self.lyricsEffectPanel showAnimated:YES];
+    [self.view bringSubviewToFront:self.lyricsEffectPanel];
+    
+    NSLog(@"🎭 打开歌词特效面板");
+}
+
 #pragma mark - 歌词视图设置
 
 - (void)setupLyricsView {
-    // 创建歌词容器（半透明背景，带圆角）
+    // 创建歌词容器（缩小高度）
     CGFloat containerWidth = self.view.bounds.size.width - 40;
-    CGFloat containerHeight = 300;
+    CGFloat containerHeight = 180; // 从 300 缩小到 180
     CGFloat containerY = self.view.bounds.size.height - containerHeight - 120; // 在底部但不遮挡列表
     
     self.lyricsContainer = [[UIView alloc] initWithFrame:CGRectMake(20, 
@@ -981,15 +1089,18 @@
     self.lyricsView = [[LyricsView alloc] initWithFrame:self.lyricsContainer.bounds];
     self.lyricsView.backgroundColor = [UIColor clearColor];
     
-    // 自定义歌词样式 - 适配你的酷炫界面
-    self.lyricsView.highlightColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0];  // 青色高亮，匹配赛博朋克风格
+    // 自定义歌词样式 - 缩小字体
+    self.lyricsView.highlightColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0];  // 青色高亮
     self.lyricsView.normalColor = [UIColor colorWithWhite:1.0 alpha:0.5];
-    self.lyricsView.highlightFont = [UIFont boldSystemFontOfSize:18];
-    self.lyricsView.lyricsFont = [UIFont systemFontOfSize:15];
-    self.lyricsView.lineSpacing = 25;
+    self.lyricsView.highlightFont = [UIFont boldSystemFontOfSize:16]; // 从 18 缩小到 16
+    self.lyricsView.lyricsFont = [UIFont systemFontOfSize:13];        // 从 15 缩小到 13
+    self.lyricsView.lineSpacing = 18; // 从 25 缩小到 18
     self.lyricsView.autoScroll = YES;
     
     [self.lyricsContainer addSubview:self.lyricsView];
+    
+    // 🎨 添加上下渐变遮罩层（模糊边缘效果）
+    [self addGradientMaskToLyricsContainer];
     
     // 默认隐藏，等歌词加载后再显示
     self.lyricsContainer.hidden = YES;
@@ -1000,7 +1111,34 @@
     tapGesture.numberOfTapsRequired = 2; // 双击切换
     [self.lyricsContainer addGestureRecognizer:tapGesture];
     
-    NSLog(@"🎵 歌词视图已创建");
+    NSLog(@"🎵 歌词视图已创建（优化版：缩小尺寸 + 渐变边缘）");
+}
+
+// 添加渐变遮罩，实现上下模糊边缘效果
+- (void)addGradientMaskToLyricsContainer {
+    // 创建渐变图层作为遮罩
+    CAGradientLayer *gradientMask = [CAGradientLayer layer];
+    gradientMask.frame = self.lyricsContainer.bounds;
+    
+    // 设置渐变颜色：从透明到不透明再到透明
+    gradientMask.colors = @[
+        (id)[UIColor clearColor].CGColor,              // 顶部完全透明
+        (id)[UIColor colorWithWhite:1.0 alpha:0.3].CGColor,  // 顶部渐变
+        (id)[UIColor whiteColor].CGColor,              // 中间不透明
+        (id)[UIColor whiteColor].CGColor,              // 中间不透明
+        (id)[UIColor colorWithWhite:1.0 alpha:0.3].CGColor,  // 底部渐变
+        (id)[UIColor clearColor].CGColor               // 底部完全透明
+    ];
+    
+    // 设置渐变位置：上下各 20% 渐变区域
+    gradientMask.locations = @[@0.0, @0.15, @0.25, @0.75, @0.85, @1.0];
+    
+    // 设置为垂直渐变
+    gradientMask.startPoint = CGPointMake(0.5, 0);
+    gradientMask.endPoint = CGPointMake(0.5, 1);
+    
+    // 应用遮罩
+    self.lyricsContainer.layer.mask = gradientMask;
 }
 
 - (void)toggleLyricsView:(UITapGestureRecognizer *)gesture {
@@ -1096,6 +1234,20 @@
     
     // 清理通知观察者
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+#pragma mark - LyricsEffectControlDelegate
+
+- (void)lyricsEffectDidChange:(LyricsEffectType)effectType {
+    NSLog(@"🎭 歌词特效已切换: %@", [LyricsEffectManager nameForEffect:effectType]);
+    
+    if (self.lyricsView) {
+        [self.lyricsView setLyricsEffect:effectType];
+    }
+    
+    // 添加触觉反馈
+    UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
+    [feedback impactOccurred];
 }
 
 @end
