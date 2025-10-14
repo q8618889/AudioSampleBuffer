@@ -27,6 +27,8 @@
 
 @implementation AudioSpectrumPlayer
 
+@synthesize duration = _duration;
+
 - (instancetype)init {
     if (self = [super init]) {
         [self configInit];

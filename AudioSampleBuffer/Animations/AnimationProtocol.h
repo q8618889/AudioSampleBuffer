@@ -2,7 +2,6 @@
 //  AnimationProtocol.h
 //  AudioSampleBuffer
 //
-//  Created by AI Assistant on 2025/9/29.
 //
 
 #import <Foundation/Foundation.h>

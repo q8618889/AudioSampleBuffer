@@ -2,7 +2,6 @@
 //  SpectrumAnimationManager.m
 //  AudioSampleBuffer
 //
-//  Created by AI Assistant on 2025/9/29.
 //
 
 #import "SpectrumAnimationManager.h"

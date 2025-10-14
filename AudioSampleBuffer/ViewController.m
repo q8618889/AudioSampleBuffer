@@ -17,6 +17,7 @@
 #import "PerformanceControlPanel.h"
 #import "LyricsView.h"
 #import "LRCParser.h"
+#import "KaraokeViewController.h"
 #import <AVFoundation/AVFoundation.h>
 
 @interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate, PerformanceControlDelegate>
@@ -61,6 +62,9 @@
 // 歌词视图
 @property (nonatomic, strong) LyricsView *lyricsView;
 @property (nonatomic, strong) UIView *lyricsContainer;
+
+// 卡拉OK按钮
+@property (nonatomic, strong) UIButton *karaokeButton;
 @end
 
 @implementation ViewController
@@ -78,6 +82,24 @@
     enterBackground = NO;
     [self.animationCoordinator applicationDidBecomeActive];
     [self.visualEffectManager resumeRendering];
+}
+
+- (void)karaokeModeDidStart {
+    NSLog(@"🎤 收到卡拉OK模式开始通知，停止主界面音频播放");
+    // 停止主界面的音频播放
+    [self.player stop];
+    // 暂停视觉效果渲染以节省资源
+    [self.visualEffectManager pauseRendering];
+}
+
+- (void)karaokeModeDidEnd {
+    NSLog(@"🎤 收到卡拉OK模式结束通知，恢复主界面音频播放");
+    // 恢复视觉效果渲染
+    [self.visualEffectManager resumeRendering];
+    // 可以选择恢复播放当前选中的歌曲
+    if (self.audioArray.count > 0 && index < self.audioArray.count) {
+        [self.player playWithFileName:self.audioArray[index]];
+    }
 }
 
 - (void)setupVisualEffectSystem {
@@ -138,6 +160,9 @@
                         forControlEvents:UIControlEventTouchUpInside];
     
     [self.view addSubview:self.effectSelectorButton];
+    
+    // 添加卡拉OK按钮
+    [self createKaraokeButton];
     
     // 添加快捷切换按钮
     [self createQuickEffectButtons];
@@ -242,12 +267,37 @@
     [self.view addSubview:self.cyberpunkControlButton];
 }
 
+- (void)createKaraokeButton {
+    self.karaokeButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [self.karaokeButton setTitle:@"🎤 卡拉OK" forState:UIControlStateNormal];
+    [self.karaokeButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.karaokeButton.titleLabel.font = [UIFont boldSystemFontOfSize:16];
+    self.karaokeButton.backgroundColor = [UIColor colorWithRed:0.8 green:0.2 blue:0.2 alpha:0.9];
+    self.karaokeButton.layer.cornerRadius = 25;
+    self.karaokeButton.layer.borderWidth = 2.0;
+    self.karaokeButton.layer.borderColor = [UIColor colorWithRed:1.0 green:0.3 blue:0.3 alpha:1.0].CGColor;
+    self.karaokeButton.frame = CGRectMake(20, 110, 120, 50);
+    
+    // 添加阴影效果
+    self.karaokeButton.layer.shadowColor = [UIColor redColor].CGColor;
+    self.karaokeButton.layer.shadowOffset = CGSizeMake(0, 2);
+    self.karaokeButton.layer.shadowOpacity = 0.8;
+    self.karaokeButton.layer.shadowRadius = 4;
+    
+    [self.karaokeButton addTarget:self 
+                           action:@selector(karaokeButtonTapped:) 
+                 forControlEvents:UIControlEventTouchUpInside];
+    
+    [self.view addSubview:self.karaokeButton];
+}
+
 - (void)bringControlButtonsToFront {
     // 将所有控制按钮提到最前面
     [self.view bringSubviewToFront:self.performanceControlButton];
     [self.view bringSubviewToFront:self.effectSelectorButton];
     [self.view bringSubviewToFront:self.galaxyControlButton];
     [self.view bringSubviewToFront:self.cyberpunkControlButton];
+    [self.view bringSubviewToFront:self.karaokeButton];
     
     // 将所有快捷按钮也提到前面
     for (UIView *subview in self.view.subviews) {
@@ -277,6 +327,10 @@
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(hadEnterBackGround) name:UIApplicationDidEnterBackgroundNotification object:nil];
     
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(hadEnterForeGround) name:UIApplicationDidBecomeActiveNotification object:nil];
+    
+    // 监听卡拉OK模式通知
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(karaokeModeDidStart) name:@"KaraokeModeDidStart" object:nil];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(karaokeModeDidEnd) name:@"KaraokeModeDidEnd" object:nil];
     
     self.view.backgroundColor = [UIColor blackColor];
     
@@ -873,6 +927,31 @@
     
     [self.performanceControlPanel showAnimated:YES];
     [self.view bringSubviewToFront:self.performanceControlPanel];
+}
+
+- (void)karaokeButtonTapped:(UIButton *)sender {
+    // 检查是否有选中的歌曲
+    if (self.audioArray.count == 0 || index >= self.audioArray.count) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"提示" 
+                                                                       message:@"请先选择一首歌曲" 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        
+        UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"确定" 
+                                                           style:UIAlertActionStyleDefault 
+                                                         handler:nil];
+        [alert addAction:okAction];
+        
+        [self presentViewController:alert animated:YES completion:nil];
+        return;
+    }
+    
+    // 创建卡拉OK视图控制器
+    KaraokeViewController *karaokeVC = [[KaraokeViewController alloc] init];
+    karaokeVC.currentSongName = self.audioArray[index];
+    
+    // 推送到卡拉OK页面（现在有NavigationController了）
+    [self.navigationController pushViewController:karaokeVC animated:YES];
+    NSLog(@"🎤 进入卡拉OK模式: %@", self.audioArray[index]);
 }
 
 #pragma mark - 歌词视图设置

@@ -2,7 +2,6 @@
 //  RotationAnimationManager.m
 //  AudioSampleBuffer
 //
-//  Created by AI Assistant on 2025/9/29.
 //
 
 #import "RotationAnimationManager.h"
