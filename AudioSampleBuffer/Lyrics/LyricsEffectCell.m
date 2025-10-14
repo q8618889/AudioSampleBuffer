@@ -146,18 +146,31 @@
     }
 }
 
-// 淡入淡出效果
+// 淡入淡出效果 - 带脉冲循环
 - (void)applyFadeInOutEffect:(BOOL)animated {
-    _mainLabel.alpha = 0.0;
+    _mainLabel.transform = CGAffineTransformMakeScale(1.15, 1.15);
     
     if (animated) {
-        [UIView animateWithDuration:0.5 animations:^{
-            self.mainLabel.alpha = 1.0;
-            self.mainLabel.transform = CGAffineTransformMakeScale(1.15, 1.15);
-        }];
-    } else {
-        _mainLabel.alpha = 1.0;
-        _mainLabel.transform = CGAffineTransformMakeScale(1.15, 1.15);
+        // 🌫️ 呼吸脉冲效果 - 无限循环
+        CABasicAnimation *pulseAnimation = [CABasicAnimation animationWithKeyPath:@"opacity"];
+        pulseAnimation.fromValue = @(0.7);
+        pulseAnimation.toValue = @(1.0);
+        pulseAnimation.duration = 1.2;
+        pulseAnimation.autoreverses = YES;
+        pulseAnimation.repeatCount = HUGE_VALF;  // ♻️ 无限循环
+        pulseAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+        
+        [_mainLabel.layer addAnimation:pulseAnimation forKey:@"fadePulse"];
+        
+        // 🌫️ 微缩放效果
+        CABasicAnimation *scaleAnimation = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
+        scaleAnimation.fromValue = @(1.1);
+        scaleAnimation.toValue = @(1.2);
+        scaleAnimation.duration = 1.2;
+        scaleAnimation.autoreverses = YES;
+        scaleAnimation.repeatCount = HUGE_VALF;
+        
+        [_mainLabel.layer addAnimation:scaleAnimation forKey:@"fadeScale"];
     }
 }
 
