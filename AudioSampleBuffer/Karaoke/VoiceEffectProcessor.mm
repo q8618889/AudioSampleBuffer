@@ -1,11 +1,12 @@
 //
-//  VoiceEffectProcessor.m
+//  VoiceEffectProcessor.mm
 //  AudioSampleBuffer
 //
-//  音效处理器实现
+//  音效处理器实现 (Objective-C++)
 //
 
 #import "VoiceEffectProcessor.h"
+#import "DSP/DSPBridge.h"
 #import <Accelerate/Accelerate.h>
 
 // 混响参数
@@ -39,6 +40,15 @@
 @property (nonatomic, assign) float highPassPrev;
 @property (nonatomic, assign) float highPassInput;
 
+// 🆕 高级 DSP 处理器
+@property (nonatomic, strong) NoiseReductionProcessor *noiseReducer;
+@property (nonatomic, strong) PitchCorrectionProcessor *pitchCorrector;
+
+// 🆕 音高处理缓冲区（堆内存，避免栈溢出）
+@property (nonatomic, assign) SInt16 *pitchTempBuffer;
+@property (nonatomic, assign) NSUInteger pitchBufferSize;
+@property (nonatomic, assign) float *pitchFloatBuffer;  // 浮点缓冲区
+
 @end
 
 @implementation VoiceEffectProcessor
@@ -71,7 +81,23 @@
         _highPassPrev = 0.0;
         _highPassInput = 0.0;
         
+        // 🆕 初始化高级 DSP 处理器
+        _enableNoiseReduction = NO;
+        _pitchShift = 0.0f;
+        _enableAutoTune = NO;
+        
+        _noiseReducer = [[NoiseReductionProcessor alloc] initWithSampleRate:sampleRate];
+        _pitchCorrector = [[PitchCorrectionProcessor alloc] initWithSampleRate:sampleRate channels:1];
+        
+        // 🆕 初始化音高处理缓冲区（堆内存）
+        _pitchBufferSize = 8192;  // 初始大小
+        _pitchTempBuffer = (SInt16 *)malloc(_pitchBufferSize * sizeof(SInt16));
+        _pitchFloatBuffer = (float *)malloc(_pitchBufferSize * sizeof(float));
+        
         NSLog(@"✅ 音效处理器初始化完成 (采样率: %.0f Hz)", sampleRate);
+        NSLog(@"   🔊 降噪处理器: %@", _noiseReducer ? @"已加载" : @"未加载");
+        NSLog(@"   🎵 音高修正器: %@", _pitchCorrector ? @"已加载" : @"未加载");
+        NSLog(@"   💾 音高缓冲区: %lu samples", (unsigned long)_pitchBufferSize);
     }
     return self;
 }
@@ -82,6 +108,10 @@
     if (_reverbBuffer3) free(_reverbBuffer3);
     if (_reverbBuffer4) free(_reverbBuffer4);
     if (_delayBuffer) free(_delayBuffer);
+    
+    // 🆕 释放音高处理缓冲区
+    if (_pitchTempBuffer) free(_pitchTempBuffer);
+    if (_pitchFloatBuffer) free(_pitchFloatBuffer);
 }
 
 #pragma mark - 音效处理主函数
@@ -90,7 +120,55 @@
     static int debugCounter = 0;
     BOOL shouldLog = (debugCounter++ % 1000 == 0);  // 每1000次回调打印一次
     
-    if (_effectType == VoiceEffectTypeNone) {
+    // 🆕 1. 降噪处理（总是优先执行，在其他音效之前）
+    if (_enableNoiseReduction && _noiseReducer) {
+        [_noiseReducer processInt16Samples:buffer count:sampleCount];
+        if (shouldLog) {
+            NSLog(@"🔇 降噪处理完成，样本数: %u", sampleCount);
+        }
+    }
+    
+    // 🆕 2. 音高修正处理（使用堆内存，安全处理）
+    if ((_pitchShift != 0.0f || _enableAutoTune) && _pitchCorrector) {
+        // 确保缓冲区足够大（现在输出样本数=输入样本数，不会增加）
+        NSUInteger requiredSize = sampleCount * 2;  // 预留一些空间
+        if (requiredSize > _pitchBufferSize) {
+            // 动态扩展缓冲区
+            _pitchBufferSize = requiredSize;
+            _pitchTempBuffer = (SInt16 *)realloc(_pitchTempBuffer, _pitchBufferSize * sizeof(SInt16));
+            _pitchFloatBuffer = (float *)realloc(_pitchFloatBuffer, _pitchBufferSize * sizeof(float));
+            
+            if (shouldLog) {
+                NSLog(@"🔄 音高缓冲区扩展至: %lu samples", (unsigned long)_pitchBufferSize);
+            }
+        }
+        
+        // 使用堆内存处理音高修正（输出样本数=输入样本数）
+        NSUInteger outputCount = [_pitchCorrector processInt16InputSamples:buffer
+                                                                inputCount:sampleCount
+                                                             outputSamples:_pitchTempBuffer
+                                                            maxOutputCount:sampleCount * 2];
+        
+        // 复制处理后的数据（现在输出样本数应该等于输入）
+        if (outputCount == sampleCount) {
+            memcpy(buffer, _pitchTempBuffer, outputCount * sizeof(SInt16));
+            
+            if (shouldLog) {
+                NSLog(@"🎵 音高修正完成: %.1f半音, 输入/输出: %u samples", _pitchShift, sampleCount);
+            }
+        } else {
+            // 样本数不匹配，使用输出数据但保持原样本数
+            NSUInteger copyCount = (outputCount < sampleCount) ? outputCount : sampleCount;
+            memcpy(buffer, _pitchTempBuffer, copyCount * sizeof(SInt16));
+            
+            if (shouldLog || (outputCount != sampleCount)) {
+                NSLog(@"⚠️ 音高修正样本数变化: %u → %lu (使用 %lu)", 
+                      sampleCount, (unsigned long)outputCount, (unsigned long)copyCount);
+            }
+        }
+    }
+    
+    if (_effectType == VoiceEffectTypeNone && _pitchShift == 0.0f && !_enableAutoTune) {
         // 无音效，只应用音量增益
         if (_volumeGain != 1.0) {
             [self applyVolumeGain:buffer sampleCount:sampleCount];
@@ -439,6 +517,49 @@
             _trebleGain = 4.0;  // 降低高频增益（原6.0）
             _volumeGain = 2.0;  // 降低音量增益
             break;
+            
+        // 🆕 新增音效类型（音高修正功能已启用）
+        case VoiceEffectTypeAutoTune:
+            // 自动修音（基础实现：轻微音高修正 + 增强音效）
+            _reverbMix = 0.25;
+            _delayMix = 0.05;
+            _compressionRatio = 4.5;  // 增强压缩，稳定音量
+            _bassGain = 0.5;          // 轻微低频增强
+            _trebleGain = 2.0;        // 轻微高频增强
+            _volumeGain = 1.8;
+            _enableAutoTune = YES;    // ✅ 启用 Auto-Tune
+            _pitchShift = 0.0f;       // Auto-Tune 模式下不固定偏移
+            [_pitchCorrector setAutoTuneEnabled:YES key:0 scale:0];  // C 大调
+            NSLog(@"✅ Auto-Tune 已启用（基础实现）");
+            break;
+            
+        case VoiceEffectTypePitchUp:
+            // 升调 +3 半音
+            _reverbMix = 0.20;
+            _delayMix = 0.05;
+            _compressionRatio = 3.5;
+            _bassGain = -0.5;         // 轻微降低低频（升调后低频会相对减少）
+            _trebleGain = 1.5;        // 轻微增强高频（保持清晰度）
+            _volumeGain = 1.7;
+            _enableAutoTune = NO;
+            _pitchShift = 3.0f;       // ✅ 升高 3 半音
+            [_pitchCorrector setPitchShift:3.0f];
+            NSLog(@"✅ 升调 +3 半音已启用");
+            break;
+            
+        case VoiceEffectTypePitchDown:
+            // 降调 -3 半音
+            _reverbMix = 0.20;
+            _delayMix = 0.05;
+            _compressionRatio = 3.5;
+            _bassGain = 1.5;          // 增强低频（降调后需要补偿）
+            _trebleGain = -0.5;       // 轻微降低高频（避免尖锐）
+            _volumeGain = 1.8;
+            _enableAutoTune = NO;
+            _pitchShift = -3.0f;      // ✅ 降低 3 半音
+            [_pitchCorrector setPitchShift:-3.0f];
+            NSLog(@"✅ 降调 -3 半音已启用");
+            break;
     }
     
     NSLog(@"🎵 音效切换: %@", [VoiceEffectProcessor nameForEffectType:effectType]);
@@ -467,6 +588,10 @@
     _highPassPrev = 0.0;
     _highPassInput = 0.0;
     
+    // 🆕 重置高级 DSP 处理器
+    [_noiseReducer reset];
+    [_pitchCorrector clear];
+    
     NSLog(@"🔄 音效处理器已重置");
 }
 
@@ -483,8 +608,46 @@
         case VoiceEffectTypeEthereal: return @"空灵";
         case VoiceEffectTypeMagnetic: return @"磁性";
         case VoiceEffectTypeBright: return @"明亮";
+        case VoiceEffectTypeAutoTune: return @"自动修音";
+        case VoiceEffectTypePitchUp: return @"升调+3";
+        case VoiceEffectTypePitchDown: return @"降调-3";
         default: return @"未知";
     }
+}
+
+#pragma mark - 🆕 高级音效控制方法
+
+- (void)setNoiseReductionEnabled:(BOOL)enabled {
+    _enableNoiseReduction = enabled;
+    NSLog(@"🔇 降噪功能: %@", enabled ? @"开启" : @"关闭");
+}
+
+- (void)setPitchShiftSemitones:(float)semitones {
+    _pitchShift = fmaxf(-12.0f, fminf(12.0f, semitones));
+    [_pitchCorrector setPitchShift:_pitchShift];
+    NSLog(@"🎵 音高偏移设置为: %.1f 半音", _pitchShift);
+    
+    // 如果手动设置音高，关闭 Auto-Tune
+    if (_pitchShift != 0.0f) {
+        _enableAutoTune = NO;
+        [_pitchCorrector setAutoTuneEnabled:NO key:0 scale:0];
+    }
+}
+
+- (void)setAutoTuneEnabled:(BOOL)enabled musicalKey:(NSInteger)key scale:(NSInteger)scale {
+    _enableAutoTune = enabled;
+    [_pitchCorrector setAutoTuneEnabled:enabled key:key scale:scale];
+    
+    // Auto-Tune 启用时，清除手动音高偏移
+    if (enabled) {
+        _pitchShift = 0.0f;
+        [_pitchCorrector setPitchShift:0.0f];
+    }
+    
+    NSLog(@"🎤 Auto-Tune %@, 调性: %ld %@", 
+          enabled ? @"启用" : @"禁用", 
+          (long)key, 
+          scale == 0 ? @"Major" : @"Minor");
 }
 
 @end

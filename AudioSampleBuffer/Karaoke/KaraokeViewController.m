@@ -382,7 +382,45 @@ static void CheckError(OSStatus error, const char *operation) {
     [self.bgmVolumeSlider addTarget:self action:@selector(bgmVolumeChanged:) forControlEvents:UIControlEventValueChanged];
     [self.view addSubview:self.bgmVolumeSlider];
     
+    // 🆕 智能降噪开关（放在 BGM 音量下方）
+    UILabel *noiseReductionLabel = [[UILabel alloc] init];
+    noiseReductionLabel.text = @"🔇 智能降噪";
+    noiseReductionLabel.textColor = [UIColor whiteColor];
+    noiseReductionLabel.font = [UIFont systemFontOfSize:14];
+    noiseReductionLabel.frame = CGRectMake(20, startY + spacing * 4, 100, 20);
+    [self.view addSubview:noiseReductionLabel];
+    
+    UISwitch *noiseReductionSwitch = [[UISwitch alloc] init];
+    noiseReductionSwitch.on = NO; // 默认关闭
+    noiseReductionSwitch.onTintColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0];
+    noiseReductionSwitch.frame = CGRectMake(110, startY + spacing * 4 - 5, 51, 31);
+    noiseReductionSwitch.tag = 9001; // 标记为降噪开关
+    [noiseReductionSwitch addTarget:self action:@selector(noiseReductionSwitchChanged:) forControlEvents:UIControlEventValueChanged];
+    [self.view addSubview:noiseReductionSwitch];
+    
+    // 🆕 音高调节（放在降噪开关下方）
+    UILabel *pitchShiftLabel = [[UILabel alloc] init];
+    pitchShiftLabel.text = @"🎵 音高: 0半音";
+    pitchShiftLabel.textColor = [UIColor whiteColor];
+    pitchShiftLabel.font = [UIFont systemFontOfSize:14];
+    pitchShiftLabel.frame = CGRectMake(20, startY + spacing * 5, 100, 20);
+    pitchShiftLabel.tag = 9002; // 标记为音高标签
+    [self.view addSubview:pitchShiftLabel];
+    
+    UISlider *pitchShiftSlider = [[UISlider alloc] init];
+    pitchShiftSlider.minimumValue = -6.0f;
+    pitchShiftSlider.maximumValue = 6.0f;
+    pitchShiftSlider.value = 0.0f;
+    pitchShiftSlider.minimumTrackTintColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0];
+    pitchShiftSlider.frame = CGRectMake(110, startY + spacing * 5, self.view.bounds.size.width - 130, 20);
+    pitchShiftSlider.tag = 9003; // 标记为音高滑块
+    pitchShiftSlider.userInteractionEnabled = YES;
+    [pitchShiftSlider addTarget:self action:@selector(pitchShiftSliderChanged:) forControlEvents:UIControlEventValueChanged];
+    [self.view addSubview:pitchShiftSlider];
+    
     NSLog(@"✅ 耳返控制界面已创建，所有滑块已启用交互");
+    NSLog(@"✅ 智能降噪开关已添加到主界面");
+    NSLog(@"✅ 音高调节滑块已添加到主界面");
 }
 
 - (void)setupVoiceEffectButton {
@@ -424,7 +462,7 @@ static void CheckError(OSStatus error, const char *operation) {
     
     // 创建音效选择面板
     CGFloat panelWidth = 320;
-    CGFloat panelHeight = 480;
+    CGFloat panelHeight = 580;  // 适应12个音效
     CGFloat panelX = (self.view.bounds.size.width - panelWidth) / 2;
     CGFloat panelY = (self.view.bounds.size.height - panelHeight) / 2;
     
@@ -452,7 +490,10 @@ static void CheckError(OSStatus error, const char *operation) {
         @[@(VoiceEffectTypeGodOfSong), @"歌神", @"👑"],
         @[@(VoiceEffectTypeEthereal), @"空灵", @"✨"],
         @[@(VoiceEffectTypeMagnetic), @"磁性", @"🔥"],
-        @[@(VoiceEffectTypeBright), @"明亮", @"💎"]
+        @[@(VoiceEffectTypeBright), @"明亮", @"💎"],
+        @[@(VoiceEffectTypeAutoTune), @"自动修音", @"🎤"],
+        @[@(VoiceEffectTypePitchUp), @"升调+3", @"⬆️"],
+        @[@(VoiceEffectTypePitchDown), @"降调-3", @"⬇️"]
     ];
     
     CGFloat buttonStartY = 70;
@@ -538,6 +579,50 @@ static void CheckError(OSStatus error, const char *operation) {
     
     // 关闭面板
     [self hideVoiceEffectSelector];
+}
+
+// 🆕 降噪开关改变
+- (void)noiseReductionSwitchChanged:(UISwitch *)sender {
+    BOOL enabled = sender.isOn;
+    
+    if (self.karaokeAudioEngine && self.karaokeAudioEngine.voiceEffectProcessor) {
+        [self.karaokeAudioEngine.voiceEffectProcessor setNoiseReductionEnabled:enabled];
+        NSLog(@"🔇 智能降噪: %@", enabled ? @"开启" : @"关闭");
+        
+        // 🆕 如果在预览模式且正在播放，使用防抖延迟更新
+        if (self.isInPreviewMode) {
+            [self scheduleParameterUpdateWithDelay];
+        }
+    }
+}
+
+// 🆕 音高滑块改变
+- (void)pitchShiftSliderChanged:(UISlider *)sender {
+    float pitchShift = roundf(sender.value); // 四舍五入到整数半音
+    sender.value = pitchShift; // 捕捉到整数值
+    
+    // 更新标签
+    UILabel *pitchLabel = (UILabel *)[self.view viewWithTag:9002];
+    if (pitchLabel) {
+        if (pitchShift > 0) {
+            pitchLabel.text = [NSString stringWithFormat:@"🎵 音高: +%.0f半音", pitchShift];
+        } else if (pitchShift < 0) {
+            pitchLabel.text = [NSString stringWithFormat:@"🎵 音高: %.0f半音", pitchShift];
+        } else {
+            pitchLabel.text = @"🎵 音高: 0半音";
+        }
+    }
+    
+    // 应用音高变化
+    if (self.karaokeAudioEngine && self.karaokeAudioEngine.voiceEffectProcessor) {
+        [self.karaokeAudioEngine.voiceEffectProcessor setPitchShiftSemitones:pitchShift];
+        NSLog(@"🎵 音高调节: %.0f 半音", pitchShift);
+        
+        // 🆕 如果在预览模式且正在播放，使用防抖延迟更新
+        if (self.isInPreviewMode) {
+            [self scheduleParameterUpdateWithDelay];
+        }
+    }
 }
 
 #pragma mark - Audio Setup
@@ -780,6 +865,11 @@ static void CheckError(OSStatus error, const char *operation) {
 }
 
 - (void)progressSliderValueChanged:(UISlider *)sender {
+    // 🔧 Bug修复：预览模式下禁止拖动进度条
+    if (self.isInPreviewMode) {
+        return;  // 预览模式下不响应拖动
+    }
+    
     // 实时更新预览时间和歌词
     if (self.karaokeAudioEngine.audioPlayer) {
         NSTimeInterval duration = self.karaokeAudioEngine.audioPlayer.duration;
@@ -796,6 +886,20 @@ static void CheckError(OSStatus error, const char *operation) {
 }
 
 - (void)progressSliderTouchUp:(UISlider *)sender {
+    // 🔧 Bug修复：预览模式下禁止拖动进度条（避免干扰预览播放）
+    if (self.isInPreviewMode) {
+        NSLog(@"⚠️ 预览模式下不支持拖动进度条");
+        // 恢复到当前实际播放位置
+        if ([self.karaokeAudioEngine isPlayingPreview]) {
+            NSTimeInterval currentTime = [self.karaokeAudioEngine currentPreviewTime];
+            NSTimeInterval duration = [self.karaokeAudioEngine previewDuration];
+            if (duration > 0) {
+                self.progressSlider.value = currentTime / duration;
+            }
+        }
+        return;
+    }
+    
     if (!self.karaokeAudioEngine.audioPlayer) {
         return;
     }

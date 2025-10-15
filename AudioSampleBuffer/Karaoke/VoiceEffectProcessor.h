@@ -21,6 +21,9 @@ typedef NS_ENUM(NSInteger, VoiceEffectType) {
     VoiceEffectTypeEthereal,          // 空灵（长混响+延迟）
     VoiceEffectTypeMagnetic,          // 磁性（低频增强）
     VoiceEffectTypeBright,            // 明亮（高频增强）
+    VoiceEffectTypeAutoTune,          // 🆕 自动修音（Auto-Tune）
+    VoiceEffectTypePitchUp,           // 🆕 升调（+3半音）
+    VoiceEffectTypePitchDown,         // 🆕 降调（-3半音）
 };
 
 @interface VoiceEffectProcessor : NSObject
@@ -35,6 +38,11 @@ typedef NS_ENUM(NSInteger, VoiceEffectType) {
 @property (nonatomic, assign) float bassGain;       // 低频增益 (-12dB to +12dB)
 @property (nonatomic, assign) float trebleGain;     // 高频增益 (-12dB to +12dB)
 @property (nonatomic, assign) float volumeGain;     // 整体增益 (0.0 - 3.0)
+
+// 🆕 高级音效参数
+@property (nonatomic, assign) BOOL enableNoiseReduction;  // 启用降噪
+@property (nonatomic, assign) float pitchShift;           // 音高偏移（半音，-12 to +12）
+@property (nonatomic, assign) BOOL enableAutoTune;        // 启用自动修音
 
 /**
  * 创建音效处理引擎
@@ -65,6 +73,25 @@ typedef NS_ENUM(NSInteger, VoiceEffectType) {
  * 获取音效名称
  */
 + (NSString *)nameForEffectType:(VoiceEffectType)type;
+
+/**
+ * 🆕 单独启用/禁用降噪（独立于音效类型）
+ */
+- (void)setNoiseReductionEnabled:(BOOL)enabled;
+
+/**
+ * 🆕 设置音高偏移（独立于音效类型）
+ * @param semitones 半音数 (-12 to +12)
+ */
+- (void)setPitchShiftSemitones:(float)semitones;
+
+/**
+ * 🆕 启用 Auto-Tune 自动修音
+ * @param enabled 是否启用
+ * @param key 音乐调性 (0-11: C, C#, D, ..., B)
+ * @param scale 音阶 (0=大调, 1=小调)
+ */
+- (void)setAutoTuneEnabled:(BOOL)enabled musicalKey:(NSInteger)key scale:(NSInteger)scale;
 
 @end
 
