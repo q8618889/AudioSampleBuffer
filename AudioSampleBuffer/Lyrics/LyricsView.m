@@ -251,6 +251,24 @@
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    // 获取点击的歌词信息
+    if (indexPath.row >= 0 && indexPath.row < _parser.lyrics.count) {
+        LRCLine *line = _parser.lyrics[indexPath.row];
+        
+        NSLog(@"🎵 点击歌词: 索引=%ld, 时间=%.2f秒, 文本=%@", 
+              (long)indexPath.row, line.time, line.text);
+        
+        // 🆕 通知代理
+        if ([_delegate respondsToSelector:@selector(lyricsView:didTapLyricAtTime:text:index:)]) {
+            [_delegate lyricsView:self 
+                didTapLyricAtTime:line.time 
+                             text:line.text 
+                            index:indexPath.row];
+        }
+    }
+    
     // 点击歌词后暂时禁用自动滚动
     _autoScroll = NO;
     

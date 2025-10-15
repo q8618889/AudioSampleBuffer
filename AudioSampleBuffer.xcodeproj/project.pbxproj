@@ -11,6 +11,7 @@
 		4C4906902E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C49068F2E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 */; };
 		4C5167EC2E9DED6200853960 /* KaraokeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5167E92E9DED6200853960 /* KaraokeViewController.m */; };
 		4C5167F02E9DF28C00853960 /* KaraokeAudioEngine.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5167EF2E9DF28C00853960 /* KaraokeAudioEngine.m */; };
+		4C51693FE5D91950459F8E6D /* VoiceEffectProcessor.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C51DB61D13DB2C847B685D5 /* VoiceEffectProcessor.m */; };
 		4C5167F52E9E027F00853960 /* RecordingListViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5167F22E9E027F00853960 /* RecordingListViewController.m */; };
 		4C5167F62E9E027F00853960 /* RecordingPlaybackView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5167F42E9E027F00853960 /* RecordingPlaybackView.m */; };
 		4C5167F92E9E032E00853960 /* PCMAudioPlayer.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5167F82E9E032E00853960 /* PCMAudioPlayer.m */; };
@@ -159,6 +160,8 @@
 		4C5167E92E9DED6200853960 /* KaraokeViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = KaraokeViewController.m; sourceTree = "<group>"; };
 		4C5167EE2E9DF28C00853960 /* KaraokeAudioEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KaraokeAudioEngine.h; sourceTree = "<group>"; };
 		4C5167EF2E9DF28C00853960 /* KaraokeAudioEngine.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = KaraokeAudioEngine.m; sourceTree = "<group>"; };
+		4C5161DAEDAB185F481B94D3 /* VoiceEffectProcessor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VoiceEffectProcessor.h; sourceTree = "<group>"; };
+		4C51DB61D13DB2C847B685D5 /* VoiceEffectProcessor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = VoiceEffectProcessor.m; sourceTree = "<group>"; };
 		4C5167F12E9E027F00853960 /* RecordingListViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RecordingListViewController.h; sourceTree = "<group>"; };
 		4C5167F22E9E027F00853960 /* RecordingListViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RecordingListViewController.m; sourceTree = "<group>"; };
 		4C5167F32E9E027F00853960 /* RecordingPlaybackView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RecordingPlaybackView.h; sourceTree = "<group>"; };
@@ -356,6 +359,8 @@
 				4C5167FB2E9E05E000853960 /* AudioMixer.m */,
 				4C5167EE2E9DF28C00853960 /* KaraokeAudioEngine.h */,
 				4C5167EF2E9DF28C00853960 /* KaraokeAudioEngine.m */,
+				4C5161DAEDAB185F481B94D3 /* VoiceEffectProcessor.h */,
+				4C51DB61D13DB2C847B685D5 /* VoiceEffectProcessor.m */,
 				4C5167F12E9E027F00853960 /* RecordingListViewController.h */,
 				4C5167F22E9E027F00853960 /* RecordingListViewController.m */,
 				4C5167F32E9E027F00853960 /* RecordingPlaybackView.h */,
@@ -782,6 +787,7 @@
 				4C66E7342E8A9255003200DA /* QuantumShader.metal in Sources */,
 				4C66E7352E8A9255003200DA /* HolographicShader.metal in Sources */,
 				4C5167F02E9DF28C00853960 /* KaraokeAudioEngine.m in Sources */,
+				4C51693FE5D91950459F8E6D /* VoiceEffectProcessor.m in Sources */,
 				4C66E7362E8A9255003200DA /* CyberpunkShader.metal in Sources */,
 				4C66E7372E8A9255003200DA /* GalaxyShader.metal in Sources */,
 				4C66E7382E8A9256003200DA /* LightningShader.metal in Sources */,

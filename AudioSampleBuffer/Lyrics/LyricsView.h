@@ -11,8 +11,26 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class LyricsView;
+
+/// 歌词点击代理
+@protocol LyricsViewDelegate <NSObject>
+@optional
+/**
+ * 用户点击了某一行歌词
+ * @param lyricsView 歌词视图
+ * @param time 该行歌词对应的时间点
+ * @param text 歌词文本
+ * @param index 歌词索引
+ */
+- (void)lyricsView:(LyricsView *)lyricsView didTapLyricAtTime:(NSTimeInterval)time text:(NSString *)text index:(NSInteger)index;
+@end
+
 /// 歌词显示视图
 @interface LyricsView : UIView
+
+/// 代理
+@property (nonatomic, weak, nullable) id<LyricsViewDelegate> delegate;
 
 /// 歌词解析器
 @property (nonatomic, strong, nullable) LRCParser *parser;
