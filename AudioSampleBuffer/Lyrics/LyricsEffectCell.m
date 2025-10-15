@@ -47,13 +47,24 @@
 
 - (void)setLyricsText:(NSString *)lyricsText {
     _lyricsText = lyricsText;
-    _mainLabel.text = lyricsText;
+    if (_mainLabel) {
+        _mainLabel.text = lyricsText;
+    }
 }
 
 - (void)setIsHighlighted:(BOOL)isHighlighted {
     _isHighlighted = isHighlighted;
-    _mainLabel.textColor = isHighlighted ? _highlightColor : _normalColor;
-    _mainLabel.font = isHighlighted ? _highlightFont : _normalFont;
+    
+    // 🔧 确保在更新高亮状态时立即应用颜色和字体，避免闪烁
+    if (_mainLabel) {
+        _mainLabel.textColor = isHighlighted ? _highlightColor : _normalColor;
+        _mainLabel.font = isHighlighted ? _highlightFont : _normalFont;
+    }
+    
+    // 🔧 如果不是高亮状态，立即清理特效避免重叠
+    if (!isHighlighted) {
+        [self resetEffect];
+    }
 }
 
 - (void)applyEffect:(BOOL)animated {
@@ -61,6 +72,16 @@
         [self resetEffect];
         return;
     }
+    
+    // 🔧 在应用特效前先清理旧特效，避免重叠
+    [self resetEffect];
+    
+    // 🔧 确保主标签的基本样式正确（在应用特效之前）
+    _mainLabel.textColor = _highlightColor;
+    _mainLabel.font = _highlightFont;
+    _mainLabel.hidden = NO;
+    _mainLabel.alpha = 1.0;
+    _mainLabel.transform = CGAffineTransformIdentity;
     
     switch (_effectType) {
         case LyricsEffectTypeNone:
@@ -207,9 +228,14 @@
         leftLabel.frame = CGRectMake(bounds.origin.x, bounds.origin.y, bounds.size.width / 2, bounds.size.height);
         rightLabel.frame = CGRectMake(bounds.origin.x + bounds.size.width / 2, bounds.origin.y, bounds.size.width / 2, bounds.size.height);
     } completion:^(BOOL finished) {
-        self.mainLabel.hidden = NO;
-        [leftLabel removeFromSuperview];
-        [rightLabel removeFromSuperview];
+        // 🔧 确保在完成后显示主标签并清理特效标签
+        if (finished) {
+            self.mainLabel.hidden = NO;
+            [leftLabel removeFromSuperview];
+            [rightLabel removeFromSuperview];
+            [self.characterLabels removeObject:leftLabel];
+            [self.characterLabels removeObject:rightLabel];
+        }
     }];
 }
 
@@ -222,6 +248,8 @@
     NSString *text = _lyricsText ?: @"";
     CGFloat totalWidth = _mainLabel.bounds.size.width;
     CGFloat charWidth = totalWidth / MAX(1, text.length);
+    
+    __block NSInteger completedCount = 0; // 🔧 跟踪完成的字符数
     
     for (NSInteger i = 0; i < text.length; i++) {
         NSString *character = [text substringWithRange:NSMakeRange(i, 1)];
@@ -239,15 +267,18 @@
             charLabel.alpha = 1.0;
             charLabel.transform = CGAffineTransformIdentity;
         } completion:^(BOOL finished) {
-            if (i == text.length - 1) {
-                // 最后一个字符完成后，显示主标签
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    self.mainLabel.hidden = NO;
-                    for (UILabel *label in self.characterLabels) {
-                        [label removeFromSuperview];
-                    }
-                    [self.characterLabels removeAllObjects];
-                });
+            if (finished) {
+                completedCount++;
+                // 🔧 只有当所有字符都完成时才显示主标签
+                if (completedCount == text.length) {
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        self.mainLabel.hidden = NO;
+                        for (UILabel *label in self.characterLabels) {
+                            [label removeFromSuperview];
+                        }
+                        [self.characterLabels removeAllObjects];
+                    });
+                }
             }
         }];
     }
@@ -257,7 +288,9 @@
 - (void)applyWaveEffect:(BOOL)animated {
     if (!animated) return;
     
+    // 🔧 确保主标签隐藏，避免与波浪字符重叠
     _mainLabel.hidden = YES;
+    _mainLabel.alpha = 0.0;
     
     NSString *text = _lyricsText ?: @"";
     
@@ -313,6 +346,10 @@
 // 故障艺术效果 - 循环播放
 - (void)applyGlitchEffect:(BOOL)animated {
     if (!animated) return;
+    
+    // 🔧 主标签作为底层显示，特效标签在上层
+    _mainLabel.hidden = NO;
+    _mainLabel.alpha = 0.8;
     
     // 创建多个重叠标签模拟故障
     for (NSInteger i = 0; i < 3; i++) {

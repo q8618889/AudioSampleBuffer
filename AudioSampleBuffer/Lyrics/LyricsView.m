@@ -7,6 +7,7 @@
 
 #import "LyricsView.h"
 #import "LyricsEffectCell.h"
+#import <QuartzCore/QuartzCore.h>
 
 @interface LyricsView () <UITableViewDelegate, UITableViewDataSource>
 
@@ -116,6 +117,10 @@
         NSInteger oldIndex = _currentIndex;
         _currentIndex = newIndex;
         
+        // 🔧 使用 CATransaction 禁用隐式动画，避免闪烁
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        
         // 🔧 刷新旧的、新的和周围的行（用于更新透明度渐变效果）
         NSMutableArray *indexPaths = [NSMutableArray array];
         
@@ -141,10 +146,15 @@
         }
         
         if (indexPaths.count > 0) {
+            // 🔧 使用 beginUpdates/endUpdates 来批量更新，减少闪烁
+            [_tableView beginUpdates];
             [_tableView reloadRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationNone];
+            [_tableView endUpdates];
         }
         
-        // 自动滚动到当前歌词
+        [CATransaction commit];
+        
+        // 🔧 自动滚动到当前歌词（在 CATransaction 之外执行，保持滚动动画）
         if (_autoScroll && newIndex >= 0) {
             [self scrollToIndex:newIndex animated:YES];
         }
@@ -185,13 +195,16 @@
     LRCLine *line = _parser.lyrics[indexPath.row];
     BOOL isCurrentLine = (indexPath.row == _currentIndex);
     
-    cell.lyricsText = line.text;
-    cell.isHighlighted = isCurrentLine;
+    // 🔧 先设置样式属性，再设置文本和高亮状态，避免闪烁
     cell.effectType = _currentEffect;
     cell.highlightColor = _highlightColor;
     cell.normalColor = _normalColor;
     cell.highlightFont = _highlightFont;
     cell.normalFont = _lyricsFont;
+    
+    // 🔧 设置高亮状态在设置文本之前，确保颜色立即正确
+    cell.isHighlighted = isCurrentLine;
+    cell.lyricsText = line.text;
     
     // 🎨 计算距离当前行的距离，实现渐进渐出效果
     NSInteger distance = labs(indexPath.row - _currentIndex);
@@ -211,7 +224,7 @@
     
     cell.alpha = alpha;
     
-    // 应用特效
+    // 🔧 应用特效（在所有属性设置完成后）
     if (isCurrentLine) {
         [cell applyEffect:YES];
     } else {
