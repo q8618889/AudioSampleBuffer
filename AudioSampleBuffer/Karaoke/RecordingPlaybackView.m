@@ -171,15 +171,14 @@
     self.pcmPlayer = [[PCMAudioPlayer alloc] init];
     self.pcmPlayer.delegate = self;
     
-    // 🔧 使用系统实际采样率（录音时使用的采样率）
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
+    // 🔧 关键修复：从文件名中提取采样率，避免播放速度错误
+    double sampleRate = [self extractSampleRateFromFileName:self.filePath];
     
-    NSLog(@"🎵 使用采样率加载PCM: %.0f Hz", systemSampleRate);
+    NSLog(@"🎵 使用采样率加载PCM: %.0f Hz (从文件名提取)", sampleRate);
     
-    // 加载PCM文件（使用录音时的参数：系统采样率, 单声道, 16bit）
+    // 加载PCM文件（使用录音时的参数：提取的采样率, 单声道, 16bit）
     BOOL success = [self.pcmPlayer loadPCMFile:self.filePath
-                                    sampleRate:systemSampleRate
+                                    sampleRate:sampleRate
                                       channels:1
                                  bitsPerSample:16];
     
@@ -194,6 +193,35 @@
         NSLog(@"❌ PCM文件加载失败");
         self.titleLabel.text = @"❌ 加载失败";
     }
+}
+
+// 🔧 从文件名中提取采样率（格式：xxx_44100Hz.pcm 或 xxx_48000Hz.pcm）
+- (double)extractSampleRateFromFileName:(NSString *)filePath {
+    NSString *fileName = [filePath lastPathComponent];
+    
+    // 使用正则表达式提取采样率：匹配 "数字+Hz" 模式
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"(\\d+)Hz"
+                                                                           options:0
+                                                                             error:nil];
+    NSTextCheckingResult *match = [regex firstMatchInString:fileName
+                                                    options:0
+                                                      range:NSMakeRange(0, fileName.length)];
+    
+    if (match && match.numberOfRanges >= 2) {
+        NSRange sampleRateRange = [match rangeAtIndex:1];
+        NSString *sampleRateStr = [fileName substringWithRange:sampleRateRange];
+        double extractedSampleRate = [sampleRateStr doubleValue];
+        
+        NSLog(@"✅ 从文件名提取到采样率: %.0f Hz", extractedSampleRate);
+        return extractedSampleRate;
+    }
+    
+    // 如果文件名中没有采样率信息，使用系统当前采样率（向后兼容旧文件）
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    double systemSampleRate = audioSession.sampleRate;
+    
+    NSLog(@"⚠️ 文件名中未找到采样率信息，使用系统采样率: %.0f Hz", systemSampleRate);
+    return systemSampleRate;
 }
 
 - (void)updateFileInfo {

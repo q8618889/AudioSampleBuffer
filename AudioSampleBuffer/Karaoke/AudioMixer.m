@@ -144,9 +144,15 @@
         return nil;
     }
     
-    // 设置PCM格式 (44.1kHz, 单声道, 16bit)
+    // 🔧 关键修复：使用系统实际采样率而不是固定44100 Hz
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    double systemSampleRate = audioSession.sampleRate;
+    
+    NSLog(@"🎵 AudioMixer - 系统采样率: %.0f Hz", systemSampleRate);
+    
+    // 设置PCM格式 (系统采样率, 单声道, 16bit)
     AVAudioFormat *pcmFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
-                                                                sampleRate:44100.0
+                                                                sampleRate:systemSampleRate
                                                                   channels:1
                                                                interleaved:YES];
     
@@ -282,9 +288,15 @@
         return NO;
     }
     
-    // 设置PCM格式 (44.1kHz, 单声道, 16bit)
+    // 🔧 关键修复：使用系统实际采样率而不是固定44100 Hz
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    double systemSampleRate = audioSession.sampleRate;
+    
+    NSLog(@"🎵 PCM转M4A - 系统采样率: %.0f Hz", systemSampleRate);
+    
+    // 设置PCM格式 (系统采样率, 单声道, 16bit)
     AudioStreamBasicDescription pcmFormat = {0};
-    pcmFormat.mSampleRate = 44100.0;
+    pcmFormat.mSampleRate = systemSampleRate;
     pcmFormat.mFormatID = kAudioFormatLinearPCM;
     pcmFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
     pcmFormat.mBytesPerPacket = 2;
@@ -297,7 +309,7 @@
     
     // 设置AAC输出格式
     AudioStreamBasicDescription aacFormat = {0};
-    aacFormat.mSampleRate = 44100.0;
+    aacFormat.mSampleRate = systemSampleRate;
     aacFormat.mFormatID = kAudioFormatMPEG4AAC;
     aacFormat.mChannelsPerFrame = 1;
     

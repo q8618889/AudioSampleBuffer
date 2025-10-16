@@ -21,9 +21,8 @@ typedef NS_ENUM(NSInteger, VoiceEffectType) {
     VoiceEffectTypeEthereal,          // 空灵（长混响+延迟）
     VoiceEffectTypeMagnetic,          // 磁性（低频增强）
     VoiceEffectTypeBright,            // 明亮（高频增强）
-    VoiceEffectTypeAutoTune,          // 🆕 自动修音（Auto-Tune）
-    VoiceEffectTypePitchUp,           // 🆕 升调（+3半音）
-    VoiceEffectTypePitchDown,         // 🆕 降调（-3半音）
+    // ❌ 已移除人声升降调（改用背景音乐升降调功能）
+    // VoiceEffectTypePitchUp/Down - 请使用 player.pitchShift 调整背景音乐
 };
 
 @interface VoiceEffectProcessor : NSObject
@@ -43,6 +42,10 @@ typedef NS_ENUM(NSInteger, VoiceEffectType) {
 @property (nonatomic, assign) BOOL enableNoiseReduction;  // 启用降噪
 @property (nonatomic, assign) float pitchShift;           // 音高偏移（半音，-12 to +12）
 @property (nonatomic, assign) BOOL enableAutoTune;        // 启用自动修音
+
+// 🆕 自动增益控制（AGC）参数
+@property (nonatomic, assign) BOOL enableAGC;             // 启用AGC
+@property (nonatomic, assign) float agcStrength;          // AGC强度 (0.0=弱, 0.5=中, 1.0=强)
 
 /**
  * 创建音效处理引擎
@@ -92,6 +95,19 @@ typedef NS_ENUM(NSInteger, VoiceEffectType) {
  * @param scale 音阶 (0=大调, 1=小调)
  */
 - (void)setAutoTuneEnabled:(BOOL)enabled musicalKey:(NSInteger)key scale:(NSInteger)scale;
+
+/**
+ * 🆕 设置自动增益控制（AGC）
+ * @param enabled 是否启用AGC
+ * @param strength AGC强度 (0.0=弱, 0.5=中, 1.0=强)
+ */
+- (void)setAGCEnabled:(BOOL)enabled strength:(float)strength;
+
+/**
+ * 🆕 获取当前AGC增益值（用于UI显示）
+ * @return 当前应用的增益倍数
+ */
+- (float)getCurrentAGCGain;
 
 @end
 

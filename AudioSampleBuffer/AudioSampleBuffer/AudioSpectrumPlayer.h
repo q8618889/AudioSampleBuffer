@@ -31,6 +31,14 @@ NS_ASSUME_NONNULL_BEGIN
 /// 当前歌词解析器
 @property (nonatomic, strong, nullable, readonly) LRCParser *lyricsParser;
 
+/// 🎵 音高调整（半音数，范围 -12.0 到 +12.0）
+/// 0 = 原调，+1 = 升高一个半音，-1 = 降低一个半音
+@property (nonatomic, assign) float pitchShift;
+
+/// 🎵 速率调整（范围 0.5 到 2.0）
+/// 1.0 = 原速
+@property (nonatomic, assign) float playbackRate;
+
 - (void)playWithFileName:(NSString *)fileName;
 - (void)stop;
 

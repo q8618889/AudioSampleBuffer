@@ -6,6 +6,7 @@
 //
 
 #import "LyricsManager.h"
+#import "QQMusicLyricsAPI.h"
 #import <AVFoundation/AVFoundation.h>
 
 @interface LyricsManager ()
@@ -132,16 +133,28 @@
                 completion(parser, error);
             }
         }];
-    } else {
-        // 没有找到歌词
-        NSLog(@"⚠️ [歌词] 未找到歌词: %@", audioFileName);
-        NSError *error = [NSError errorWithDomain:@"LyricsManager"
-                                             code:404
-                                         userInfo:@{NSLocalizedDescriptionKey: @"未找到歌词文件"}];
-        if (completion) {
-            completion(nil, error);
-        }
+        return;
     }
+    
+    // 优先级5: 从QQ音乐API动态获取（通过歌名和艺术家搜索）
+    NSLog(@"🔍 [歌词] 尝试从QQ音乐API获取: %@", audioFileName);
+    [self fetchLyricsFromQQMusicForAudioFile:audioPath completion:^(LRCParser *parser, NSError *error) {
+        if (parser) {
+            [self.lyricsCache setObject:parser forKey:audioPath];
+            
+            // 保存到沙盒
+            NSString *lrcContent = [self convertParserToLRCString:parser];
+            [self saveLyrics:lrcContent forAudioFile:audioPath];
+            
+            NSLog(@"✅ [歌词] QQ音乐API获取成功: %@", audioFileName);
+        } else {
+            NSLog(@"⚠️ [歌词] 未找到歌词: %@", audioFileName);
+        }
+        
+        if (completion) {
+            completion(parser, error);
+        }
+    }];
 }
 
 - (void)fetchLyricsFromNetease:(NSString *)musicId
@@ -374,6 +387,100 @@
     NSString *lyricsDirectory = [documentsDirectory stringByAppendingPathComponent:@"Lyrics"];
     
     return lyricsDirectory;
+}
+
+#pragma mark - QQ音乐歌词获取
+
+- (void)fetchLyricsFromQQMusicForAudioFile:(NSString *)audioPath
+                                completion:(LyricsCompletionBlock)completion {
+    
+    // 从音频文件元数据提取歌名和艺术家
+    NSURL *audioURL = [NSURL fileURLWithPath:audioPath];
+    AVAsset *asset = [AVAsset assetWithURL:audioURL];
+    NSArray *metadata = [asset commonMetadata];
+    
+    NSString *title = nil;
+    NSString *artist = nil;
+    
+    for (AVMetadataItem *item in metadata) {
+        if ([item.commonKey isEqualToString:AVMetadataCommonKeyTitle]) {
+            title = (NSString *)[item.value copyWithZone:nil];
+        } else if ([item.commonKey isEqualToString:AVMetadataCommonKeyArtist]) {
+            artist = (NSString *)[item.value copyWithZone:nil];
+        }
+    }
+    
+    // 如果元数据中没有，尝试从文件名解析（格式：艺术家-歌名.mp3）
+    if (!title || !artist) {
+        NSString *fileName = [[audioPath lastPathComponent] stringByDeletingPathExtension];
+        NSArray *parts = [fileName componentsSeparatedByString:@"-"];
+        
+        if (parts.count >= 2) {
+            if (!artist) {
+                artist = [[parts objectAtIndex:0] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+            }
+            if (!title) {
+                NSArray *titleParts = [parts subarrayWithRange:NSMakeRange(1, parts.count - 1)];
+                NSString *titlePart = [titleParts componentsJoinedByString:@"-"];
+                title = [titlePart stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+            }
+        } else if (parts.count == 1) {
+            // 只有歌名，没有艺术家
+            title = fileName;
+        }
+    }
+    
+    if (!title || title.length == 0) {
+        NSLog(@"❌ [QQ音乐] 无法提取歌名信息: %@", [audioPath lastPathComponent]);
+        NSError *error = [NSError errorWithDomain:@"LyricsManager"
+                                             code:400
+                                         userInfo:@{NSLocalizedDescriptionKey: @"无法提取歌曲信息"}];
+        if (completion) {
+            completion(nil, error);
+        }
+        return;
+    }
+    
+    NSLog(@"🔍 [QQ音乐] 搜索歌词: %@%@", 
+          artist ? [NSString stringWithFormat:@"%@ - ", artist] : @"",
+          title);
+    
+    // 使用 QQMusicLyricsAPI 搜索并获取歌词
+    [QQMusicLyricsAPI searchAndFetchLyricsWithSongName:title 
+                                             artistName:artist 
+                                             completion:^(QQMusicLyrics * _Nullable lyrics, NSError * _Nullable lyricsError) {
+        
+        if (lyricsError || !lyrics || !lyrics.originalLyrics || lyrics.originalLyrics.length == 0) {
+            NSLog(@"⚠️ [QQ音乐] 获取歌词失败: %@", title);
+            if (completion) {
+                NSError *notFoundError = [NSError errorWithDomain:@"LyricsManager"
+                                                             code:404
+                                                         userInfo:@{NSLocalizedDescriptionKey: @"QQ音乐未找到歌词"}];
+                completion(nil, notFoundError);
+            }
+            return;
+        }
+        
+        NSLog(@"✅ [QQ音乐] 获取歌词成功: %@", title);
+        
+        // 解析歌词
+        LRCParser *parser = [[LRCParser alloc] init];
+        BOOL success = [parser parseFromString:lyrics.originalLyrics];
+        
+        if (success && parser.lyrics.count > 0) {
+            if (completion) {
+                completion(parser, nil);
+            }
+        } else {
+            NSLog(@"⚠️ [QQ音乐] 歌词解析失败: %@", title);
+            if (completion) {
+                NSError *parseError = [NSError errorWithDomain:@"LyricsManager"
+                                                          code:500
+                                                      userInfo:@{NSLocalizedDescriptionKey: @"歌词解析失败"}];
+                completion(nil, parseError);
+            }
+        }
+    }];
 }
 
 @end

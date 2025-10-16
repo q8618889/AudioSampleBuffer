@@ -9,10 +9,13 @@
 #import "AudioSpectrumPlayer.h"
 #import "LyricsView.h"
 #import "LRCParser.h"
+#import "LyricsManager.h"
 #import "KaraokeAudioEngine.h"
 #import "RecordingListViewController.h"
 #import "RecordingPlaybackView.h"
 #import "AudioMixer.h"
+#import "KaraokeRecordingConfig.h"
+#import "SegmentSelectorView.h"
 #import <AVFoundation/AVFoundation.h>
 #import <AudioToolbox/AudioToolbox.h>
 
@@ -54,10 +57,16 @@ static void CheckError(OSStatus error, const char *operation) {
 @property (nonatomic, strong) UILabel *microphoneVolumeLabel;
 @property (nonatomic, strong) UISlider *bgmVolumeSlider;  // 新增：BGM音量控制
 @property (nonatomic, strong) UILabel *bgmVolumeLabel;
+@property (nonatomic, strong) UISlider *bgmPitchSlider;  // 🆕 BGM音高调整控制
+@property (nonatomic, strong) UILabel *bgmPitchLabel;
 
 // 音效控制UI
 @property (nonatomic, strong) UIButton *voiceEffectButton;
 @property (nonatomic, strong) UIView *effectSelectorView;
+
+// 🆕 AGC 控制UI
+@property (nonatomic, strong) UIButton *agcButton;
+@property (nonatomic, strong) UIView *agcSettingsView;
 
 // 音频系统
 @property (nonatomic, strong) AudioSpectrumPlayer *player;
@@ -70,6 +79,11 @@ static void CheckError(OSStatus error, const char *operation) {
 @property (nonatomic, assign) BOOL isRecording;
 @property (nonatomic, assign) BOOL isPlaying;
 @property (nonatomic, assign) NSTimeInterval recordingStartTime;  // 🆕 记录录音起始时间（用于歌词同步）
+
+// 🎯 片段选择功能
+@property (nonatomic, strong) UIButton *segmentSelectorButton;       // 片段选择按钮
+@property (nonatomic, strong) SegmentSelectorView *segmentSelectorView;  // 片段选择器视图
+@property (nonatomic, strong) KaraokeRecordingConfig *recordingConfig;   // 录音配置
 
 // 回放相关
 @property (nonatomic, strong) AVAudioPlayer *playbackPlayer;
@@ -98,6 +112,9 @@ static void CheckError(OSStatus error, const char *operation) {
     [super viewDidLoad];
     NSLog(@"🎬 KaraokeViewController viewDidLoad 开始");
     
+    // 🎯 初始化录音配置（默认为全曲模式）
+    self.recordingConfig = [[KaraokeRecordingConfig alloc] init];
+    
     NSLog(@"📱 Step 1: setupUI");
     [self setupUI];
     
@@ -120,6 +137,28 @@ static void CheckError(OSStatus error, const char *operation) {
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    
+    // 🎯 关键修复：重新激活AudioSession（防止被其他页面改变）
+    if (self.karaokeAudioEngine) {
+        NSError *error = nil;
+        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+        
+        // 确保AudioSession处于正确状态
+        [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord
+                      withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker | 
+                                  AVAudioSessionCategoryOptionAllowBluetooth
+                            error:&error];
+        
+        if (!error) {
+            [audioSession setActive:YES error:&error];
+            if (!error) {
+                NSLog(@"✅ 卡拉OK页面重新激活AudioSession");
+            } else {
+                NSLog(@"⚠️ 重新激活AudioSession失败: %@", error.localizedDescription);
+            }
+        }
+    }
+    
     [self startUpdateTimer];
 }
 
@@ -132,6 +171,16 @@ static void CheckError(OSStatus error, const char *operation) {
     if (self.karaokeAudioEngine) {
         [self.karaokeAudioEngine stop];
         [self.karaokeAudioEngine stopRecording];
+    }
+    
+    // 🎯 关键修复：退出时停用AudioSession，让主界面接管
+    NSError *error = nil;
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    [audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error];
+    if (error) {
+        NSLog(@"⚠️ 停用AudioSession失败: %@", error.localizedDescription);
+    } else {
+        NSLog(@"✅ 卡拉OK页面已停用AudioSession");
     }
     
 //    // 发送通知，恢复外层音频播放
@@ -293,6 +342,9 @@ static void CheckError(OSStatus error, const char *operation) {
     // 音效选择按钮
     [self setupVoiceEffectButton];
     
+    // 🎯 片段选择按钮
+    [self setupSegmentSelectorButton];
+    
     // 歌词视图
     [self setupLyricsView];
 }
@@ -382,45 +434,61 @@ static void CheckError(OSStatus error, const char *operation) {
     [self.bgmVolumeSlider addTarget:self action:@selector(bgmVolumeChanged:) forControlEvents:UIControlEventValueChanged];
     [self.view addSubview:self.bgmVolumeSlider];
     
-    // 🆕 智能降噪开关（放在 BGM 音量下方）
+    // 🆕 BGM音高调整控件
+    self.bgmPitchLabel = [[UILabel alloc] init];
+    self.bgmPitchLabel.text = @"🎵 BGM音高: 0";
+    self.bgmPitchLabel.textColor = [UIColor whiteColor];
+    self.bgmPitchLabel.font = [UIFont systemFontOfSize:14];
+    self.bgmPitchLabel.frame = CGRectMake(20, startY + spacing * 4, 100, 20);
+    [self.view addSubview:self.bgmPitchLabel];
+    
+    self.bgmPitchSlider = [[UISlider alloc] init];
+    self.bgmPitchSlider.minimumValue = -12.0;  // -12半音
+    self.bgmPitchSlider.maximumValue = 12.0;   // +12半音
+    self.bgmPitchSlider.value = 0.0;  // 默认原调
+    self.bgmPitchSlider.frame = CGRectMake(110, startY + spacing * 4, self.view.bounds.size.width - 130, 20);
+    self.bgmPitchSlider.userInteractionEnabled = YES;
+    self.bgmPitchSlider.minimumTrackTintColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0];
+    [self.bgmPitchSlider addTarget:self action:@selector(bgmPitchChanged:) forControlEvents:UIControlEventValueChanged];
+    [self.view addSubview:self.bgmPitchSlider];
+    
+    // 🆕 智能降噪开关（放在 BGM 音高下方）
     UILabel *noiseReductionLabel = [[UILabel alloc] init];
     noiseReductionLabel.text = @"🔇 智能降噪";
     noiseReductionLabel.textColor = [UIColor whiteColor];
     noiseReductionLabel.font = [UIFont systemFontOfSize:14];
-    noiseReductionLabel.frame = CGRectMake(20, startY + spacing * 4, 100, 20);
+    noiseReductionLabel.frame = CGRectMake(20, startY + spacing * 5, 100, 20);
     [self.view addSubview:noiseReductionLabel];
     
     UISwitch *noiseReductionSwitch = [[UISwitch alloc] init];
     noiseReductionSwitch.on = NO; // 默认关闭
     noiseReductionSwitch.onTintColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0];
-    noiseReductionSwitch.frame = CGRectMake(110, startY + spacing * 4 - 5, 51, 31);
+    noiseReductionSwitch.frame = CGRectMake(110, startY + spacing * 5 - 5, 51, 31);
     noiseReductionSwitch.tag = 9001; // 标记为降噪开关
     [noiseReductionSwitch addTarget:self action:@selector(noiseReductionSwitchChanged:) forControlEvents:UIControlEventValueChanged];
     [self.view addSubview:noiseReductionSwitch];
     
-    // 🆕 音高调节（放在降噪开关下方）
-    UILabel *pitchShiftLabel = [[UILabel alloc] init];
-    pitchShiftLabel.text = @"🎵 音高: 0半音";
-    pitchShiftLabel.textColor = [UIColor whiteColor];
-    pitchShiftLabel.font = [UIFont systemFontOfSize:14];
-    pitchShiftLabel.frame = CGRectMake(20, startY + spacing * 5, 100, 20);
-    pitchShiftLabel.tag = 9002; // 标记为音高标签
-    [self.view addSubview:pitchShiftLabel];
+//    // 🆕 音高调节（放在降噪开关下方）
+//    UILabel *pitchShiftLabel = [[UILabel alloc] init];
+//    pitchShiftLabel.text = @"🎵 音高: 0半音";
+//    pitchShiftLabel.textColor = [UIColor whiteColor];
+//    pitchShiftLabel.font = [UIFont systemFontOfSize:14];
+//    pitchShiftLabel.frame = CGRectMake(20, startY + spacing * 5, 100, 20);
+//    pitchShiftLabel.tag = 9002; // 标记为音高标签
+//    [self.view addSubview:pitchShiftLabel];
+//    
+//    UISlider *pitchShiftSlider = [[UISlider alloc] init];
+//    pitchShiftSlider.minimumValue = -6.0f;
+//    pitchShiftSlider.maximumValue = 6.0f;
+//    pitchShiftSlider.value = 0.0f;
+//    pitchShiftSlider.minimumTrackTintColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0];
+//    pitchShiftSlider.frame = CGRectMake(110, startY + spacing * 5, self.view.bounds.size.width - 130, 20);
+//    pitchShiftSlider.tag = 9003; // 标记为音高滑块
+//    pitchShiftSlider.userInteractionEnabled = YES;
+//    [pitchShiftSlider addTarget:self action:@selector(pitchShiftSliderChanged:) forControlEvents:UIControlEventValueChanged];
+//    [self.view addSubview:pitchShiftSlider];
     
-    UISlider *pitchShiftSlider = [[UISlider alloc] init];
-    pitchShiftSlider.minimumValue = -6.0f;
-    pitchShiftSlider.maximumValue = 6.0f;
-    pitchShiftSlider.value = 0.0f;
-    pitchShiftSlider.minimumTrackTintColor = [UIColor colorWithRed:0.0 green:0.8 blue:1.0 alpha:1.0];
-    pitchShiftSlider.frame = CGRectMake(110, startY + spacing * 5, self.view.bounds.size.width - 130, 20);
-    pitchShiftSlider.tag = 9003; // 标记为音高滑块
-    pitchShiftSlider.userInteractionEnabled = YES;
-    [pitchShiftSlider addTarget:self action:@selector(pitchShiftSliderChanged:) forControlEvents:UIControlEventValueChanged];
-    [self.view addSubview:pitchShiftSlider];
-    
-    NSLog(@"✅ 耳返控制界面已创建，所有滑块已启用交互");
-    NSLog(@"✅ 智能降噪开关已添加到主界面");
-    NSLog(@"✅ 音高调节滑块已添加到主界面");
+ 
 }
 
 - (void)setupVoiceEffectButton {
@@ -442,7 +510,112 @@ static void CheckError(OSStatus error, const char *operation) {
     [self.voiceEffectButton addTarget:self action:@selector(showVoiceEffectSelector) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:self.voiceEffectButton];
     
+    // 🆕 创建AGC控制按钮（紧邻音效按钮下方）
+    CGFloat agcButtonY = buttonY + buttonHeight + 10;
+    
+    self.agcButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [self.agcButton setTitle:@"🎚️ AGC：关" forState:UIControlStateNormal];
+    [self.agcButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.agcButton.backgroundColor = [UIColor colorWithRed:0.5 green:0.3 blue:0.7 alpha:0.8];
+    self.agcButton.layer.cornerRadius = 22;
+    self.agcButton.layer.borderWidth = 1;
+    self.agcButton.layer.borderColor = [UIColor colorWithRed:0.6 green:0.4 blue:0.9 alpha:1.0].CGColor;
+    self.agcButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+    self.agcButton.frame = CGRectMake(buttonX, agcButtonY, buttonWidth, buttonHeight);
+    [self.agcButton addTarget:self action:@selector(showAGCSettings) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.agcButton];
+    
     NSLog(@"✅ 音效选择按钮已创建");
+    NSLog(@"✅ AGC 控制按钮已创建");
+}
+
+#pragma mark - 🎯 片段选择功能
+
+- (void)setupSegmentSelectorButton {
+    // 创建片段选择按钮（位于左上角，音效按钮的对侧）
+    CGFloat buttonWidth = 120;
+    CGFloat buttonHeight = 44;
+    CGFloat buttonX = 20;  // 左侧
+    CGFloat buttonY = 100;
+    
+    self.segmentSelectorButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [self.segmentSelectorButton setTitle:@"📍 选片段" forState:UIControlStateNormal];
+    [self.segmentSelectorButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.segmentSelectorButton.backgroundColor = [UIColor colorWithRed:1.0 green:0.6 blue:0.0 alpha:0.8];
+    self.segmentSelectorButton.layer.cornerRadius = 22;
+    self.segmentSelectorButton.layer.borderWidth = 1;
+    self.segmentSelectorButton.layer.borderColor = [UIColor colorWithRed:1.0 green:0.7 blue:0.2 alpha:1.0].CGColor;
+    self.segmentSelectorButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+    self.segmentSelectorButton.frame = CGRectMake(buttonX, buttonY, buttonWidth, buttonHeight);
+    [self.segmentSelectorButton addTarget:self action:@selector(showSegmentSelector) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.segmentSelectorButton];
+    
+    NSLog(@"✅ 片段选择按钮已创建");
+}
+
+- (void)showSegmentSelector {
+    // 创建片段选择视图
+    self.segmentSelectorView = [[SegmentSelectorView alloc] initWithFrame:self.view.bounds];
+    
+    // 传入歌词解析器和总时长
+    self.segmentSelectorView.lyricsParser = self.lyricsParser;
+    self.segmentSelectorView.totalDuration = self.karaokeAudioEngine.duration;
+    
+    // 如果已经选择了片段，传入初始值
+    if (self.recordingConfig.mode == KaraokeRecordingModeSegment) {
+        self.segmentSelectorView.initialStartTime = self.recordingConfig.segmentStartTime;
+        self.segmentSelectorView.initialEndTime = self.recordingConfig.segmentEndTime;
+    }
+    
+    // 设置回调
+    __weak typeof(self) weakSelf = self;
+    
+    // 确认选择片段
+    self.segmentSelectorView.onConfirm = ^(NSTimeInterval startTime, NSTimeInterval endTime) {
+        [weakSelf onSegmentSelected:startTime endTime:endTime];
+    };
+    
+    // 选择全曲
+    self.segmentSelectorView.onSelectFull = ^{
+        [weakSelf onFullSongSelected];
+    };
+    
+    // 取消
+    self.segmentSelectorView.onCancel = ^{
+        weakSelf.segmentSelectorView = nil;
+    };
+    
+    // 显示
+    [self.view addSubview:self.segmentSelectorView];
+    [self.segmentSelectorView show];
+}
+
+- (void)onSegmentSelected:(NSTimeInterval)startTime endTime:(NSTimeInterval)endTime {
+    // 更新录音配置为片段模式
+    [self.recordingConfig setSegmentModeWithStart:startTime end:endTime];
+    
+    // 更新按钮显示
+    [self.segmentSelectorButton setTitle:@"🔄 重置片段" forState:UIControlStateNormal];
+    self.segmentSelectorButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.8 blue:0.4 alpha:0.8];
+    
+    NSLog(@"✅ 已选择片段: %.2f ~ %.2f 秒", startTime, endTime);
+    
+    // 清理选择器视图
+    self.segmentSelectorView = nil;
+}
+
+- (void)onFullSongSelected {
+    // 重置为全曲模式
+    [self.recordingConfig resetToFullMode];
+    
+    // 恢复按钮显示
+    [self.segmentSelectorButton setTitle:@"📍 选片段" forState:UIControlStateNormal];
+    self.segmentSelectorButton.backgroundColor = [UIColor colorWithRed:1.0 green:0.6 blue:0.0 alpha:0.8];
+    
+    NSLog(@"✅ 已重置为全曲模式");
+    
+    // 清理选择器视图
+    self.segmentSelectorView = nil;
 }
 
 - (void)showVoiceEffectSelector {
@@ -462,7 +635,7 @@ static void CheckError(OSStatus error, const char *operation) {
     
     // 创建音效选择面板
     CGFloat panelWidth = 320;
-    CGFloat panelHeight = 580;  // 适应12个音效
+    CGFloat panelHeight = 630;  // 适应12个音效（新增了自动修音、升调、降调）
     CGFloat panelX = (self.view.bounds.size.width - panelWidth) / 2;
     CGFloat panelY = (self.view.bounds.size.height - panelHeight) / 2;
     
@@ -491,9 +664,6 @@ static void CheckError(OSStatus error, const char *operation) {
         @[@(VoiceEffectTypeEthereal), @"空灵", @"✨"],
         @[@(VoiceEffectTypeMagnetic), @"磁性", @"🔥"],
         @[@(VoiceEffectTypeBright), @"明亮", @"💎"],
-        @[@(VoiceEffectTypeAutoTune), @"自动修音", @"🎤"],
-        @[@(VoiceEffectTypePitchUp), @"升调+3", @"⬆️"],
-        @[@(VoiceEffectTypePitchDown), @"降调-3", @"⬇️"]
     ];
     
     CGFloat buttonStartY = 70;
@@ -558,6 +728,310 @@ static void CheckError(OSStatus error, const char *operation) {
     }];
 }
 
+#pragma mark - 🆕 AGC 控制方法
+
+- (void)showAGCSettings {
+    // 如果已经显示，则隐藏
+    if (self.agcSettingsView) {
+        [self hideAGCSettings];
+        return;
+    }
+    
+    // 创建半透明背景
+    UIView *backgroundView = [[UIView alloc] initWithFrame:self.view.bounds];
+    backgroundView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.7];
+    backgroundView.tag = 998;  // 使用不同的tag
+    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hideAGCSettings)];
+    [backgroundView addGestureRecognizer:tapGesture];
+    [self.view addSubview:backgroundView];
+    
+    // 创建AGC设置面板
+    CGFloat panelWidth = 340;
+    CGFloat panelHeight = 420;
+    CGFloat panelX = (self.view.bounds.size.width - panelWidth) / 2;
+    CGFloat panelY = (self.view.bounds.size.height - panelHeight) / 2;
+    
+    self.agcSettingsView = [[UIView alloc] initWithFrame:CGRectMake(panelX, panelY, panelWidth, panelHeight)];
+    self.agcSettingsView.backgroundColor = [UIColor colorWithWhite:0.12 alpha:0.97];
+    self.agcSettingsView.layer.cornerRadius = 20;
+    self.agcSettingsView.layer.borderWidth = 2;
+    self.agcSettingsView.layer.borderColor = [UIColor colorWithRed:0.6 green:0.4 blue:0.9 alpha:1.0].CGColor;
+    
+    // 标题
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 25, panelWidth, 35)];
+    titleLabel.text = @"🎚️ 自动增益控制 (AGC)";
+    titleLabel.textColor = [UIColor whiteColor];
+    titleLabel.font = [UIFont boldSystemFontOfSize:22];
+    titleLabel.textAlignment = NSTextAlignmentCenter;
+    [self.agcSettingsView addSubview:titleLabel];
+    
+    // 说明文字
+    UILabel *descLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 70, panelWidth - 40, 50)];
+    descLabel.text = @"自动调整麦克风音量，让录音保持稳定的响度，无需手动调节。";
+    descLabel.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
+    descLabel.font = [UIFont systemFontOfSize:13];
+    descLabel.numberOfLines = 0;
+    descLabel.textAlignment = NSTextAlignmentCenter;
+    [self.agcSettingsView addSubview:descLabel];
+    
+    CGFloat currentY = 140;
+    
+    // ======== AGC 开关 ========
+    UILabel *switchLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, currentY, 120, 30)];
+    switchLabel.text = @"启用 AGC";
+    switchLabel.textColor = [UIColor whiteColor];
+    switchLabel.font = [UIFont boldSystemFontOfSize:16];
+    [self.agcSettingsView addSubview:switchLabel];
+    
+    UISwitch *agcSwitch = [[UISwitch alloc] initWithFrame:CGRectMake(panelWidth - 80, currentY, 51, 31)];
+    agcSwitch.on = self.karaokeAudioEngine.voiceEffectProcessor.enableAGC;
+    agcSwitch.onTintColor = [UIColor colorWithRed:0.6 green:0.4 blue:0.9 alpha:1.0];
+    agcSwitch.tag = 8001;
+    [agcSwitch addTarget:self action:@selector(agcSwitchChanged:) forControlEvents:UIControlEventValueChanged];
+    [self.agcSettingsView addSubview:agcSwitch];
+    
+    currentY += 60;
+    
+    // ======== AGC 强度调节 ========
+    UILabel *strengthTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, currentY, 200, 25)];
+    strengthTitleLabel.text = @"AGC 强度";
+    strengthTitleLabel.textColor = [UIColor whiteColor];
+    strengthTitleLabel.font = [UIFont boldSystemFontOfSize:16];
+    [self.agcSettingsView addSubview:strengthTitleLabel];
+    
+    UILabel *strengthValueLabel = [[UILabel alloc] initWithFrame:CGRectMake(panelWidth - 100, currentY, 70, 25)];
+    strengthValueLabel.tag = 8002;
+    strengthValueLabel.textColor = [UIColor colorWithRed:0.6 green:0.8 blue:1.0 alpha:1.0];
+    strengthValueLabel.font = [UIFont boldSystemFontOfSize:15];
+    strengthValueLabel.textAlignment = NSTextAlignmentRight;
+    [self.agcSettingsView addSubview:strengthValueLabel];
+    
+    currentY += 35;
+    
+    UISlider *strengthSlider = [[UISlider alloc] initWithFrame:CGRectMake(30, currentY, panelWidth - 60, 30)];
+    strengthSlider.minimumValue = 0.0f;
+    strengthSlider.maximumValue = 1.0f;
+    strengthSlider.value = self.karaokeAudioEngine.voiceEffectProcessor.agcStrength;
+    strengthSlider.minimumTrackTintColor = [UIColor colorWithRed:0.6 green:0.4 blue:0.9 alpha:1.0];
+    strengthSlider.tag = 8003;
+    [strengthSlider addTarget:self action:@selector(agcStrengthSliderChanged:) forControlEvents:UIControlEventValueChanged];
+    [self.agcSettingsView addSubview:strengthSlider];
+    
+    // 更新强度标签
+    [self updateAGCStrengthLabel:strengthValueLabel forStrength:strengthSlider.value];
+    
+    currentY += 40;
+    
+    // 强度说明
+    UILabel *strengthHintLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, currentY, panelWidth - 60, 15)];
+    strengthHintLabel.text = @"弱                           中                           强";
+    strengthHintLabel.textColor = [UIColor colorWithWhite:0.5 alpha:1.0];
+    strengthHintLabel.font = [UIFont systemFontOfSize:11];
+    strengthHintLabel.textAlignment = NSTextAlignmentCenter;
+    [self.agcSettingsView addSubview:strengthHintLabel];
+    
+    currentY += 35;
+    
+    // ======== 实时增益显示 ========
+    UILabel *gainDisplayLabel = [[UILabel alloc] initWithFrame:CGRectMake(30, currentY, panelWidth - 60, 25)];
+    gainDisplayLabel.text = @"当前增益：1.0x";
+    gainDisplayLabel.textColor = [UIColor colorWithRed:0.5 green:1.0 blue:0.5 alpha:1.0];
+    gainDisplayLabel.font = [UIFont monospacedDigitSystemFontOfSize:14 weight:UIFontWeightMedium];
+    gainDisplayLabel.textAlignment = NSTextAlignmentCenter;
+    gainDisplayLabel.tag = 8004;
+    [self.agcSettingsView addSubview:gainDisplayLabel];
+    
+    // 启动定时器更新增益显示（只在AGC开启时）
+    if (agcSwitch.on) {
+        [self startAGCGainUpdateTimer];
+    }
+    
+    currentY += 40;
+    
+    // ======== 快捷设置按钮 ========
+    CGFloat presetButtonWidth = 85;
+    CGFloat presetButtonHeight = 36;
+    CGFloat presetButtonSpacing = 10;
+    CGFloat totalPresetWidth = presetButtonWidth * 3 + presetButtonSpacing * 2;
+    CGFloat presetStartX = (panelWidth - totalPresetWidth) / 2;
+    
+    NSArray *presets = @[
+        @{@"title": @"弱", @"value": @(0.16f)},
+        @{@"title": @"中", @"value": @(0.50f)},
+        @{@"title": @"强", @"value": @(1.0f)}
+    ];
+    
+    for (int i = 0; i < presets.count; i++) {
+        NSDictionary *preset = presets[i];
+        
+        UIButton *presetButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        presetButton.frame = CGRectMake(presetStartX + i * (presetButtonWidth + presetButtonSpacing), 
+                                       currentY, 
+                                       presetButtonWidth, 
+                                       presetButtonHeight);
+        [presetButton setTitle:preset[@"title"] forState:UIControlStateNormal];
+        [presetButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        presetButton.backgroundColor = [UIColor colorWithRed:0.4 green:0.25 blue:0.6 alpha:0.7];
+        presetButton.layer.cornerRadius = 8;
+        presetButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+        presetButton.tag = 8100 + i;
+        [presetButton addTarget:self action:@selector(agcPresetButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [self.agcSettingsView addSubview:presetButton];
+    }
+    
+    // 添加到视图
+    [self.view addSubview:self.agcSettingsView];
+    
+    // 动画效果
+    self.agcSettingsView.alpha = 0;
+    self.agcSettingsView.transform = CGAffineTransformMakeScale(0.85, 0.85);
+    [UIView animateWithDuration:0.35 delay:0 usingSpringWithDamping:0.75 initialSpringVelocity:0 options:0 animations:^{
+        self.agcSettingsView.alpha = 1;
+        self.agcSettingsView.transform = CGAffineTransformIdentity;
+    } completion:nil];
+    
+    NSLog(@"📱 显示 AGC 设置面板");
+}
+
+- (void)hideAGCSettings {
+    UIView *backgroundView = [self.view viewWithTag:998];
+    
+    // 停止增益更新定时器
+    [self stopAGCGainUpdateTimer];
+    
+    [UIView animateWithDuration:0.25 animations:^{
+        self.agcSettingsView.alpha = 0;
+        self.agcSettingsView.transform = CGAffineTransformMakeScale(0.85, 0.85);
+        backgroundView.alpha = 0;
+    } completion:^(BOOL finished) {
+        [self.agcSettingsView removeFromSuperview];
+        [backgroundView removeFromSuperview];
+        self.agcSettingsView = nil;
+    }];
+}
+
+- (void)agcSwitchChanged:(UISwitch *)sender {
+    BOOL enabled = sender.on;
+    float currentStrength = self.karaokeAudioEngine.voiceEffectProcessor.agcStrength;
+    
+    // 应用AGC设置
+    [self.karaokeAudioEngine.voiceEffectProcessor setAGCEnabled:enabled strength:currentStrength];
+    
+    // 更新按钮显示
+    [self updateAGCButtonTitle];
+    
+    // 控制增益显示更新
+    if (enabled) {
+        [self startAGCGainUpdateTimer];
+    } else {
+        [self stopAGCGainUpdateTimer];
+    }
+    
+    NSLog(@"🎚️ AGC %@", enabled ? @"已启用" : @"已关闭");
+}
+
+- (void)agcStrengthSliderChanged:(UISlider *)sender {
+    float strength = sender.value;
+    BOOL enabled = self.karaokeAudioEngine.voiceEffectProcessor.enableAGC;
+    
+    // 应用AGC设置
+    [self.karaokeAudioEngine.voiceEffectProcessor setAGCEnabled:enabled strength:strength];
+    
+    // 更新强度标签
+    UILabel *strengthLabel = (UILabel *)[self.agcSettingsView viewWithTag:8002];
+    [self updateAGCStrengthLabel:strengthLabel forStrength:strength];
+    
+    NSLog(@"🎚️ AGC 强度调整为: %.2f", strength);
+}
+
+- (void)agcPresetButtonTapped:(UIButton *)sender {
+    NSArray *presetValues = @[@(0.16f), @(0.50f), @(1.0f)];
+    int presetIndex = (int)(sender.tag - 8100);
+    
+    if (presetIndex >= 0 && presetIndex < presetValues.count) {
+        float strength = [presetValues[presetIndex] floatValue];
+        
+        // 更新滑块
+        UISlider *strengthSlider = (UISlider *)[self.agcSettingsView viewWithTag:8003];
+        strengthSlider.value = strength;
+        
+        // 应用设置
+        BOOL enabled = self.karaokeAudioEngine.voiceEffectProcessor.enableAGC;
+        [self.karaokeAudioEngine.voiceEffectProcessor setAGCEnabled:enabled strength:strength];
+        
+        // 更新强度标签
+        UILabel *strengthLabel = (UILabel *)[self.agcSettingsView viewWithTag:8002];
+        [self updateAGCStrengthLabel:strengthLabel forStrength:strength];
+        
+        NSLog(@"🎚️ 选择预设强度: %.2f", strength);
+    }
+}
+
+- (void)updateAGCStrengthLabel:(UILabel *)label forStrength:(float)strength {
+    NSString *levelText;
+    if (strength < 0.34f) {
+        levelText = @"弱";
+    } else if (strength < 0.67f) {
+        levelText = @"中";
+    } else {
+        levelText = @"强";
+    }
+    label.text = [NSString stringWithFormat:@"%@ (%.0f%%)", levelText, strength * 100];
+}
+
+- (void)updateAGCButtonTitle {
+    BOOL enabled = self.karaokeAudioEngine.voiceEffectProcessor.enableAGC;
+    NSString *title = enabled ? @"🎚️ AGC：开" : @"🎚️ AGC：关";
+    [self.agcButton setTitle:title forState:UIControlStateNormal];
+    
+    // 改变按钮颜色以反映状态
+    if (enabled) {
+        self.agcButton.backgroundColor = [UIColor colorWithRed:0.4 green:0.7 blue:0.3 alpha:0.9];
+        self.agcButton.layer.borderColor = [UIColor colorWithRed:0.5 green:0.9 blue:0.4 alpha:1.0].CGColor;
+    } else {
+        self.agcButton.backgroundColor = [UIColor colorWithRed:0.5 green:0.3 blue:0.7 alpha:0.8];
+        self.agcButton.layer.borderColor = [UIColor colorWithRed:0.6 green:0.4 blue:0.9 alpha:1.0].CGColor;
+    }
+}
+
+// ======== 增益显示更新定时器 ========
+- (void)startAGCGainUpdateTimer {
+    [self stopAGCGainUpdateTimer];  // 确保没有重复的定时器
+    
+    // 每0.1秒更新一次增益显示
+    self.updateTimer = [NSTimer scheduledTimerWithTimeInterval:0.1
+                                                        target:self
+                                                      selector:@selector(updateAGCGainDisplay)
+                                                      userInfo:nil
+                                                       repeats:YES];
+}
+
+- (void)stopAGCGainUpdateTimer {
+    if (self.updateTimer) {
+        [self.updateTimer invalidate];
+        self.updateTimer = nil;
+    }
+}
+
+- (void)updateAGCGainDisplay {
+    if (!self.agcSettingsView) return;
+    
+    UILabel *gainLabel = (UILabel *)[self.agcSettingsView viewWithTag:8004];
+    if (gainLabel) {
+        float currentGain = [self.karaokeAudioEngine.voiceEffectProcessor getCurrentAGCGain];
+        gainLabel.text = [NSString stringWithFormat:@"当前增益：%.2fx", currentGain];
+        
+        // 根据增益大小改变颜色（视觉反馈）
+        if (currentGain > 3.0f) {
+            gainLabel.textColor = [UIColor colorWithRed:1.0 green:0.3 blue:0.3 alpha:1.0];  // 红色 - 高增益
+        } else if (currentGain > 1.5f) {
+            gainLabel.textColor = [UIColor colorWithRed:1.0 green:0.8 blue:0.2 alpha:1.0];  // 黄色 - 中增益
+        } else {
+            gainLabel.textColor = [UIColor colorWithRed:0.5 green:1.0 blue:0.5 alpha:1.0];  // 绿色 - 正常
+        }
+    }
+}
+
 - (void)selectVoiceEffect:(UIButton *)sender {
     VoiceEffectType effectType = (VoiceEffectType)sender.tag;
     
@@ -597,33 +1071,33 @@ static void CheckError(OSStatus error, const char *operation) {
 }
 
 // 🆕 音高滑块改变
-- (void)pitchShiftSliderChanged:(UISlider *)sender {
-    float pitchShift = roundf(sender.value); // 四舍五入到整数半音
-    sender.value = pitchShift; // 捕捉到整数值
-    
-    // 更新标签
-    UILabel *pitchLabel = (UILabel *)[self.view viewWithTag:9002];
-    if (pitchLabel) {
-        if (pitchShift > 0) {
-            pitchLabel.text = [NSString stringWithFormat:@"🎵 音高: +%.0f半音", pitchShift];
-        } else if (pitchShift < 0) {
-            pitchLabel.text = [NSString stringWithFormat:@"🎵 音高: %.0f半音", pitchShift];
-        } else {
-            pitchLabel.text = @"🎵 音高: 0半音";
-        }
-    }
-    
-    // 应用音高变化
-    if (self.karaokeAudioEngine && self.karaokeAudioEngine.voiceEffectProcessor) {
-        [self.karaokeAudioEngine.voiceEffectProcessor setPitchShiftSemitones:pitchShift];
-        NSLog(@"🎵 音高调节: %.0f 半音", pitchShift);
-        
-        // 🆕 如果在预览模式且正在播放，使用防抖延迟更新
-        if (self.isInPreviewMode) {
-            [self scheduleParameterUpdateWithDelay];
-        }
-    }
-}
+//- (void)pitchShiftSliderChanged:(UISlider *)sender {
+//    float pitchShift = roundf(sender.value); // 四舍五入到整数半音
+//    sender.value = pitchShift; // 捕捉到整数值
+//    
+//    // 更新标签
+//    UILabel *pitchLabel = (UILabel *)[self.view viewWithTag:9002];
+//    if (pitchLabel) {
+//        if (pitchShift > 0) {
+//            pitchLabel.text = [NSString stringWithFormat:@"🎵 音高: +%.0f半音", pitchShift];
+//        } else if (pitchShift < 0) {
+//            pitchLabel.text = [NSString stringWithFormat:@"🎵 音高: %.0f半音", pitchShift];
+//        } else {
+//            pitchLabel.text = @"🎵 音高: 0半音";
+//        }
+//    }
+//    
+//    // 应用音高变化
+//    if (self.karaokeAudioEngine && self.karaokeAudioEngine.voiceEffectProcessor) {
+//        [self.karaokeAudioEngine.voiceEffectProcessor setPitchShiftSemitones:pitchShift];
+//        NSLog(@"🎵 音高调节: %.0f 半音", pitchShift);
+//        
+//        // 🆕 如果在预览模式且正在播放，使用防抖延迟更新
+//        if (self.isInPreviewMode) {
+//            [self scheduleParameterUpdateWithDelay];
+//        }
+//    }
+//}
 
 #pragma mark - Audio Setup
 
@@ -737,8 +1211,8 @@ static void CheckError(OSStatus error, const char *operation) {
         
         // 🎵 BGM 音量（从滑块读取，如果滑块还未创建则使用默认值）
         float bgmVolume = self.bgmVolumeSlider ? self.bgmVolumeSlider.value : 0.3;
-        if (self.karaokeAudioEngine.audioPlayer) {
-            self.karaokeAudioEngine.audioPlayer.volume = bgmVolume;
+        if (self.karaokeAudioEngine) {
+            self.karaokeAudioEngine.bgmVolume = bgmVolume;
         }
         
         NSLog(@"✅ 卡拉OK音频引擎初始音量已设置:");
@@ -756,9 +1230,9 @@ static void CheckError(OSStatus error, const char *operation) {
             [self.karaokeAudioEngine loadAudioFile:filePath];
             
             // 🔧 加载完成后，同步 UI 的 BGM 音量到音频引擎
-            if (self.bgmVolumeSlider && self.karaokeAudioEngine.audioPlayer) {
+            if (self.bgmVolumeSlider && self.karaokeAudioEngine) {
                 float bgmVolume = self.bgmVolumeSlider.value;
-                self.karaokeAudioEngine.audioPlayer.volume = bgmVolume;
+                self.karaokeAudioEngine.bgmVolume = bgmVolume;
                 NSLog(@"🎵 已同步 UI BGM 音量到引擎: %.0f%%", bgmVolume * 100);
             }
             
@@ -773,23 +1247,30 @@ static void CheckError(OSStatus error, const char *operation) {
 }
 
 - (void)loadLyricsForSong:(NSString *)songName {
-    // 尝试加载对应的歌词文件
-    NSString *lyricsFileName = [[songName stringByDeletingPathExtension] stringByAppendingString:@".lrc"];
-    NSString *lyricsPath = [[NSBundle mainBundle] pathForResource:lyricsFileName ofType:nil];
+    // 🆕 使用 LyricsManager 统一管理歌词加载（支持从Bundle和沙盒加载）
     
-    if (lyricsPath) {
-        self.lyricsParser = [[LRCParser alloc] init];
-        if ([self.lyricsParser parseFromFile:lyricsPath]) {
-            self.lyricsView.parser = self.lyricsParser;
-            NSLog(@"✅ 卡拉OK歌词加载成功: %@", lyricsFileName);
+    // 构建音频文件的完整路径（用于LyricsManager查找对应的歌词）
+    NSString *audioPath = [[NSBundle mainBundle] pathForResource:songName ofType:nil];
+    
+    if (!audioPath) {
+        NSLog(@"⚠️ 未找到音频文件: %@", songName);
+        self.lyricsView.parser = nil;
+        return;
+    }
+    
+    NSLog(@"🔍 [K歌模式] 正在加载歌词: %@", songName);
+    
+    // 使用 LyricsManager 获取歌词（自动处理Bundle、沙盒、ID3标签、在线API等多种来源）
+    [[LyricsManager sharedManager] fetchLyricsForAudioFile:audioPath completion:^(LRCParser * _Nullable parser, NSError * _Nullable error) {
+        if (parser && parser.lyrics.count > 0) {
+            self.lyricsParser = parser;
+            self.lyricsView.parser = parser;
+            NSLog(@"✅ [K歌模式] 歌词加载成功: %@ (%lu行)", songName, (unsigned long)parser.lyrics.count);
         } else {
-            NSLog(@"❌ 歌词解析失败: %@", lyricsFileName);
+            NSLog(@"⚠️ [K歌模式] 未找到歌词: %@ (error: %@)", songName, error.localizedDescription);
             self.lyricsView.parser = nil;
         }
-    } else {
-        NSLog(@"⚠️ 未找到歌词文件: %@", lyricsFileName);
-        self.lyricsView.parser = nil;
-    }
+    }];
 }
 
 #pragma mark - Timer Management
@@ -821,10 +1302,10 @@ static void CheckError(OSStatus error, const char *operation) {
         return;  // 预览模式下不更新，避免和previewUpdateTimer冲突
     }
     
-    if (self.karaokeAudioEngine && self.karaokeAudioEngine.audioPlayer) {
+    if (self.karaokeAudioEngine && self.karaokeAudioEngine.duration > 0) {
         // 更新进度滑块 - 使用基于 BGM 读取位置的时间
         NSTimeInterval currentTime = self.karaokeAudioEngine.currentPlaybackTime;
-        NSTimeInterval duration = self.karaokeAudioEngine.audioPlayer.duration;
+        NSTimeInterval duration = self.karaokeAudioEngine.duration;
         float progress = duration > 0 ? (float)(currentTime / duration) : 0.0f;
         
         // 🆕 只有在用户未拖动时才更新滑块
@@ -840,6 +1321,14 @@ static void CheckError(OSStatus error, const char *operation) {
         // 🆕 只有在播放时才更新歌词（停止/暂停时不更新）
         if (self.karaokeAudioEngine.isPlaying) {
         [self.lyricsView updateWithTime:currentTime];
+        }
+        
+        // 🎯 片段模式自动停止检测
+        if (self.isRecording && self.recordingConfig.mode == KaraokeRecordingModeSegment) {
+            if (currentTime >= self.recordingConfig.segmentEndTime) {
+                NSLog(@"🎯 已到达片段终点，自动停止录音");
+                [self autoStopSegmentRecording];
+            }
         }
     }
 }
@@ -871,8 +1360,8 @@ static void CheckError(OSStatus error, const char *operation) {
     }
     
     // 实时更新预览时间和歌词
-    if (self.karaokeAudioEngine.audioPlayer) {
-        NSTimeInterval duration = self.karaokeAudioEngine.audioPlayer.duration;
+    if (self.karaokeAudioEngine && self.karaokeAudioEngine.duration > 0) {
+        NSTimeInterval duration = self.karaokeAudioEngine.duration;
         NSTimeInterval targetTime = duration * sender.value;
         
         // 更新时间显示
@@ -900,11 +1389,11 @@ static void CheckError(OSStatus error, const char *operation) {
         return;
     }
     
-    if (!self.karaokeAudioEngine.audioPlayer) {
+    if (!self.karaokeAudioEngine || self.karaokeAudioEngine.duration <= 0) {
         return;
     }
     
-    NSTimeInterval duration = self.karaokeAudioEngine.audioPlayer.duration;
+    NSTimeInterval duration = self.karaokeAudioEngine.duration;
     NSTimeInterval targetTime = duration * sender.value;
     
     NSLog(@"📍 用户松开进度条，跳转到 %.2f 秒", targetTime);
@@ -969,8 +1458,18 @@ static void CheckError(OSStatus error, const char *operation) {
         [self resetAudioEngineForNewRecording];
         }
         
-        // 从当前位置开始录音
-        NSTimeInterval startTime = self.progressSlider.value * self.karaokeAudioEngine.audioPlayer.duration;
+        // 🎯 根据录音配置决定起始时间
+        NSTimeInterval startTime;
+        if (self.recordingConfig.mode == KaraokeRecordingModeSegment) {
+            // 片段模式：从片段起点开始
+            startTime = self.recordingConfig.segmentStartTime;
+            NSLog(@"🎯 片段模式录音：%.2f ~ %.2f 秒", startTime, self.recordingConfig.segmentEndTime);
+        } else {
+            // 全曲模式：从当前滑块位置开始
+            startTime = self.progressSlider.value * self.karaokeAudioEngine.duration;
+            NSLog(@"🎵 全曲模式录音：从 %.2f 秒开始", startTime);
+        }
+        
         [self.karaokeAudioEngine playFromTime:startTime];
         [self.karaokeAudioEngine startRecordingFromTime:startTime];
         
@@ -1025,6 +1524,49 @@ static void CheckError(OSStatus error, const char *operation) {
     
     // 进入预览模式
     [self enterPreviewMode];
+}
+
+// 🎯 片段模式自动停止录音
+- (void)autoStopSegmentRecording {
+    NSLog(@"🎯 片段录音自动停止");
+    
+    // 1. 停止录音引擎
+    [self.karaokeAudioEngine stopRecording];
+    
+    // 2. 暂停BGM播放
+    if (self.karaokeAudioEngine.isPlaying) {
+        [self.karaokeAudioEngine pause];
+        NSLog(@"⏸️ BGM已暂停");
+    }
+    
+    // 3. 停止AUGraph
+    Boolean isRunning = false;
+    AUGraphIsRunning(self.karaokeAudioEngine.auGraph, &isRunning);
+    if (isRunning) {
+        CheckError(AUGraphStop(self.karaokeAudioEngine.auGraph), "AUGraphStop on auto stop");
+        NSLog(@"🛑 AUGraph已停止");
+    }
+    
+    // 4. 更新状态
+    self.isRecording = NO;
+    
+    // 5. 更新UI
+    [self.startButton setTitle:@"开始录音" forState:UIControlStateNormal];
+    self.startButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.6 blue:1.0 alpha:1.0];
+    self.pauseButton.hidden = YES;
+    self.finishButton.hidden = NO;
+    self.rewindButton.hidden = YES;
+    
+    // 6. 提示用户
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"✅ 片段录制完成"
+                                                                   message:[NSString stringWithFormat:@"已录制片段：%.1f ~ %.1f 秒\n可以预览试听或重新录制", 
+                                                                           self.recordingConfig.segmentStartTime,
+                                                                           self.recordingConfig.segmentEndTime]
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+    
+    NSLog(@"✅ 片段录音已自动停止");
 }
 
 #pragma mark - 🆕 预览模式
@@ -1189,7 +1731,7 @@ static void CheckError(OSStatus error, const char *operation) {
             [self.karaokeAudioEngine stopPreview];
         }
         
-        // 退出预览模式
+        // 退出预览模式（会自动清空缓存）
         [self exitPreviewMode];
         
         // 重置引擎
@@ -1235,14 +1777,24 @@ static void CheckError(OSStatus error, const char *operation) {
                         } else {
                             NSLog(@"✅ 保存成功: %@", filePath);
                             
-                            // 退出预览模式
+                            // 1. 🆕 保存文件路径（重要：在reset之前保存，因为reset会清空recordingFilePath）
+                            NSString *savedRecordingPath = filePath;
+                            
+                            // 2. 退出预览模式（会自动清空缓存和重置UI参数）
                             [self exitPreviewMode];
                             
-                            // 显示回放对话框
-                            [self showRecordingPlaybackDialog];
+                            // 3. 🆕 重置音频引擎（重要：清空录音段落、重置BGM位置等）
+                            [self resetAudioEngineForNewRecording];
                             
-                            // 重置状态
+                            // 4. 重置UI状态（重要：必须在显示对话框之前，确保进度条等都归零）
                             [self resetToInitialState];
+                            
+                            // 5. 最后显示回放对话框（使用保存的文件路径）
+                            if (savedRecordingPath && [[NSFileManager defaultManager] fileExistsAtPath:savedRecordingPath]) {
+                                [self showPlaybackViewForFile:savedRecordingPath];
+                            } else {
+                                NSLog(@"⚠️ 录音文件路径无效，跳过回放");
+                            }
                         }
                     }];
                 });
@@ -1271,6 +1823,15 @@ static void CheckError(OSStatus error, const char *operation) {
         [self.karaokeAudioEngine stopPreview];
     }
     
+    // 🆕 清空预览缓存
+    [self.karaokeAudioEngine invalidatePreviewCache];
+    NSLog(@"🗑️ 预览缓存已清空");
+    
+    // 🆕 重置预览按钮状态
+    if (self.previewButton) {
+        [self.previewButton setTitle:@"🎧 试听" forState:UIControlStateNormal];
+    }
+    
     // 隐藏预览控制面板
     if (self.previewControlView) {
         self.previewControlView.hidden = YES;
@@ -1278,6 +1839,59 @@ static void CheckError(OSStatus error, const char *operation) {
     
     // 显示录音控制按钮
     self.startButton.hidden = NO;
+    
+    // 🆕 重置参数控制面板到默认值
+    [self resetParameterControls];
+}
+
+// 🆕 重置参数控制面板到默认值
+- (void)resetParameterControls {
+    NSLog(@"🔄 重置参数控制面板到默认值");
+    
+    // 1. 重置耳返开关和音量
+    if (self.earReturnSwitch) {
+        self.earReturnSwitch.on = NO;
+        [self.karaokeAudioEngine setEarReturnEnabled:NO];
+    }
+    if (self.earReturnVolumeSlider) {
+        self.earReturnVolumeSlider.value = 0.5;
+        [self.karaokeAudioEngine setEarReturnVolume:0.5];
+        self.earReturnVolumeLabel.text = @"耳返音量: 50%";
+    }
+    
+    // 2. 重置麦克风音量
+    if (self.microphoneVolumeSlider) {
+        self.microphoneVolumeSlider.value = 1.0;
+        [self.karaokeAudioEngine setMicrophoneVolume:1.0];
+        self.microphoneVolumeLabel.text = @"麦克风音量: 100%";
+    }
+    
+    // 3. 重置BGM音量
+    if (self.bgmVolumeSlider) {
+        self.bgmVolumeSlider.value = 0.3;
+        if (self.karaokeAudioEngine) {
+            self.karaokeAudioEngine.bgmVolume = 0.3;
+        }
+        self.bgmVolumeLabel.text = @"🎵 BGM音量: 30%";
+    }
+    
+    // 4. 重置音效为原声
+    if (self.karaokeAudioEngine.voiceEffectProcessor) {
+        [self.karaokeAudioEngine.voiceEffectProcessor setPresetEffect:VoiceEffectTypeNone];
+        [self.voiceEffectButton setTitle:@"🎤 音效：原声" forState:UIControlStateNormal];
+    }
+    
+    // 5. 关闭音效选择器（如果打开）
+    if (self.effectSelectorView && !self.effectSelectorView.hidden) {
+        self.effectSelectorView.hidden = YES;
+    }
+    
+    // 6. 关闭AGC设置面板（如果打开）
+    if (self.agcSettingsView && !self.agcSettingsView.hidden) {
+        self.agcSettingsView.hidden = YES;
+    }
+    
+    NSLog(@"✅ 参数控制面板已重置到默认值");
 }
 
 // 🆕 重置到初始状态
@@ -1294,6 +1908,11 @@ static void CheckError(OSStatus error, const char *operation) {
     self.finishButton.hidden = YES;
     self.rewindButton.hidden = YES;
     
+    // 🎯 重置片段选择配置
+    [self.recordingConfig resetToFullMode];
+    [self.segmentSelectorButton setTitle:@"📍 选片段" forState:UIControlStateNormal];
+    self.segmentSelectorButton.backgroundColor = [UIColor colorWithRed:1.0 green:0.6 blue:0.0 alpha:0.8];
+    
     // 3. 重置段落信息
     self.segmentInfoLabel.text = @"";
     
@@ -1301,8 +1920,8 @@ static void CheckError(OSStatus error, const char *operation) {
     self.progressSlider.value = 0.0;
     
     // 5. 重置时间显示
-    if (self.karaokeAudioEngine.audioPlayer) {
-        NSTimeInterval duration = self.karaokeAudioEngine.audioPlayer.duration;
+    if (self.karaokeAudioEngine && self.karaokeAudioEngine.duration > 0) {
+        NSTimeInterval duration = self.karaokeAudioEngine.duration;
         self.durationLabel.text = [NSString stringWithFormat:@"0:00 / %@", [self formatTime:duration]];
     }
     
@@ -1316,12 +1935,15 @@ static void CheckError(OSStatus error, const char *operation) {
     self.rmsProgressView.progress = 0.0;
     self.peakProgressView.progress = 0.0;
     
+    // 8. 🆕 重置参数控制面板（防御性编程，确保参数被重置）
+    [self resetParameterControls];
+    
     NSLog(@"✅ 状态重置完成");
 }
 
 // 🆕 回退按钮
 - (void)rewindButtonTapped {
-    if (!self.karaokeAudioEngine.audioPlayer) {
+    if (!self.karaokeAudioEngine || self.karaokeAudioEngine.duration <= 0) {
         return;
     }
     
@@ -1748,9 +2370,40 @@ static void CheckError(OSStatus error, const char *operation) {
 
 - (void)bgmVolumeChanged:(UISlider *)sender {
     NSLog(@"🎵 BGM音量滑块改变: %.0f%%", sender.value * 100);
-    if (self.karaokeAudioEngine && self.karaokeAudioEngine.audioPlayer) {
-        self.karaokeAudioEngine.audioPlayer.volume = sender.value;
+    if (self.karaokeAudioEngine) {
+        self.karaokeAudioEngine.bgmVolume = sender.value;
         NSLog(@"✅ BGM音量已设置为: %.0f%%", sender.value * 100);
+        
+        // 更新标签
+        self.bgmVolumeLabel.text = [NSString stringWithFormat:@"🎵 BGM音量: %.0f%%", sender.value * 100];
+        
+        // 🆕 如果在预览模式且正在播放，使用防抖延迟更新
+        if (self.isInPreviewMode) {
+            [self scheduleParameterUpdateWithDelay];
+        }
+    }
+}
+
+// 🆕 BGM音高调整
+- (void)bgmPitchChanged:(UISlider *)sender {
+    float pitchValue = roundf(sender.value);  // 四舍五入到整数半音
+    sender.value = pitchValue;  // 更新滑块到整数位置
+    
+    NSLog(@"🎵 BGM音高滑块改变: %.0f 半音", pitchValue);
+    if (self.karaokeAudioEngine) {
+        self.karaokeAudioEngine.bgmPitchShift = pitchValue;
+        NSLog(@"✅ BGM音高已设置为: %.0f 半音", pitchValue);
+        
+        // 更新标签
+        NSString *pitchText;
+        if (pitchValue > 0) {
+            pitchText = [NSString stringWithFormat:@"🎵 BGM音高: +%.0f", pitchValue];
+        } else if (pitchValue < 0) {
+            pitchText = [NSString stringWithFormat:@"🎵 BGM音高: %.0f", pitchValue];
+        } else {
+            pitchText = @"🎵 BGM音高: 0";
+        }
+        self.bgmPitchLabel.text = pitchText;
         
         // 🆕 如果在预览模式且正在播放，使用防抖延迟更新
         if (self.isInPreviewMode) {
@@ -1828,7 +2481,7 @@ static void CheckError(OSStatus error, const char *operation) {
 - (void)lyricsView:(LyricsView *)lyricsView didTapLyricAtTime:(NSTimeInterval)time text:(NSString *)text index:(NSInteger)index {
     NSLog(@"🎵 用户点击歌词: 索引=%ld, 时间=%.2f秒, 文本=%@", (long)index, time, text);
     
-    if (!self.karaokeAudioEngine.audioPlayer) {
+    if (!self.karaokeAudioEngine || self.karaokeAudioEngine.duration <= 0) {
         NSLog(@"⚠️ BGM未加载，无法跳转");
         return;
     }
@@ -1849,8 +2502,8 @@ static void CheckError(OSStatus error, const char *operation) {
         [self.karaokeAudioEngine playFromTime:time];
         
         // 更新进度条
-        if (self.karaokeAudioEngine.audioPlayer.duration > 0) {
-            self.progressSlider.value = time / self.karaokeAudioEngine.audioPlayer.duration;
+        if (self.karaokeAudioEngine.duration > 0) {
+            self.progressSlider.value = time / self.karaokeAudioEngine.duration;
         }
         
         // 立即更新歌词显示

@@ -35,18 +35,25 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-@interface KaraokeAudioEngine : NSObject <AVAudioPlayerDelegate>
+@interface KaraokeAudioEngine : NSObject
 
 @property (nonatomic, weak) id<KaraokeAudioEngineDelegate> delegate;
 @property (nonatomic, assign, readonly) BOOL isPlaying;
 @property (nonatomic, assign, readonly) BOOL isRecording;
 @property (nonatomic, assign, readonly) BOOL isRecordingPaused;  // 录音是否暂停（BGM继续播放）
 
-// 音频播放器（用于BGM音量控制）
-@property (nonatomic, strong, readonly) AVAudioPlayer *audioPlayer;
+// 🎵 BGM音高调整（半音数，-12 到 +12）
+// ✅ 已实现：使用 AVAudioEngine + AVAudioUnitTimePitch
+@property (nonatomic, assign) float bgmPitchShift;
+
+// 🎵 BGM音量控制（0.0 到 1.0）
+@property (nonatomic, assign) float bgmVolume;
 
 // 获取当前播放时间（基于BGM读取位置）
 @property (nonatomic, assign, readonly) NSTimeInterval currentPlaybackTime;
+
+// 🎵 BGM总时长
+@property (nonatomic, assign, readonly) NSTimeInterval duration;
 
 // 录音段落管理（外部只读，返回不可变副本）
 @property (nonatomic, copy, readonly) NSArray<RecordingSegment *> *recordingSegments;

@@ -95,14 +95,34 @@
     _parser = parser;
     _currentIndex = -1;
     
-    [_tableView reloadData];
-    
-    if (!parser || parser.lyrics.count == 0) {
-        _noLyricsLabel.hidden = NO;
-        _tableView.hidden = YES;
+    // ⚠️ 关键修复：确保所有 UI 更新都在主线程执行
+    // 如果已经在主线程，直接执行；否则调度到主线程
+    if ([NSThread isMainThread]) {
+        // 先设置可见性，再 reloadData，避免 tableView 在隐藏状态下更新导致崩溃
+        if (!parser || parser.lyrics.count == 0) {
+            _noLyricsLabel.hidden = NO;
+            _tableView.hidden = YES;
+        } else {
+            _noLyricsLabel.hidden = YES;
+            _tableView.hidden = NO;
+        }
+        
+        // 在 tableView 可见后才调用 reloadData
+        [_tableView reloadData];
     } else {
-        _noLyricsLabel.hidden = YES;
-        _tableView.hidden = NO;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // 先设置可见性，再 reloadData，避免 tableView 在隐藏状态下更新导致崩溃
+            if (!parser || parser.lyrics.count == 0) {
+                self->_noLyricsLabel.hidden = NO;
+                self->_tableView.hidden = YES;
+            } else {
+                self->_noLyricsLabel.hidden = YES;
+                self->_tableView.hidden = NO;
+            }
+            
+            // 在 tableView 可见后才调用 reloadData
+            [self->_tableView reloadData];
+        });
     }
 }
 

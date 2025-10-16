@@ -7,7 +7,7 @@
 
 #import "DSPBridge.h"
 #import "RNNoise/rnnoise.h"
-#import "SoundTouch/SoundTouch.h"
+#import "SoundTouch/SoundTouchBridge.h"
 #include <vector>
 
 #pragma mark - 降噪处理器实现
@@ -107,6 +107,8 @@
 @property (nonatomic, assign) NSInteger musicalKey;
 @property (nonatomic, assign) NSInteger musicalScale;
 @property (nonatomic, assign) std::vector<float> *floatBuffer;
+@property (nonatomic, assign) std::vector<float> *outputBuffer;  // 输出缓冲区
+@property (nonatomic, assign) NSUInteger outputBufferPos;         // 输出缓冲区读取位置
 @end
 
 @implementation PitchCorrectionProcessor
@@ -120,6 +122,8 @@
         _musicalKey = 0; // C
         _musicalScale = 0; // Major
         _floatBuffer = new std::vector<float>();
+        _outputBuffer = new std::vector<float>();
+        _outputBufferPos = 0;
         
         _soundTouchHandle = soundtouch_create();
         if (!_soundTouchHandle) {
@@ -130,8 +134,13 @@
         soundtouch_setSampleRate(_soundTouchHandle, (unsigned int)sampleRate);
         soundtouch_setChannels(_soundTouchHandle, (unsigned int)channels);
         
-        NSLog(@"✅ 音高修正处理器初始化成功 (采样率: %.0f Hz, 声道: %lu)", 
-              sampleRate, (unsigned long)channels);
+        // 🎵 优化设置：降低延迟
+        soundtouch_setSetting(_soundTouchHandle, SETTING_SEQUENCE_MS, 40);     // 序列长度（默认82ms，减少到40ms）
+        soundtouch_setSetting(_soundTouchHandle, SETTING_SEEKWINDOW_MS, 15);   // 搜索窗口（默认28ms，减少到15ms）
+        soundtouch_setSetting(_soundTouchHandle, SETTING_OVERLAP_MS, 8);       // 重叠长度（默认12ms，减少到8ms）
+        
+        NSLog(@"✅ SoundTouch v%s 初始化成功", soundtouch_getVersionString());
+        NSLog(@"   采样率: %.0f Hz, 声道: %lu", sampleRate, (unsigned long)channels);
     }
     return self;
 }
@@ -144,6 +153,10 @@
     if (_floatBuffer) {
         delete _floatBuffer;
         _floatBuffer = nullptr;
+    }
+    if (_outputBuffer) {
+        delete _outputBuffer;
+        _outputBuffer = nullptr;
     }
 }
 
@@ -177,15 +190,74 @@
                    maxOutputCount:(NSUInteger)maxOutputCount {
     if (!_soundTouchHandle || !inputSamples || !outputSamples) return 0;
     
+    NSUInteger totalChannelSamples = inputCount * _channels;
+    NSUInteger outputChannelSamples = maxOutputCount * _channels;
+    
     // 输入样本到 SoundTouch
     soundtouch_putSamples(_soundTouchHandle, inputSamples, (unsigned int)inputCount);
     
-    // 接收处理后的样本
-    unsigned int receivedSamples = soundtouch_receiveSamples(_soundTouchHandle, 
-                                                              outputSamples, 
-                                                              (unsigned int)maxOutputCount);
+    // 🎵 关键优化：使用内部缓冲区累积输出
+    NSUInteger outputPos = 0;
     
-    return (NSUInteger)receivedSamples;
+    // 1. 先从内部缓冲区读取剩余样本
+    if (_outputBufferPos < _outputBuffer->size()) {
+        NSUInteger available = _outputBuffer->size() - _outputBufferPos;
+        NSUInteger toCopy = (available < outputChannelSamples) ? available : outputChannelSamples;
+        
+        memcpy(outputSamples, &(*_outputBuffer)[_outputBufferPos], toCopy * sizeof(float));
+        _outputBufferPos += toCopy;
+        outputPos += toCopy;
+        
+        // 如果已经满足需求，返回
+        if (outputPos >= outputChannelSamples) {
+            return outputPos / _channels;
+        }
+    }
+    
+    // 2. 从 SoundTouch 读取新样本
+    _outputBuffer->resize(outputChannelSamples * 2);  // 预留足够空间
+    unsigned int receivedSamples = soundtouch_receiveSamples(_soundTouchHandle, 
+                                                              &(*_outputBuffer)[0], 
+                                                              (unsigned int)maxOutputCount * 2);
+    
+    // 3. 复制到输出缓冲区
+    if (receivedSamples > 0) {
+        NSUInteger receivedChannelSamples = receivedSamples * _channels;
+        NSUInteger remaining = outputChannelSamples - outputPos;
+        NSUInteger toCopy = (receivedChannelSamples < remaining) ? receivedChannelSamples : remaining;
+        
+        memcpy(&outputSamples[outputPos], &(*_outputBuffer)[0], toCopy * sizeof(float));
+        outputPos += toCopy;
+        
+        // 保存剩余样本到内部缓冲区
+        if (receivedChannelSamples > toCopy) {
+            _outputBuffer->resize(receivedChannelSamples);
+            memmove(&(*_outputBuffer)[0], &(*_outputBuffer)[toCopy], 
+                    (receivedChannelSamples - toCopy) * sizeof(float));
+            _outputBuffer->resize(receivedChannelSamples - toCopy);
+            _outputBufferPos = 0;
+        } else {
+            _outputBuffer->clear();
+            _outputBufferPos = 0;
+        }
+    }
+    
+    // 4. 如果仍然不足，用零填充（避免静音）
+    if (outputPos < outputChannelSamples) {
+        // 用输入样本填充（直通模式）
+        NSUInteger remaining = outputChannelSamples - outputPos;
+        NSUInteger toCopy = (remaining < totalChannelSamples) ? remaining : totalChannelSamples;
+        memcpy(&outputSamples[outputPos], inputSamples, toCopy * sizeof(float));
+        outputPos += toCopy;
+        
+        static int fillCount = 0;
+        if (++fillCount % 100 == 0) {
+            NSLog(@"⚠️ SoundTouch 输出不足，使用直通填充: %lu/%lu", 
+                  (unsigned long)receivedSamples, (unsigned long)inputCount);
+        }
+    }
+    
+    return outputPos / _channels;
 }
 
 - (NSUInteger)processInt16InputSamples:(const SInt16 *)inputSamples
@@ -222,6 +294,8 @@
     if (_soundTouchHandle) {
         soundtouch_clear(_soundTouchHandle);
     }
+    _outputBuffer->clear();
+    _outputBufferPos = 0;
 }
 
 - (void)flush {

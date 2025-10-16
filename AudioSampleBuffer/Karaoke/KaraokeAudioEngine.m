@@ -8,6 +8,7 @@
 //
 
 #import "KaraokeAudioEngine.h"
+#import "DSP/SoundTouch/SoundTouchBridge.h"
 
 #define kInputBus 1
 #define kOutputBus 0
@@ -64,16 +65,23 @@ static void CheckError(OSStatus error, const char *operation) {
 @property (nonatomic, assign) AudioUnit remoteIOUnit;
 @property (nonatomic, assign) AUNode remoteIONode;
 
-// 音频播放器（重新声明为readwrite）
-@property (nonatomic, strong, readwrite) AVAudioPlayer *audioPlayer;
-
-// BGM音频文件读取
+// 🆕 BGM播放引擎（AVAudioEngine）
+@property (nonatomic, strong) AVAudioEngine *bgmEngine;
+@property (nonatomic, strong) AVAudioPlayerNode *bgmPlayerNode;
+@property (nonatomic, strong) AVAudioUnitTimePitch *bgmTimePitchNode;
 @property (nonatomic, strong) AVAudioFile *bgmAudioFile;
+@property (nonatomic, assign) NSTimeInterval bgmDuration;  // BGM总时长
+
+// BGM音频文件读取（用于录音混合）
 @property (nonatomic, strong) NSData *bgmPCMData;  // 存储完整的BGM PCM数据
 @property (nonatomic, assign) NSUInteger bgmPCMDataLength;  // PCM数据长度（样本数）
 @property (atomic, assign) NSUInteger bgmReadPosition;  // 当前读取位置（样本索引）- 使用 atomic
 @property (nonatomic, assign) BOOL shouldLoopBGM;
-@property (nonatomic, assign) float bgmVolume;
+
+// 🆕 播放进度追踪
+@property (nonatomic, strong) NSTimer *playbackTimer;  // 播放进度定时器
+@property (nonatomic, assign) NSTimeInterval lastPlaybackTime;  // 上次记录的播放时间
+@property (nonatomic, assign) NSUInteger playbackSessionID;  // 播放会话ID，用于忽略旧的completionHandler
 
 // 分段录音相关（重新声明为readwrite）
 @property (nonatomic, strong) NSMutableArray<RecordingSegment *> *recordingSegmentsInternal;  // 内部可变数组
@@ -125,6 +133,7 @@ static void CheckError(OSStatus error, const char *operation) {
         _earReturnVolume = 0.5;
         _microphoneVolume = 1.0;
         _bgmVolume = 0.3;  // 默认BGM音量30%
+        _bgmPitchShift = 0.0;  // 默认原调
         _bgmReadPosition = 0;
         _shouldLoopBGM = NO;  // 不循环播放
         
@@ -160,9 +169,65 @@ static void CheckError(OSStatus error, const char *operation) {
         NSLog(@"🔧 Step 2: setupAudioUnit");
         [self setupAudioUnit];
         
+        NSLog(@"🔧 Step 3: setupBGMEngine");
+        [self setupBGMEngine];
+        
         NSLog(@"✅ KaraokeAudioEngine初始化完成（分段录音模式，支持跳转和回退）");
     }
     return self;
+}
+
+#pragma mark - 🎵 BGM引擎设置
+
+- (void)setupBGMEngine {
+    NSLog(@"🔧 初始化 BGM 播放引擎...");
+    
+    // 🔧 预先配置音频会话（兼容 AVAudioEngine + AudioUnit）
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    NSError *sessionError = nil;
+    
+    if (![audioSession setCategory:AVAudioSessionCategoryPlayAndRecord 
+                       withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker | AVAudioSessionCategoryOptionAllowBluetooth
+                             error:&sessionError]) {
+        NSLog(@"⚠️ 音频会话配置失败: %@", sessionError);
+    }
+    
+    // 1. 创建 AVAudioEngine
+    _bgmEngine = [[AVAudioEngine alloc] init];
+    _bgmPlayerNode = [[AVAudioPlayerNode alloc] init];
+    _bgmTimePitchNode = [[AVAudioUnitTimePitch alloc] init];
+    
+    // 2. 连接节点
+    [_bgmEngine attachNode:_bgmPlayerNode];
+    [_bgmEngine attachNode:_bgmTimePitchNode];
+    
+    AVAudioMixerNode *mainMixer = _bgmEngine.mainMixerNode;
+    
+    // 音频链路：player → timePitch → mainMixer → 输出
+    // 使用 nil format 让系统自动协商格式
+    [_bgmEngine connect:_bgmPlayerNode to:_bgmTimePitchNode format:nil];
+    [_bgmEngine connect:_bgmTimePitchNode to:mainMixer format:nil];
+    
+    // 3. 设置默认参数
+    _bgmTimePitchNode.pitch = 0.0f;  // 原调（单位：cents）
+    _bgmTimePitchNode.rate = 1.0f;   // 原速
+    mainMixer.outputVolume = _bgmVolume;
+    
+    // 4. 启动引擎
+    NSError *error = nil;
+    if (![_bgmEngine startAndReturnError:&error]) {
+        NSLog(@"❌ BGM引擎启动失败: %@", error);
+        return;
+    }
+    
+    // 5. 获取实际音频格式
+    AVAudioFormat *format = [mainMixer outputFormatForBus:0];
+    
+    NSLog(@"✅ BGM引擎已启动");
+    NSLog(@"   音频链路: PlayerNode → TimePitch → MainMixer → 输出");
+    NSLog(@"   格式: %.0f Hz, %u 声道", format.sampleRate, (unsigned int)format.channelCount);
+    NSLog(@"   音高: %.0f cents, 速率: %.2fx", _bgmTimePitchNode.pitch, _bgmTimePitchNode.rate);
+    NSLog(@"   音量: %.0f%%", mainMixer.outputVolume * 100);
 }
 
 #pragma mark - AudioSession初始化
@@ -171,14 +236,18 @@ static void CheckError(OSStatus error, const char *operation) {
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
     NSError *error;
     
+    NSLog(@"🔧 开始配置卡拉OK AudioSession...");
+    
     // 🔧 关键修复：强制设置采样率为 44.1 kHz
     // 策略：先停用，设置参数，再激活
     
-    // 1. 先停用 AudioSession（如果已激活）
-    [audioSession setActive:NO error:&error];
+    // 1. 先停用 AudioSession（如果已激活）- 使用 notifyOthersOnDeactivation 避免打断其他音频
+    [audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:&error];
     if (error) {
         NSLog(@"⚠️ 停用AudioSession失败: %@", error.localizedDescription);
         error = nil;
+    } else {
+        NSLog(@"✅ AudioSession已停用，准备重新配置");
     }
     
     // 2. 设置采样率（必须在 category 之前）
@@ -191,16 +260,18 @@ static void CheckError(OSStatus error, const char *operation) {
     }
     
     // 3. 设置为播放和录音模式
-    // 关键：使用MixWithOthers让BGM和麦克风分离，避免麦克风捕获BGM
+    // 🎯 关键修复：移除 MixWithOthers，使用独占模式避免音质问题
+    // MixWithOthers 会导致音频被系统混音器处理，可能引起音质下降
     [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord
                   withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker | 
-                              AVAudioSessionCategoryOptionMixWithOthers |  // 允许混音但不捕获其他音频
                               AVAudioSessionCategoryOptionAllowBluetooth
                         error:&error];
     
     if (error) {
         NSLog(@"❌ 设置AudioSession category失败: %@", error.localizedDescription);
         error = nil;
+    } else {
+        NSLog(@"✅ 设置为PlayAndRecord模式（独占，避免混音降质）");
     }
     
     // 4. 再次强制设置采样率（某些设备在 setCategory 后会重置）
@@ -217,16 +288,18 @@ static void CheckError(OSStatus error, const char *operation) {
         error = nil;
     }
     
-    // 6. 激活 AudioSession
+    // 6. 🎯 关键修复：立即激活 AudioSession，确保配置生效
     [audioSession setActive:YES error:&error];
     if (error) {
         NSLog(@"❌ 激活AudioSession失败: %@", error.localizedDescription);
     } else {
         // 验证实际采样率
         double actualSampleRate = audioSession.sampleRate;
-        NSLog(@"✅ AudioSession配置成功（MixWithOthers模式）");
+        NSLog(@"✅ AudioSession配置成功并已激活");
+        NSLog(@"   模式: PlayAndRecord (独占)");
         NSLog(@"   首选采样率: 44100 Hz");
         NSLog(@"   实际采样率: %.0f Hz", actualSampleRate);
+        NSLog(@"   输出路由: %@", audioSession.currentRoute.outputs.firstObject.portType);
         
         if (fabs(actualSampleRate - 44100.0) > 1.0) {
             NSLog(@"⚠️ 警告：实际采样率与预期不一致！");
@@ -234,6 +307,10 @@ static void CheckError(OSStatus error, const char *operation) {
             NSLog(@"   建议：将所有音频组件改为 %.0f Hz", actualSampleRate);
         }
     }
+    
+    // 7. 🆕 短暂延迟确保AudioSession完全初始化
+    usleep(50 * 1000);  // 50ms
+    NSLog(@"✅ AudioSession初始化完成");
 }
 
 #pragma mark - AudioUnit设置
@@ -397,6 +474,17 @@ static OSStatus RenderCallback(void *inRefCon,
         // 使用预分配的混音缓冲区（避免 malloc/free）
         SInt16 *mixedSamples = engine->_mixBuffer;
         
+        // 🐛 调试日志：每100次回调打印一次（避免日志过多）
+        static int recordingCallbackCount = 0;
+        recordingCallbackCount++;
+        if (recordingCallbackCount % 100 == 0) {
+            NSLog(@"📊 录音回调 #%d: sampleCount=%u, vocalData=%lu, audioData=%lu", 
+                  recordingCallbackCount, 
+                  sampleCount,
+                  (unsigned long)engine.currentSegment.vocalData.length,
+                  (unsigned long)engine.currentSegment.audioData.length);
+        }
+        
         // 检查缓冲区大小是否足够
         if (sampleCount <= engine->_mixBufferSize && mixedSamples) {
             // 复制麦克风数据并应用音量（使用 memcpy + 就地修改，更快）
@@ -430,6 +518,17 @@ static OSStatus RenderCallback(void *inRefCon,
             [engine.currentSegment.audioData appendData:mixedChunkData];
         } else {
             NSLog(@"⚠️ 混音缓冲区太小: 需要 %u, 可用 %u", sampleCount, engine->_mixBufferSize);
+        }
+    } else {
+        // 🐛 调试日志：如果条件不满足，打印原因
+        static int skipCount = 0;
+        skipCount++;
+        if (skipCount % 500 == 0) {  // 降低频率
+            NSLog(@"⚠️ 跳过录音写入 #%d: isRecording=%d, isPaused=%d, hasSegment=%d",
+                  skipCount,
+                  engine.isRecording,
+                  engine.isRecordingPaused,
+                  engine.currentSegment != nil);
         }
     }
     
@@ -618,9 +717,54 @@ static OSStatus RenderCallback(void *inRefCon,
         return;
     }
     
+    NSLog(@"🎤 准备开始录音（从 %.2f 秒开始）", startTime);
+    NSLog(@"   当前状态: isRecording=%d, isRecordingPaused=%d", self.isRecording, self.isRecordingPaused);
+    NSLog(@"   BGM状态: isPlaying=%d, currentTime=%.2f", self.isPlaying, self.currentPlaybackTime);
+    
     // 如果之前暂停了，先保存暂停前的段落
     if (self.isRecording && self.isRecordingPaused) {
         [self saveCurrentSegment];
+    }
+    
+    // 🔧 确保音频会话正确配置（支持 AVAudioEngine + AudioUnit 混合使用）
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    NSError *sessionError = nil;
+    
+    // 使用 PlayAndRecord 类别，允许同时播放和录音
+    if (![audioSession setCategory:AVAudioSessionCategoryPlayAndRecord 
+                       withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker | AVAudioSessionCategoryOptionAllowBluetooth
+                             error:&sessionError]) {
+        NSLog(@"⚠️ 音频会话配置失败: %@", sessionError);
+    }
+    
+    // 激活音频会话
+    if (![audioSession setActive:YES error:&sessionError]) {
+        NSLog(@"⚠️ 音频会话激活失败: %@", sessionError);
+    } else {
+        NSLog(@"✅ 音频会话已激活: 类别=%@, 采样率=%.0fHz", audioSession.category, audioSession.sampleRate);
+    }
+    
+    // 🎯 关键修复：确保AUGraph在创建录音段落之前启动
+    Boolean isRunning = false;
+    AUGraphIsRunning(self.auGraph, &isRunning);
+    NSLog(@"   AUGraph状态: isRunning=%d", isRunning);
+    
+    if (!isRunning) {
+        NSLog(@"   启动AUGraph...");
+        OSStatus status = AUGraphStart(self.auGraph);
+        CheckError(status, "AUGraphStart");
+        
+        if (status == noErr) {
+            // 短暂延迟，确保AUGraph完全启动
+            usleep(50 * 1000);  // 50ms
+            NSLog(@"   ✅ AUGraph已启动");
+        } else {
+            NSLog(@"   ❌ AUGraph启动失败！");
+        }
+        
+        // 再次确认状态
+        AUGraphIsRunning(self.auGraph, &isRunning);
+        NSLog(@"   AUGraph最终状态: isRunning=%d", isRunning);
     }
     
     // 创建新的录音段落
@@ -635,17 +779,12 @@ static OSStatus RenderCallback(void *inRefCon,
     self.currentSegment = newSegment;
     self.currentSegmentStartTime = startTime;
     self.isRecordingPaused = NO;
-    
-    // 如果AUGraph未启动，启动它
-    Boolean isRunning = false;
-    AUGraphIsRunning(self.auGraph, &isRunning);
-    if (!isRunning) {
-        CheckError(AUGraphStart(self.auGraph), "AUGraphStart");
-    }
-    
     self.isRecording = YES;
     
-    NSLog(@"🎤 开始录音（从 %.2f 秒开始）", startTime);
+    NSLog(@"✅ 录音已启动");
+    NSLog(@"   currentSegment: %p", self.currentSegment);
+    NSLog(@"   vocalData初始大小: %lu bytes", (unsigned long)self.currentSegment.vocalData.length);
+    NSLog(@"   audioData初始大小: %lu bytes", (unsigned long)self.currentSegment.audioData.length);
 }
 
 // 🆕 暂停录音（BGM继续播放，但不写入人声）
@@ -737,6 +876,19 @@ static OSStatus RenderCallback(void *inRefCon,
 // 保存当前段落
 - (void)saveCurrentSegment {
     if (!self.currentSegment) {
+        NSLog(@"⚠️ saveCurrentSegment: currentSegment为nil，跳过保存");
+        return;
+    }
+    
+    // 🐛 调试：检查数据大小
+    NSLog(@"💾 准备保存段落:");
+    NSLog(@"   vocalData: %lu bytes", (unsigned long)self.currentSegment.vocalData.length);
+    NSLog(@"   audioData: %lu bytes", (unsigned long)self.currentSegment.audioData.length);
+    
+    // 🎯 关键修复：检查是否有数据，空段落不保存
+    if (self.currentSegment.audioData.length == 0) {
+        NSLog(@"⚠️ 段落无数据，丢弃此段落");
+        self.currentSegment = nil;
         return;
     }
     
@@ -749,11 +901,12 @@ static OSStatus RenderCallback(void *inRefCon,
     // 添加到段落数组
     [self.recordingSegmentsInternal addObject:self.currentSegment];
     
-    NSLog(@"💾 段落已保存: %.2f~%.2fs (%.2fMB, %@)",
+    NSLog(@"✅ 段落已保存: %.2f~%.2fs (%.2fMB, %@)",
           self.currentSegment.startTime,
           self.currentSegment.startTime + self.currentSegment.duration,
           self.currentSegment.audioData.length / (1024.0 * 1024.0),
           self.currentSegment.isRecorded ? @"录制" : @"BGM");
+    NSLog(@"   总段落数: %lu", (unsigned long)self.recordingSegmentsInternal.count);
     
     // 通知代理
     [self notifySegmentsUpdate];
@@ -778,9 +931,12 @@ static OSStatus RenderCallback(void *inRefCon,
         self.isRecordingPaused = YES;
     }
     
-    // 跳转播放位置
-    if (self.audioPlayer) {
-        self.audioPlayer.currentTime = targetTime;
+    // 🔧 Bug修复：记住当前播放状态
+    BOOL wasPlaying = self.isPlaying;
+    
+    // 停止当前播放并重新调度
+    if (self.bgmPlayerNode) {
+        [self.bgmPlayerNode stop];
     }
     
     // 更新BGM读取位置
@@ -789,6 +945,12 @@ static OSStatus RenderCallback(void *inRefCon,
     self.bgmReadPosition = (NSUInteger)(targetTime * systemSampleRate);
     
     NSLog(@"⏭️ 跳转到 %.2f 秒（跳过 %.2f 秒）", targetTime, targetTime - currentTime);
+    
+    // 🔧 Bug修复：如果之前在播放，确保跳转后继续播放
+    if (wasPlaying) {
+        NSLog(@"▶️ 跳转后继续播放");
+        [self playFromTime:targetTime];
+    }
     
     // 如果正在录音模式，恢复录音
     if (self.isRecording && self.isRecordingPaused) {
@@ -831,15 +993,29 @@ static OSStatus RenderCallback(void *inRefCon,
     
     self.recordingSegmentsInternal = segmentsToKeep;
     
-    // 跳转播放位置
-    if (self.audioPlayer) {
-        self.audioPlayer.currentTime = targetTime;
+    // 🔧 Bug修复：记住当前播放状态
+    BOOL wasPlaying = self.isPlaying;
+    BOOL wasRecording = self.isRecording;
+    
+    // 停止当前播放
+    if (self.bgmPlayerNode) {
+        [self.bgmPlayerNode stop];
     }
     
     // 更新BGM读取位置
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
     double systemSampleRate = audioSession.sampleRate;
     self.bgmReadPosition = (NSUInteger)(targetTime * systemSampleRate);
+    
+    // 🔧 Bug修复：如果之前在播放/录音，回退后继续播放/录音
+    if (wasPlaying || wasRecording) {
+        NSLog(@"▶️ 回退后继续播放（wasPlaying=%d, wasRecording=%d）", wasPlaying, wasRecording);
+        [self playFromTime:targetTime];
+        
+        if (wasRecording) {
+            [self startRecordingFromTime:targetTime];
+        }
+    }
     
     // 通知代理
     [self notifySegmentsUpdate];
@@ -910,15 +1086,13 @@ static OSStatus RenderCallback(void *inRefCon,
     }
     
     // 🔧 使用当前实际参数重新生成
-    // BGM音量从audioPlayer读取（用户可能已调整）
-    float currentBGMVolume = self.audioPlayer ? self.audioPlayer.volume : self.bgmVolume;
-    
     NSLog(@"📊 当前预览参数:");
-    NSLog(@"   BGM音量: %.0f%% (audioPlayer.volume)", currentBGMVolume * 100);
+    NSLog(@"   BGM音量: %.0f%%", self.bgmVolume * 100);
+    NSLog(@"   BGM音高: %.1f 半音", self.bgmPitchShift);
     NSLog(@"   麦克风音量: %.0f%%", self.microphoneVolume * 100);
     NSLog(@"   音效: %@", [VoiceEffectProcessor nameForEffectType:self.voiceEffectProcessor.effectType]);
     
-    return [self previewSynthesizedAudioWithBGMVolume:currentBGMVolume 
+    return [self previewSynthesizedAudioWithBGMVolume:self.bgmVolume 
                                             micVolume:self.microphoneVolume 
                                                effect:self.voiceEffectProcessor.effectType];
 }
@@ -963,19 +1137,20 @@ static OSStatus RenderCallback(void *inRefCon,
     // 停止当前预览
     [self stopPreview];
     
-    // 暂停BGM播放
-    if (self.isPlaying) {
-        [self pause];
-        NSLog(@"⏸️ BGM已暂停");
-    }
-    
-    // 停止AUGraph（避免冲突）
-    Boolean isRunning = false;
-    AUGraphIsRunning(self.auGraph, &isRunning);
-    if (isRunning) {
-        CheckError(AUGraphStop(self.auGraph), "AUGraphStop for preview");
-        NSLog(@"🛑 AUGraph已停止");
-    }
+        // 🔧 停止BGM播放（预览时不需要播放原BGM）
+        BOOL wasBGMPlaying = self.isPlaying;
+        if (wasBGMPlaying) {
+            [self pause];
+            NSLog(@"⏸️ BGM已暂停以播放预览");
+        }
+        
+        // 🔧 停止AUGraph（预览时不需要录音）
+        Boolean isRunning = false;
+        AUGraphIsRunning(self.auGraph, &isRunning);
+        if (isRunning) {
+            CheckError(AUGraphStop(self.auGraph), "AUGraphStop for preview");
+            NSLog(@"🛑 AUGraph已停止");
+        }
     
     // 生成预览音频
     NSData *audioData = [self previewSynthesizedAudio];
@@ -1149,7 +1324,13 @@ static OSStatus RenderCallback(void *inRefCon,
     // 生成文件路径
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsDirectory = [paths objectAtIndex:0];
-    NSString *fileName = [NSString stringWithFormat:@"karaoke_final_%ld.pcm", (long)[[NSDate date] timeIntervalSince1970]];
+    
+    // 🔧 关键修复：在文件名中嵌入采样率信息
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    double systemSampleRate = audioSession.sampleRate;
+    NSString *fileName = [NSString stringWithFormat:@"karaoke_final_%ld_%.0fHz.pcm", 
+                          (long)[[NSDate date] timeIntervalSince1970], 
+                          systemSampleRate];
     NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
     
     // 保存文件
@@ -1178,22 +1359,48 @@ static OSStatus RenderCallback(void *inRefCon,
     }
     
     NSLog(@"🎬 开始合成 %lu 个录音段落...", (unsigned long)self.recordingSegmentsInternal.count);
+    NSLog(@"   BGM音量: %.0f%%, 麦克风音量: %.0f%%, 音效: %@, BGM音高: %.1f半音", 
+          bgmVolume * 100, micVolume * 100, 
+          [VoiceEffectProcessor nameForEffectType:effectType],
+          self.bgmPitchShift);
     
-    // 1. 按时间排序段落
+    // 1. 获取系统采样率
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    double systemSampleRate = audioSession.sampleRate;
+    
+    // 2. 🆕 如果需要音高调整，使用SoundTouch批处理整个BGM
+    NSData *processedBGM = self.bgmPCMData;
+    
+    if (fabs(self.bgmPitchShift) > 0.01f) {
+        NSLog(@"🎵 使用SoundTouch批处理BGM音高 (%.1f半音)...", self.bgmPitchShift);
+        processedBGM = [self applyPitchShiftToBGM:self.bgmPCMData 
+                                       pitchShift:self.bgmPitchShift 
+                                       sampleRate:systemSampleRate];
+        
+        if (!processedBGM || processedBGM.length == 0) {
+            NSLog(@"⚠️ 音高处理失败，使用原始BGM");
+            processedBGM = self.bgmPCMData;
+        }
+    }
+    
+    // 3. 临时保存处理后的BGM（用于extractBGMFromTime）
+    NSData *originalBGM = self.bgmPCMData;
+    NSUInteger originalLength = self.bgmPCMDataLength;
+    
+    self.bgmPCMData = processedBGM;
+    self.bgmPCMDataLength = processedBGM.length / sizeof(SInt16);
+    
+    // 4. 按时间排序段落
     NSArray *sortedSegments = [self.recordingSegmentsInternal sortedArrayUsingComparator:^NSComparisonResult(RecordingSegment *seg1, RecordingSegment *seg2) {
         if (seg1.startTime < seg2.startTime) return NSOrderedAscending;
         if (seg1.startTime > seg2.startTime) return NSOrderedDescending;
         return NSOrderedSame;
     }];
     
-    // 2. 创建最终输出缓冲区
+    // 5. 创建最终输出缓冲区
     NSMutableData *finalAudio = [NSMutableData data];
     
-    // 3. 获取系统采样率
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
-    
-    // 4. 创建音效处理器（如果需要重新应用音效）
+    // 6. 创建音效处理器（如果需要重新应用音效）
     VoiceEffectProcessor *previewEffectProcessor = nil;
     if (effectType != VoiceEffectTypeNone) {
         previewEffectProcessor = [[VoiceEffectProcessor alloc] initWithSampleRate:systemSampleRate];
@@ -1202,8 +1409,12 @@ static OSStatus RenderCallback(void *inRefCon,
     }
     
     // 5. 逐段处理
-    NSTimeInterval currentTime = 0.0;
+    // 🔧 Bug修复：从第一个段落的起始时间开始，而不是从0.0开始
+    // 这样选段录音时，只合成选段部分（如30~60秒），而不是从0秒开始
+    NSTimeInterval currentTime = sortedSegments.count > 0 ? ((RecordingSegment *)sortedSegments.firstObject).startTime : 0.0;
     NSTimeInterval lastSegmentEndTime = 0.0;
+    
+    NSLog(@"🎬 合成起始时间: %.2f秒 (第一个段落的起点)", currentTime);
     
     for (RecordingSegment *segment in sortedSegments) {
         
@@ -1253,7 +1464,7 @@ static OSStatus RenderCallback(void *inRefCon,
     
     NSLog(@"📊 合成统计:");
     NSLog(@"   最后段落结束时间: %.2f秒", lastSegmentEndTime);
-    NSLog(@"   BGM总时长: %.2f秒", self.audioPlayer.duration);
+    NSLog(@"   BGM总时长: %.2f秒", self.bgmDuration);
     NSLog(@"   合成策略: 只保留已录制部分（%.2f秒）", lastSegmentEndTime);
     
     NSTimeInterval totalDuration = finalAudio.length / sizeof(SInt16) / systemSampleRate;
@@ -1261,6 +1472,10 @@ static OSStatus RenderCallback(void *inRefCon,
     NSLog(@"   总大小: %.2fMB", finalAudio.length / (1024.0 * 1024.0));
     NSLog(@"   总时长: %.2f秒", totalDuration);
     NSLog(@"   采样率: %.0fHz", systemSampleRate);
+    
+    // 7. 🆕 恢复原始BGM数据
+    self.bgmPCMData = originalBGM;
+    self.bgmPCMDataLength = originalLength;
     
     return [finalAudio copy];
 }
@@ -1320,6 +1535,91 @@ static OSStatus RenderCallback(void *inRefCon,
                                            effect:self.voiceEffectProcessor.effectType];
 }
 
+#pragma mark - 🎵 BGM音高处理（使用SoundTouch批处理）
+
+- (NSData *)applyPitchShiftToBGM:(NSData *)bgmData 
+                      pitchShift:(float)semitones 
+                      sampleRate:(double)sampleRate {
+    if (fabs(semitones) < 0.01f || !bgmData || bgmData.length == 0) {
+        // 音高偏移太小或没有数据，直接返回原数据
+        return bgmData;
+    }
+    
+    NSLog(@"🎵 开始使用SoundTouch批处理BGM音高 (%.1f半音)...", semitones);
+    
+    // 创建SoundTouch实例
+    SoundTouchHandle *st = soundtouch_create();
+    if (!st) {
+        NSLog(@"❌ 无法创建SoundTouch实例");
+        return bgmData;
+    }
+    
+    soundtouch_setSampleRate(st, (unsigned int)sampleRate);
+    soundtouch_setChannels(st, 1);  // 单声道
+    soundtouch_setPitch(st, semitones);  // 设置音高偏移（半音）
+    
+    // 优化设置：提高音质
+    soundtouch_setSetting(st, SETTING_USE_QUICKSEEK, 0);  // 禁用快速搜索，提高音质
+    soundtouch_setSetting(st, SETTING_USE_AA_FILTER, 1);  // 启用抗混叠滤波器
+    
+    // 转换 SInt16 → float
+    NSUInteger sampleCount = bgmData.length / sizeof(SInt16);
+    const SInt16 *int16Samples = (const SInt16 *)bgmData.bytes;
+    float *floatSamples = (float *)malloc(sampleCount * sizeof(float));
+    
+    if (!floatSamples) {
+        NSLog(@"❌ 无法分配浮点数缓冲区");
+        soundtouch_destroy(st);
+        return bgmData;
+    }
+    
+    for (NSUInteger i = 0; i < sampleCount; i++) {
+        floatSamples[i] = int16Samples[i] / 32768.0f;
+    }
+    
+    // 输入所有样本到SoundTouch
+    NSLog(@"   输入 %lu 个样本到SoundTouch...", (unsigned long)sampleCount);
+    soundtouch_putSamples(st, floatSamples, (unsigned int)sampleCount);
+    soundtouch_flush(st);  // 刷新，获取所有处理后的样本
+    
+    // 接收处理后的样本
+    NSMutableData *outputData = [NSMutableData data];
+    float *outputBuffer = (float *)malloc(8192 * sizeof(float));
+    
+    if (!outputBuffer) {
+        NSLog(@"❌ 无法分配输出缓冲区");
+        free(floatSamples);
+        soundtouch_destroy(st);
+        return bgmData;
+    }
+    
+    unsigned int receivedSamples;
+    NSUInteger totalReceivedSamples = 0;
+    
+    while ((receivedSamples = soundtouch_receiveSamples(st, outputBuffer, 8192)) > 0) {
+        // 转换 float → SInt16
+        for (unsigned int i = 0; i < receivedSamples; i++) {
+            float sample = fmaxf(-1.0f, fminf(1.0f, outputBuffer[i]));
+            SInt16 int16Sample = (SInt16)(sample * 32767.0f);
+            [outputData appendBytes:&int16Sample length:sizeof(SInt16)];
+        }
+        totalReceivedSamples += receivedSamples;
+    }
+    
+    // 清理
+    free(floatSamples);
+    free(outputBuffer);
+    soundtouch_destroy(st);
+    
+    NSLog(@"✅ SoundTouch批处理完成:");
+    NSLog(@"   输入样本: %lu", (unsigned long)sampleCount);
+    NSLog(@"   输出样本: %lu", (unsigned long)totalReceivedSamples);
+    NSLog(@"   样本比率: %.2f%%", (totalReceivedSamples * 100.0 / sampleCount));
+    NSLog(@"   输出大小: %.2f MB", outputData.length / (1024.0 * 1024.0));
+    
+    return outputData;
+}
+
 // 🆕 合成最终录音文件（将所有段落拼接，并填充BGM到跳过的部分）
 - (void)synthesizeFinalRecording {
     NSLog(@"💾 开始保存最终文件...");
@@ -1335,7 +1635,13 @@ static OSStatus RenderCallback(void *inRefCon,
     // 保存到文件
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsDirectory = [paths objectAtIndex:0];
-    NSString *fileName = [NSString stringWithFormat:@"karaoke_final_%ld.pcm", (long)[[NSDate date] timeIntervalSince1970]];
+    
+    // 🔧 关键修复：在文件名中嵌入采样率信息，避免播放时采样率不匹配
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    double systemSampleRate = audioSession.sampleRate;
+    NSString *fileName = [NSString stringWithFormat:@"karaoke_final_%ld_%.0fHz.pcm", 
+                          (long)[[NSDate date] timeIntervalSince1970], 
+                          systemSampleRate];
     self.recordingFilePath = [documentsDirectory stringByAppendingPathComponent:fileName];
     
     BOOL success = [finalAudio writeToFile:self.recordingFilePath atomically:YES];
@@ -1481,30 +1787,27 @@ static OSStatus RenderCallback(void *inRefCon,
     NSError *error;
     NSURL *fileURL = [NSURL fileURLWithPath:filePath];
     
-    // 1. 加载AVAudioPlayer（用于显示进度和控制）
-    self.audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:fileURL error:&error];
-    if (error) {
+    NSLog(@"🎵 开始加载BGM文件: %@", filePath);
+    
+    // 1. 🆕 加载音频文件到 AVAudioFile（用于AVAudioEngine播放）
+    self.bgmAudioFile = [[AVAudioFile alloc] initForReading:fileURL error:&error];
+    if (error || !self.bgmAudioFile) {
         NSLog(@"❌ 加载音频文件失败: %@", error.localizedDescription);
         return;
     }
-    self.audioPlayer.delegate = self;  // 设置代理以监听播放完成
-    [self.audioPlayer prepareToPlay];
     
-    // 🔧 应用当前的 BGM 音量设置
-    self.audioPlayer.volume = self.bgmVolume;
+    // 保存BGM时长
+    self.bgmDuration = (NSTimeInterval)self.bgmAudioFile.length / self.bgmAudioFile.processingFormat.sampleRate;
     
-    // 🔧 启用变速播放（虽然我们用rate=1.0，但需要启用才能设置）
-    self.audioPlayer.enableRate = YES;
-    self.audioPlayer.rate = 1.0;
+    NSLog(@"✅ BGM文件信息:");
+    NSLog(@"   格式: %.0f Hz, %u 声道", 
+          self.bgmAudioFile.processingFormat.sampleRate, 
+          (unsigned int)self.bgmAudioFile.processingFormat.channelCount);
+    NSLog(@"   帧数: %lld", self.bgmAudioFile.length);
+    NSLog(@"   时长: %.2f 秒", self.bgmDuration);
     
-    NSLog(@"🎵 AVAudioPlayer 配置:");
-    NSLog(@"   音量: %.0f%%", self.bgmVolume * 100);
-    NSLog(@"   时长: %.2f秒", self.audioPlayer.duration);
-    NSLog(@"   声道数: %lu", (unsigned long)self.audioPlayer.numberOfChannels);
-    NSLog(@"   播放速率: %.2f", self.audioPlayer.rate);
-    
-    // 2. 将整个BGM文件转换为PCM格式并加载到内存
-    NSLog(@"🔄 开始转换BGM文件为PCM...");
+    // 2. 将整个BGM文件转换为PCM格式并加载到内存（用于录音混合）
+    NSLog(@"🔄 开始转换BGM文件为PCM（用于录音混合）...");
     NSData *pcmData = [self convertAudioFileToPCM:filePath];
     
     if (pcmData) {
@@ -1516,26 +1819,19 @@ static OSStatus RenderCallback(void *inRefCon,
         AVAudioSession *audioSession = [AVAudioSession sharedInstance];
         double systemSampleRate = audioSession.sampleRate;
         
-        NSLog(@"✅ BGM文件转换成功");
+        NSLog(@"✅ BGM PCM数据转换成功:");
         NSLog(@"   文件大小: %.2f MB", self.bgmPCMData.length / (1024.0 * 1024.0));
         NSLog(@"   样本数: %lu", (unsigned long)originalLength);
-        NSLog(@"   转换后时长: %.2f秒", originalLength / systemSampleRate);
-        NSLog(@"   AVAudioPlayer 时长: %.2f秒", self.audioPlayer.duration);
+        NSLog(@"   系统采样率: %.0f Hz", systemSampleRate);
+        NSLog(@"   精确时长: %.2f秒", originalLength / systemSampleRate);
         
-        // 🆕 直接使用转换后的精确长度（AVAudioFile已经提供了正确的帧数）
-        // 不再需要根据AVAudioPlayer校准，因为AVAudioFile的长度是精确的
         self.bgmPCMDataLength = originalLength;
         self.bgmReadPosition = 0;
-        
-        NSLog(@"📊 最终 BGM 参数:");
-        NSLog(@"   样本数: %lu", (unsigned long)self.bgmPCMDataLength);
-        NSLog(@"   系统采样率: %.0f Hz", systemSampleRate);
-        NSLog(@"   精确时长: %.2f秒", self.bgmPCMDataLength / systemSampleRate);
     } else {
         NSLog(@"❌ BGM文件转换失败");
     }
     
-    NSLog(@"✅ 音频文件加载成功: %@", filePath);
+    NSLog(@"✅ 音频文件加载完成，可以开始播放");
 }
 
 // 将音频文件转换为PCM格式 (系统采样率, 单声道, 16bit)
@@ -1698,53 +1994,158 @@ static OSStatus RenderCallback(void *inRefCon,
     [self playFromTime:0.0];
 }
 
-// 🆕 从指定时间开始播放
+// 🆕 从指定时间开始播放（使用 AVAudioEngine）
 - (void)playFromTime:(NSTimeInterval)startTime {
-    if (!self.audioPlayer) {
+    if (!self.bgmAudioFile) {
         NSLog(@"❌ 没有加载音频文件");
         return;
     }
+    
+    // 🔧 确保 BGM 引擎正在运行
+    if (!self.bgmEngine.isRunning) {
+        NSError *error = nil;
+        if (![self.bgmEngine startAndReturnError:&error]) {
+            NSLog(@"❌ BGM引擎启动失败: %@", error);
+            return;
+        }
+        NSLog(@"✅ BGM引擎已重新启动");
+    }
+    
+    // 停止当前播放
+    [self.bgmPlayerNode stop];
+    
+    // 🔧 递增会话ID，使旧的completionHandler失效
+    self.playbackSessionID++;
+    NSUInteger currentSessionID = self.playbackSessionID;
     
     // 获取系统采样率
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
     double systemSampleRate = audioSession.sampleRate;
     
-    // 设置BGM读取位置
-    NSUInteger targetPosition = (NSUInteger)(startTime * systemSampleRate);
-    if (targetPosition >= self.bgmPCMDataLength) {
+    // 计算起始帧位置
+    AVAudioFramePosition startFrame = (AVAudioFramePosition)(startTime * self.bgmAudioFile.processingFormat.sampleRate);
+    AVAudioFrameCount frameCount = (AVAudioFrameCount)(self.bgmAudioFile.length - startFrame);
+    
+    if (startFrame >= self.bgmAudioFile.length) {
         NSLog(@"⚠️ 起始时间 %.2f 超出BGM长度，重置为0", startTime);
-        targetPosition = 0;
+        startFrame = 0;
+        frameCount = (AVAudioFrameCount)self.bgmAudioFile.length;
         startTime = 0;
     }
+    
+    // 更新BGM读取位置（用于录音混合）
+    NSUInteger targetPosition = (NSUInteger)(startTime * systemSampleRate);
     self.bgmReadPosition = targetPosition;
     
-    // 设置AVAudioPlayer播放位置
-    self.audioPlayer.currentTime = startTime;
+    // 调度音频段落播放
+    __weak typeof(self) weakSelf = self;
+    [self.bgmPlayerNode scheduleSegment:self.bgmAudioFile 
+                          startingFrame:startFrame 
+                             frameCount:frameCount 
+                                 atTime:nil 
+                      completionHandler:^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        
+        // 🔧 检查会话ID，忽略旧的completionHandler
+        if (currentSessionID != strongSelf.playbackSessionID) {
+            NSLog(@"🔇 忽略旧的播放完成回调（会话ID: %lu != %lu）", (unsigned long)currentSessionID, (unsigned long)strongSelf.playbackSessionID);
+            return;
+        }
+        
+        NSLog(@"🎵 BGM播放完成（会话ID: %lu）", (unsigned long)currentSessionID);
+        strongSelf.isPlaying = NO;
+        
+        // 停止播放进度定时器
+        [strongSelf stopPlaybackTimer];
+        
+        // 通知代理
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ([strongSelf.delegate respondsToSelector:@selector(audioEngineDidFinishPlaying)]) {
+                [strongSelf.delegate audioEngineDidFinishPlaying];
+            }
+        });
+    }];
     
-    // 启用变速播放
-    self.audioPlayer.enableRate = YES;
-    self.audioPlayer.volume = self.bgmVolume;
-    self.audioPlayer.rate = 1.0;  // 正常速度
-    
-    [self.audioPlayer play];
+    // 开始播放
+    [self.bgmPlayerNode play];
     self.isPlaying = YES;
+    self.lastPlaybackTime = startTime;
+    
+    // 启动播放进度定时器（用于歌词同步）
+    [self startPlaybackTimer];
     
     NSLog(@"🎵 从 %.2f 秒开始播放 BGM", startTime);
     NSLog(@"   音量: %.0f%%", self.bgmVolume * 100);
+    NSLog(@"   音高: %.1f 半音", self.bgmPitchShift);
     NSLog(@"   BGM读取位置: %lu/%lu", (unsigned long)targetPosition, (unsigned long)self.bgmPCMDataLength);
 }
 
 - (void)pause {
-    [self.audioPlayer pause];
+    [self.bgmPlayerNode pause];
     self.isPlaying = NO;
-    NSLog(@"⏸️ 音频暂停");
+    [self stopPlaybackTimer];
+    NSLog(@"⏸️ BGM暂停");
 }
 
 - (void)stop {
-    [self.audioPlayer stop];
-    self.audioPlayer.currentTime = 0;
+    [self.bgmPlayerNode stop];
     self.isPlaying = NO;
-    NSLog(@"⏹️ 音频停止");
+    self.bgmReadPosition = 0;
+    self.lastPlaybackTime = 0;
+    [self stopPlaybackTimer];
+    NSLog(@"⏹️ BGM停止");
+}
+
+#pragma mark - 🎵 播放进度追踪
+
+- (void)startPlaybackTimer {
+    [self stopPlaybackTimer];
+    
+    // 创建定时器，每0.1秒更新一次播放位置
+    self.playbackTimer = [NSTimer scheduledTimerWithTimeInterval:0.1
+                                                          target:self
+                                                        selector:@selector(updatePlaybackProgress)
+                                                        userInfo:nil
+                                                         repeats:YES];
+    
+    NSLog(@"⏱️ 播放进度定时器已启动");
+}
+
+- (void)stopPlaybackTimer {
+    if (self.playbackTimer) {
+        [self.playbackTimer invalidate];
+        self.playbackTimer = nil;
+        NSLog(@"⏱️ 播放进度定时器已停止");
+    }
+}
+
+- (void)updatePlaybackProgress {
+    if (!self.isPlaying || !self.bgmPlayerNode.isPlaying) {
+        return;
+    }
+    
+    // 从AVAudioPlayerNode获取当前播放位置
+    AVAudioTime *nodeTime = self.bgmPlayerNode.lastRenderTime;
+    AVAudioTime *playerTime = [self.bgmPlayerNode playerTimeForNodeTime:nodeTime];
+    
+    if (playerTime) {
+        // 计算当前播放时间
+        NSTimeInterval currentTime = self.lastPlaybackTime + (NSTimeInterval)playerTime.sampleTime / playerTime.sampleRate;
+        
+        // 更新BGM读取位置（用于录音混合）
+        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+        double systemSampleRate = audioSession.sampleRate;
+        self.bgmReadPosition = (NSUInteger)(currentTime * systemSampleRate);
+        
+        // 通知代理更新播放时间（用于歌词同步等）
+        if ([self.delegate respondsToSelector:@selector(audioEngineDidUpdatePlaybackTime:)]) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                // 这里可以添加新的delegate方法来通知播放时间
+                // 暂时先不添加，保持接口兼容
+            });
+        }
+    }
 }
 
 - (void)reset {
@@ -1762,11 +2163,9 @@ static OSStatus RenderCallback(void *inRefCon,
         [self stop];
     }
     
-    // 3. 重置 BGM 播放器到开头
-    if (self.audioPlayer) {
-        self.audioPlayer.currentTime = 0;
-        NSLog(@"   ✅ BGM播放器已重置到开头");
-    }
+    // 3. 🆕 重置 BGM 播放节点到开头
+    self.lastPlaybackTime = 0;
+    NSLog(@"   ✅ BGM播放位置已重置");
     
     // 4. 重置 BGM 读取位置（原子操作）
     self.bgmReadPosition = 0;
@@ -1781,10 +2180,42 @@ static OSStatus RenderCallback(void *inRefCon,
     self.recordingFilePath = nil;
     NSLog(@"   ✅ 录音文件路径已清空");
     
-    // 7. 通知代理
+    // 7. 🆕 清空预览缓存
+    [self invalidatePreviewCache];
+    NSLog(@"   ✅ 预览缓存已清空");
+    
+    // 8. 通知代理
     [self notifySegmentsUpdate];
     
     NSLog(@"✅ KaraokeAudioEngine 重置完成，可以开始新的录音");
+}
+
+#pragma mark - BGM控制
+
+- (void)setBgmVolume:(float)volume {
+    _bgmVolume = fmaxf(0.0f, fminf(1.0f, volume));
+    
+    // 应用到BGM引擎
+    if (self.bgmEngine && self.bgmEngine.mainMixerNode) {
+        self.bgmEngine.mainMixerNode.outputVolume = _bgmVolume;
+    }
+    
+    NSLog(@"🎵 BGM音量: %.0f%%", _bgmVolume * 100);
+}
+
+- (void)setBgmPitchShift:(float)pitchShift {
+    // 限制范围 -12 ~ +12 半音
+    _bgmPitchShift = fmaxf(-12.0f, fminf(12.0f, pitchShift));
+    
+    // 应用到BGM音高节点 (AVAudioUnitTimePitch 使用 cents, 1半音 = 100 cents)
+    if (self.bgmTimePitchNode) {
+        self.bgmTimePitchNode.pitch = _bgmPitchShift * 100.0f;
+    }
+    
+    NSLog(@"🎵 BGM音高调整: %.1f 半音 (%.0f cents)", _bgmPitchShift, _bgmPitchShift * 100.0f);
+    
+    // 清除预览缓存（因为音高参数变了）
+    [self invalidatePreviewCache];
 }
 
 #pragma mark - 耳返控制
@@ -1814,13 +2245,35 @@ static OSStatus RenderCallback(void *inRefCon,
 
 #pragma mark - 播放进度
 
+// 🎵 获取BGM总时长
+- (NSTimeInterval)duration {
+    return self.bgmDuration;
+}
+
 // 根据 BGM 读取位置计算当前播放时间
 - (NSTimeInterval)currentPlaybackTime {
+    // 🆕 从 AVAudioPlayerNode 获取播放位置
+    if (self.bgmPlayerNode && self.bgmPlayerNode.isPlaying) {
+        AVAudioTime *nodeTime = self.bgmPlayerNode.lastRenderTime;
+        AVAudioTime *playerTime = [self.bgmPlayerNode playerTimeForNodeTime:nodeTime];
+        
+        if (playerTime) {
+            // 计算相对于起始时间的播放时间
+            NSTimeInterval currentTime = self.lastPlaybackTime + (NSTimeInterval)playerTime.sampleTime / playerTime.sampleRate;
+            return currentTime;
+        }
+    }
+    
+    // 如果没有播放，使用上次记录的时间
+    if (self.lastPlaybackTime > 0) {
+        return self.lastPlaybackTime;
+    }
+    
+    // 回退到使用bgmReadPosition计算（用于录音时的同步）
     if (self.bgmPCMDataLength == 0) {
         return 0.0;
     }
     
-    // 🔧 使用系统实际采样率计算时间
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
     double systemSampleRate = audioSession.sampleRate;
     
@@ -1828,32 +2281,24 @@ static OSStatus RenderCallback(void *inRefCon,
     return (NSTimeInterval)currentPos / systemSampleRate;
 }
 
-#pragma mark - AVAudioPlayerDelegate
-
-- (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag {
-    NSLog(@"🎵 BGM播放完成 (成功: %@)", flag ? @"是" : @"否");
-    
-    // BGM播放完成，自动停止录音（如果正在录音）
-    if (self.isRecording) {
-        NSLog(@"🎵 BGM播放完成，自动停止录音");
-        [self stopRecording];
-        
-        // 通知代理
-        if ([self.delegate respondsToSelector:@selector(audioEngineDidFinishPlaying)]) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self.delegate audioEngineDidFinishPlaying];
-            });
-        }
-    }
-    
-    self.isPlaying = NO;
-}
+// 注意：AVAudioPlayerDelegate已移除，改用AVAudioPlayerNode的completionHandler
 
 #pragma mark - 清理
 
 - (void)dealloc {
     [self stopRecording];
     [self stop];
+    
+    // 🆕 停止播放进度定时器
+    [self stopPlaybackTimer];
+    
+    // 🆕 清理BGM引擎
+    if (self.bgmEngine) {
+        [self.bgmEngine stop];
+        self.bgmEngine = nil;
+    }
+    self.bgmPlayerNode = nil;
+    self.bgmTimePitchNode = nil;
     
     // 清理BGM资源（不需要锁）
     self.bgmPCMData = nil;

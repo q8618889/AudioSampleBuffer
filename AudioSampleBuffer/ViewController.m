@@ -18,10 +18,12 @@
 #import "LyricsView.h"
 #import "LRCParser.h"
 #import "LyricsEffectControlPanel.h"
+#import "AudioFileFormats.h"  // 🆕 音频格式工具
 #import "KaraokeViewController.h"
+#import "MusicLibraryManager.h"  // 🆕 音乐库管理器
 #import <AVFoundation/AVFoundation.h>
 
-@interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate, PerformanceControlDelegate, LyricsEffectControlDelegate>
+@interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate, PerformanceControlDelegate, LyricsEffectControlDelegate, UISearchBarDelegate>
 {
     BOOL enterBackground;
     NSInteger index;
@@ -29,9 +31,19 @@
     UIImageView * imageView ;
 }
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) NSMutableArray *audioArray;
+@property (nonatomic, strong) NSMutableArray *audioArray;  // 保留用于兼容性
 @property (nonatomic, strong) AudioSpectrumPlayer *player;
 @property (nonatomic, strong) SpectrumView *spectrumView;
+
+// 🆕 音乐库管理器相关
+@property (nonatomic, strong) MusicLibraryManager *musicLibrary;
+@property (nonatomic, strong) NSArray<MusicItem *> *displayedMusicItems;  // 当前显示的音乐列表
+@property (nonatomic, assign) MusicCategory currentCategory;  // 当前分类
+@property (nonatomic, strong) NSMutableArray<UIButton *> *categoryButtons;  // 分类按钮数组
+@property (nonatomic, strong) UISearchBar *searchBar;  // 搜索栏
+@property (nonatomic, strong) UIButton *sortButton;  // 排序按钮
+@property (nonatomic, assign) MusicSortType currentSortType;  // 当前排序方式
+@property (nonatomic, assign) BOOL sortAscending;  // 排序方向
 
 
 @property (nonatomic, strong) CAGradientLayer *gradientLayer;
@@ -102,9 +114,32 @@
     // 恢复视觉效果渲染
     [self.visualEffectManager resumeRendering];
     // 可以选择恢复播放当前选中的歌曲
-    if (self.audioArray.count > 0 && index < self.audioArray.count) {
-        [self.player playWithFileName:self.audioArray[index]];
+    if (self.displayedMusicItems.count > 0 && index < self.displayedMusicItems.count) {
+        // 🆕 自动处理 NCM 文件解密
+        MusicItem *musicItem = self.displayedMusicItems[index];
+        NSString *fileName = musicItem.fileName;
+        NSString *playableFileName = [AudioFileFormats prepareAudioFileForPlayback:fileName];
+        [self.player playWithFileName:playableFileName];
     }
+}
+
+- (void)ncmDecryptionCompleted:(NSNotification *)notification {
+    NSNumber *count = notification.userInfo[@"count"];
+    NSLog(@"🎉 收到 NCM 解密完成通知: %@ 个文件", count);
+    
+    // 显示提示
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"✅ 解密完成" 
+                                                                       message:[NSString stringWithFormat:@"成功解密 %@ 个 NCM 文件\n现在可以播放了！", count]
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        
+        UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"好的" 
+                                                           style:UIAlertActionStyleDefault 
+                                                         handler:nil];
+        [alert addAction:okAction];
+        
+        [self presentViewController:alert animated:YES completion:nil];
+    });
 }
 
 - (void)setupVisualEffectSystem {
@@ -408,6 +443,9 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
+    // 🆕 初始化音乐库管理器（最先初始化）
+    [self setupMusicLibrary];
+    
     // 初始化动画协调器
     self.animationCoordinator = [[AnimationCoordinator alloc] initWithContainerView:self.view];
     
@@ -421,6 +459,9 @@
     // 监听卡拉OK模式通知
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(karaokeModeDidStart) name:@"KaraokeModeDidStart" object:nil];
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(karaokeModeDidEnd) name:@"KaraokeModeDidEnd" object:nil];
+    
+    // 🆕 监听 NCM 解密完成通知
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(ncmDecryptionCompleted:) name:@"NCMDecryptionCompleted" object:nil];
     
     self.view.backgroundColor = [UIColor blackColor];
     
@@ -530,8 +571,14 @@
     
     imageView = [[UIImageView alloc]init];
     imageView.frame = CGRectMake(0, 0, 170, 170);
-    NSURL *fileUrl = [[NSBundle mainBundle] URLForResource:self.audioArray[index] withExtension:nil];
-    imageView.image = [self musicImageWithMusicURL:fileUrl];
+    
+    // 🆕 使用当前显示的音乐项获取封面
+    if (self.displayedMusicItems.count > 0 && index < self.displayedMusicItems.count) {
+        MusicItem *musicItem = self.displayedMusicItems[index];
+        NSURL *fileUrl = [[NSBundle mainBundle] URLForResource:musicItem.fileName withExtension:nil];
+        imageView.image = [self musicImageWithMusicURL:fileUrl];
+    }
+    
     imageView.layer.cornerRadius = imageView.frame.size.height/2.0;
     imageView.clipsToBounds = YES;
     imageView.contentMode = UIViewContentModeScaleAspectFill;
@@ -600,20 +647,98 @@
         return;
     }
     
-    NSArray *pathArray = [[NSBundle mainBundle] pathsForResourcesOfType:@"mp3" inDirectory:nil];
-    for (int i = 0; i < pathArray.count; i ++) {
-        NSString *audioName = [[pathArray[i] componentsSeparatedByString:@"/"] lastObject];
-        [self.audioArray addObject:audioName];
-    }
+    // 🆕 使用统一的音频格式工具类加载所有支持格式的文件
+    NSArray *audioFiles = [AudioFileFormats loadAudioFilesFromBundle];
+    [self.audioArray addObjectsFromArray:audioFiles];
 }
 
 - (void)buildUI {
-    self.tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 64, self.view.frame.size.width, self.view.frame.size.height - 64) style:UITableViewStylePlain];
+    // 计算顶部偏移量
+    CGFloat safeTop = 0;
+    if (@available(iOS 11.0, *)) {
+        safeTop = self.view.safeAreaInsets.top;
+    }
+    CGFloat navigationBarHeight = self.navigationController.navigationBar.frame.size.height;
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
+    CGFloat topOffset = MAX(safeTop, statusBarHeight + navigationBarHeight) + 140;
+    
+    // 🆕 左侧分类按钮组 - 竖向排列
+    CGFloat leftX = 10;
+    CGFloat buttonWidth = 70;
+    CGFloat buttonHeight = 40;
+    CGFloat spacing = 8;
+    
+    self.categoryButtons = [NSMutableArray array];
+    
+    NSArray *categories = @[
+        @{@"title": @"📁 全部", @"category": @(MusicCategoryAll)},
+        @{@"title": @"🕐 最近", @"category": @(MusicCategoryRecent)},
+        @{@"title": @"❤️ 最爱", @"category": @(MusicCategoryFavorite)},
+        @{@"title": @"🎵 MP3", @"category": @(MusicCategoryMP3)},
+        @{@"title": @"🔒 NCM", @"category": @(MusicCategoryNCM)}
+    ];
+    
+    for (NSInteger i = 0; i < categories.count; i++) {
+        NSDictionary *catInfo = categories[i];
+        UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+        [button setTitle:catInfo[@"title"] forState:UIControlStateNormal];
+        [button setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        button.titleLabel.font = [UIFont boldSystemFontOfSize:13];
+        button.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.85];
+        button.layer.cornerRadius = 8;
+        button.layer.borderWidth = 1.5;
+        button.layer.borderColor = [UIColor colorWithWhite:0.4 alpha:0.6].CGColor;
+        button.tag = [catInfo[@"category"] integerValue];
+        
+        CGFloat yPos = topOffset + i * (buttonHeight + spacing);
+        button.frame = CGRectMake(leftX, yPos, buttonWidth, buttonHeight);
+        
+        [button addTarget:self action:@selector(categoryButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+        [self.view addSubview:button];
+        [self.categoryButtons addObject:button];
+        
+        // 默认选中"全部"
+        if (i == 0) {
+            button.backgroundColor = [UIColor colorWithRed:0.2 green:0.5 blue:0.8 alpha:0.9];
+            button.layer.borderColor = [UIColor colorWithRed:0.3 green:0.6 blue:1.0 alpha:1.0].CGColor;
+        }
+    }
+    
+    // 🆕 排序按钮 - 放在分类按钮下方
+    CGFloat sortButtonY = topOffset + categories.count * (buttonHeight + spacing) + 15;
+    self.sortButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [self.sortButton setTitle:@"🔄 排序" forState:UIControlStateNormal];
+    [self.sortButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.sortButton.titleLabel.font = [UIFont boldSystemFontOfSize:13];
+    self.sortButton.backgroundColor = [UIColor colorWithRed:0.3 green:0.6 blue:0.3 alpha:0.85];
+    self.sortButton.layer.cornerRadius = 8;
+    self.sortButton.layer.borderWidth = 1.5;
+    self.sortButton.layer.borderColor = [UIColor colorWithRed:0.4 green:0.8 blue:0.4 alpha:0.8].CGColor;
+    self.sortButton.frame = CGRectMake(leftX, sortButtonY, buttonWidth, buttonHeight);
+    [self.sortButton addTarget:self action:@selector(sortButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.sortButton];
+    
+    // 🆕 添加搜索栏 - 放在右侧
+    CGFloat searchBarX = leftX + buttonWidth + 15;
+    CGFloat searchBarWidth = self.view.frame.size.width - searchBarX - 10;
+    self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(searchBarX, topOffset, searchBarWidth, 50)];
+    self.searchBar.delegate = self;
+    self.searchBar.placeholder = @"搜索歌曲、艺术家...";
+    self.searchBar.barStyle = UIBarStyleBlack;
+    self.searchBar.searchBarStyle = UISearchBarStyleMinimal;
+    [self.view addSubview:self.searchBar];
+    
+    // 更新 TableView 位置
+    CGFloat tableY = topOffset + 60;
+    CGFloat tableX = searchBarX;
+    CGFloat tableWidth = searchBarWidth;
+    self.tableView = [[UITableView alloc] initWithFrame:CGRectMake(tableX, tableY, tableWidth, self.view.frame.size.height - tableY) style:UITableViewStylePlain];
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
-    self.tableView.tableHeaderView = [[UIView alloc]initWithFrame:CGRectMake(0, 100, self.view.frame.size.width, self.view.frame.size.height)];
+    self.tableView.tableHeaderView = [[UIView alloc]initWithFrame:CGRectMake(0, 100, tableWidth, self.view.frame.size.height)];
     self.tableView.tableFooterView = [UIView new];
     self.tableView.backgroundColor = [UIColor clearColor];
+    self.tableView.rowHeight = 60;  // 增加行高以适应新的UI
     [self.view addSubview:self.tableView];
     
     // 确保控制按钮在tableView之上
@@ -632,7 +757,7 @@
 
 #pragma mark - UITableView
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return self.audioArray.count;
+    return self.displayedMusicItems.count;
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -644,13 +769,33 @@
     if (!cell) {
         cell = [[AudioPlayCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"cellID"];
     }
-    cell.nameLabel.text = self.audioArray[indexPath.row];
-    cell.playBtn.hidden = YES;
+    
+    // 🆕 使用 MusicItem 配置 cell
+    MusicItem *musicItem = self.displayedMusicItems[indexPath.row];
+    [cell configureWithMusicItem:musicItem];
+    
+    cell.playBtn.hidden = YES;  // 隐藏播放按钮（点击整行即可播放）
+    
+    // 播放回调
+    __weak typeof(self) weakSelf = self;
     cell.playBlock = ^(BOOL isPlaying) {
         if (isPlaying) {
-            [self.player stop];
+            [weakSelf.player stop];
         } else {
-            [self.player playWithFileName:self.audioArray[indexPath.row]];
+            NSString *fileName = musicItem.fileName;
+            NSString *playableFileName = [AudioFileFormats prepareAudioFileForPlayback:fileName];
+            [weakSelf.player playWithFileName:playableFileName];
+        }
+    };
+    
+    // 🆕 收藏回调
+    cell.favoriteBlock = ^{
+        [weakSelf.musicLibrary toggleFavoriteForMusic:musicItem];
+        cell.favoriteButton.selected = musicItem.isFavorite;
+        
+        // 如果当前在"我的最爱"分类，且取消了收藏，刷新列表
+        if (weakSelf.currentCategory == MusicCategoryFavorite && !musicItem.isFavorite) {
+            [weakSelf refreshMusicList];
         }
     };
     
@@ -659,8 +804,20 @@
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
     index = indexPath.row;
+    
+    // 🆕 获取选中的音乐项
+    MusicItem *musicItem = self.displayedMusicItems[indexPath.row];
+    
+    // 🆕 记录播放
+    [self.musicLibrary recordPlayForMusic:musicItem];
+    
     [self updateAudioSelection];
-    [self.player playWithFileName:self.audioArray[indexPath.row]];
+    
+    // 🆕 自动处理 NCM 文件解密
+    NSString *fileName = musicItem.fileName;
+    NSString *playableFileName = [AudioFileFormats prepareAudioFileForPlayback:fileName];
+    
+    [self.player playWithFileName:playableFileName];
 }
 
 - (void)updateAudioSelection {
@@ -672,13 +829,18 @@
                                                  alpha:1.0].CGColor;
     }
     
-    // 更新封面图像
-    NSURL *fileUrl = [[NSBundle mainBundle] URLForResource:self.audioArray[index] withExtension:nil];
-    UIImage *image = [self musicImageWithMusicURL:fileUrl];
-    if (image) {
-        imageView.image = image;
-        // 更新粒子图像
-        [self.animationCoordinator updateParticleImage:image];
+    // 🆕 使用当前显示的音乐项
+    if (index < self.displayedMusicItems.count) {
+        MusicItem *musicItem = self.displayedMusicItems[index];
+        
+        // 更新封面图像
+        NSURL *fileUrl = [[NSBundle mainBundle] URLForResource:musicItem.fileName withExtension:nil];
+        UIImage *image = [self musicImageWithMusicURL:fileUrl];
+        if (image) {
+            imageView.image = image;
+            // 更新粒子图像
+            [self.animationCoordinator updateParticleImage:image];
+        }
     }
 }
 #pragma mark - AudioSpectrumPlayerDelegate
@@ -707,34 +869,52 @@
 -(void)didFinishPlay
 {
     index++;
-    if (index >= self.audioArray.count)
+    if (index >= self.displayedMusicItems.count)
     {
         index = 0;
     }
+    
+    // 🆕 记录播放
+    if (index < self.displayedMusicItems.count) {
+        MusicItem *musicItem = self.displayedMusicItems[index];
+        [self.musicLibrary recordPlayForMusic:musicItem];
+    }
+    
     [self updateAudioSelection];
-    [self.player playWithFileName:self.audioArray[index]];
+    
+    // 🆕 自动处理 NCM 文件解密
+    if (index < self.displayedMusicItems.count) {
+        MusicItem *musicItem = self.displayedMusicItems[index];
+        NSString *fileName = musicItem.fileName;
+        NSString *playableFileName = [AudioFileFormats prepareAudioFileForPlayback:fileName];
+        
+        [self.player playWithFileName:playableFileName];
+    }
 }
 
 #pragma mark - 歌词代理方法
 
 - (void)playerDidLoadLyrics:(LRCParser *)parser {
-    if (parser) {
-        NSLog(@"✅ 歌词加载成功: %@ - %@", parser.artist ?: @"未知", parser.title ?: @"未知");
-        NSLog(@"   歌词行数: %lu", (unsigned long)parser.lyrics.count);
-        
-        // 显示歌词容器
-        self.lyricsContainer.hidden = NO;
-        
-        // 更新歌词视图
-        self.lyricsView.parser = parser;
-    } else {
-        NSLog(@"⚠️ 未找到歌词");
-        // 显示歌词容器（显示"暂无lrc文件歌词"提示）
-        self.lyricsContainer.hidden = NO;
-        
-        // 清空歌词视图，触发显示"暂无lrc文件歌词"消息
-        self.lyricsView.parser = nil;
-    }
+    // ⚠️ 关键修复：确保所有 UI 更新都在主线程执行
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (parser) {
+            NSLog(@"✅ 歌词加载成功: %@ - %@", parser.artist ?: @"未知", parser.title ?: @"未知");
+            NSLog(@"   歌词行数: %lu", (unsigned long)parser.lyrics.count);
+            
+            // 显示歌词容器
+            self.lyricsContainer.hidden = NO;
+            
+            // 更新歌词视图
+            self.lyricsView.parser = parser;
+        } else {
+            NSLog(@"⚠️ 未找到歌词");
+            // 显示歌词容器（显示"暂无lrc文件歌词"提示）
+            self.lyricsContainer.hidden = NO;
+            
+            // 清空歌词视图，触发显示"暂无lrc文件歌词"消息
+            self.lyricsView.parser = nil;
+        }
+    });
 }
 
 - (void)playerDidUpdateTime:(NSTimeInterval)currentTime {
@@ -1021,7 +1201,7 @@
 
 - (void)karaokeButtonTapped:(UIButton *)sender {
     // 检查是否有选中的歌曲
-    if (self.audioArray.count == 0 || index >= self.audioArray.count) {
+    if (self.displayedMusicItems.count == 0 || index >= self.displayedMusicItems.count) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"提示" 
                                                                        message:@"请先选择一首歌曲" 
                                                                 preferredStyle:UIAlertControllerStyleAlert];
@@ -1037,11 +1217,12 @@
     
     // 创建卡拉OK视图控制器
     KaraokeViewController *karaokeVC = [[KaraokeViewController alloc] init];
-    karaokeVC.currentSongName = self.audioArray[index];
+    MusicItem *musicItem = self.displayedMusicItems[index];
+    karaokeVC.currentSongName = musicItem.fileName;
     
     // 推送到卡拉OK页面（现在有NavigationController了）
     [self.navigationController pushViewController:karaokeVC animated:YES];
-    NSLog(@"🎤 进入卡拉OK模式: %@", self.audioArray[index]);
+    NSLog(@"🎤 进入卡拉OK模式: %@", musicItem.fileName);
 }
 
 - (void)lyricsEffectButtonTapped:(UIButton *)sender {
@@ -1225,6 +1406,162 @@
                           (long)targetFPS,
                           statusText,
                           loadText];
+}
+
+#pragma mark - 音乐库管理器方法
+
+- (void)setupMusicLibrary {
+    // 初始化音乐库管理器
+    self.musicLibrary = [MusicLibraryManager sharedManager];
+    
+    // 设置初始分类和排序
+    self.currentCategory = MusicCategoryAll;
+    self.currentSortType = MusicSortByName;
+    self.sortAscending = YES;
+    
+    // 加载音乐列表
+    [self refreshMusicList];
+    
+    NSLog(@"🎵 音乐库初始化完成: %ld 首歌曲", (long)self.musicLibrary.totalMusicCount);
+}
+
+- (void)refreshMusicList {
+    // 获取当前分类的音乐
+    NSArray<MusicItem *> *musicList = [self.musicLibrary musicForCategory:self.currentCategory];
+    
+    // 应用搜索过滤（如果有搜索词）
+    if (self.searchBar.text.length > 0) {
+        musicList = [self.musicLibrary searchMusic:self.searchBar.text inCategory:self.currentCategory];
+    }
+    
+    // 应用排序
+    self.displayedMusicItems = [self.musicLibrary sortMusic:musicList 
+                                                      byType:self.currentSortType 
+                                                   ascending:self.sortAscending];
+    
+    // 刷新表格
+    [self.tableView reloadData];
+    
+    NSLog(@"🔄 音乐列表已刷新: %ld 首", (long)self.displayedMusicItems.count);
+}
+
+#pragma mark - UI 事件处理
+
+- (void)categoryButtonTapped:(UIButton *)sender {
+    // 获取选中的分类
+    MusicCategory selectedCategory = (MusicCategory)sender.tag;
+    self.currentCategory = selectedCategory;
+    
+    // 更新所有分类按钮的样式
+    for (UIButton *btn in self.categoryButtons) {
+        if (btn.tag == selectedCategory) {
+            // 选中状态 - 蓝色高亮
+            btn.backgroundColor = [UIColor colorWithRed:0.2 green:0.5 blue:0.8 alpha:0.9];
+            btn.layer.borderColor = [UIColor colorWithRed:0.3 green:0.6 blue:1.0 alpha:1.0].CGColor;
+            btn.transform = CGAffineTransformMakeScale(1.05, 1.05);
+        } else {
+            // 未选中状态 - 灰色
+            btn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.85];
+            btn.layer.borderColor = [UIColor colorWithWhite:0.4 alpha:0.6].CGColor;
+            btn.transform = CGAffineTransformIdentity;
+        }
+    }
+    
+    // 刷新音乐列表
+    [self refreshMusicList];
+    
+    NSLog(@"📂 切换分类: %@ (%ld 首)", [MusicLibraryManager nameForCategory:self.currentCategory], (long)self.displayedMusicItems.count);
+}
+
+- (void)sortButtonTapped:(UIButton *)sender {
+    // 创建排序选项菜单
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"排序方式" 
+                                                                   message:@"选择排序方式" 
+                                                            preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    // 按名称排序
+    [alert addAction:[UIAlertAction actionWithTitle:@"按名称 A-Z" 
+                                              style:UIAlertActionStyleDefault 
+                                            handler:^(UIAlertAction *action) {
+        self.currentSortType = MusicSortByName;
+        self.sortAscending = YES;
+        [self refreshMusicList];
+    }]];
+    
+    // 按艺术家排序
+    [alert addAction:[UIAlertAction actionWithTitle:@"按艺术家 A-Z" 
+                                              style:UIAlertActionStyleDefault 
+                                            handler:^(UIAlertAction *action) {
+        self.currentSortType = MusicSortByArtist;
+        self.sortAscending = YES;
+        [self refreshMusicList];
+    }]];
+    
+    // 按播放次数排序
+    [alert addAction:[UIAlertAction actionWithTitle:@"按播放次数（最多）" 
+                                              style:UIAlertActionStyleDefault 
+                                            handler:^(UIAlertAction *action) {
+        self.currentSortType = MusicSortByPlayCount;
+        self.sortAscending = NO;
+        [self refreshMusicList];
+    }]];
+    
+    // 按添加日期排序
+    [alert addAction:[UIAlertAction actionWithTitle:@"按添加日期（最新）" 
+                                              style:UIAlertActionStyleDefault 
+                                            handler:^(UIAlertAction *action) {
+        self.currentSortType = MusicSortByDate;
+        self.sortAscending = NO;
+        [self refreshMusicList];
+    }]];
+    
+    // 按时长排序
+    [alert addAction:[UIAlertAction actionWithTitle:@"按时长（短到长）" 
+                                              style:UIAlertActionStyleDefault 
+                                            handler:^(UIAlertAction *action) {
+        self.currentSortType = MusicSortByDuration;
+        self.sortAscending = YES;
+        [self refreshMusicList];
+    }]];
+    
+    // 按文件大小排序
+    [alert addAction:[UIAlertAction actionWithTitle:@"按文件大小（小到大）" 
+                                              style:UIAlertActionStyleDefault 
+                                            handler:^(UIAlertAction *action) {
+        self.currentSortType = MusicSortByFileSize;
+        self.sortAscending = YES;
+        [self refreshMusicList];
+    }]];
+    
+    // 取消按钮
+    [alert addAction:[UIAlertAction actionWithTitle:@"取消" 
+                                              style:UIAlertActionStyleCancel 
+                                            handler:nil]];
+    
+    // 对于 iPad，设置 popover 的源
+    if (alert.popoverPresentationController) {
+        alert.popoverPresentationController.sourceView = sender;
+        alert.popoverPresentationController.sourceRect = sender.bounds;
+    }
+    
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+#pragma mark - UISearchBarDelegate
+
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
+    [self refreshMusicList];
+}
+
+- (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
+    [searchBar resignFirstResponder];
+    [self refreshMusicList];
+}
+
+- (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar {
+    searchBar.text = @"";
+    [searchBar resignFirstResponder];
+    [self refreshMusicList];
 }
 
 - (void)dealloc {

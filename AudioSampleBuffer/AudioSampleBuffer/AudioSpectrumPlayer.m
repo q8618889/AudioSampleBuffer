@@ -15,6 +15,7 @@
 }
 @property (nonatomic, strong) AVAudioEngine *engine;
 @property (nonatomic, strong) AVAudioPlayerNode *player;
+@property (nonatomic, strong) AVAudioUnitTimePitch *timePitchNode;  // 🎵 音高/速率调整节点
 @property (nonatomic, strong) RealtimeAnalyzer *analyzer;
 @property (nonatomic, assign) int bufferSize;
 @property (nonatomic, strong) AVAudioFile *file;
@@ -41,16 +42,57 @@
     self.bufferSize = 2048;
     self.analyzer = [[RealtimeAnalyzer alloc] initWithFFTSize:self.bufferSize];
     self.enableLyrics = YES;  // 默认启用歌词
+    
+    // 🎵 初始化音高/速率参数
+    _pitchShift = 0.0f;      // 默认原调
+    _playbackRate = 1.0f;    // 默认原速
 }
 
 - (void)setupPlayer {
+    // 🔧 关键修复：配置音频会话
+    NSError *sessionError = nil;
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    
+    // 设置音频会话类别为播放
+    [audioSession setCategory:AVAudioSessionCategoryPlayback 
+                  withOptions:AVAudioSessionCategoryOptionMixWithOthers 
+                        error:&sessionError];
+    if (sessionError) {
+        NSLog(@"⚠️ 音频会话配置失败: %@", sessionError);
+        sessionError = nil;
+    }
+    
+    // 激活音频会话
+    [audioSession setActive:YES error:&sessionError];
+    if (sessionError) {
+        NSLog(@"⚠️ 音频会话激活失败: %@", sessionError);
+        sessionError = nil;
+    } else {
+        NSLog(@"✅ 音频会话已激活: 类别=%@, 采样率=%.0fHz", audioSession.category, audioSession.sampleRate);
+    }
+    
     [self.engine attachNode:self.player];
+    [self.engine attachNode:self.timePitchNode];
+    
     AVAudioMixerNode *mixerNode = self.engine.mainMixerNode;
-    [self.engine connect:self.player to:mixerNode format:[mixerNode outputFormatForBus:0]];
-    [self.engine startAndReturnError:nil];
-    //在添加tap之前先移除上一个  不然有可能报"Terminating ap  p due to uncaught exception 'com.apple.coreaudio.avfaudio',"之类的错误
+    
+    // ⚠️ 关键修复：不要在连接前获取格式，连接时使用 nil 让系统自动协商格式
+    // 🎵 音频链路：player → timePitch → mixer
+    [self.engine connect:self.player to:self.timePitchNode format:nil];
+    [self.engine connect:self.timePitchNode to:mixerNode format:nil];
+    
+    NSError *error = nil;
+    if (![self.engine startAndReturnError:&error]) {
+        NSLog(@"❌ AudioEngine 启动失败: %@", error);
+        return;
+    }
+    
+    // 在引擎启动后获取实际格式
+    AVAudioFormat *format = [mixerNode outputFormatForBus:0];
+    
+    //在添加tap之前先移除上一个  不然有可能报"Terminating app due to uncaught exception 'com.apple.coreaudio.avfaudio',"之类的错误
     [mixerNode removeTapOnBus:0];
-    [mixerNode installTapOnBus:0 bufferSize:self.bufferSize format:[mixerNode outputFormatForBus:0] block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
+    [mixerNode installTapOnBus:0 bufferSize:self.bufferSize format:format block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
         if (!self.player.isPlaying) return ;
         buffer.frameLength = self.bufferSize;
         NSArray *spectrums = [self.analyzer analyse:buffer withAmplitudeLevel:5];
@@ -59,7 +101,8 @@
         }
     }];
 
-
+    NSLog(@"✅ AudioSpectrumPlayer 音频链路已建立: player → timePitch → mixer");
+    NSLog(@"   格式: %.0f Hz, %u 声道", format.sampleRate, (unsigned int)format.channelCount);
 }
 - (NSTimeInterval)audioDurationFromURL:(NSString *)url {
     AVURLAsset *audioAsset = nil;
@@ -98,11 +141,30 @@
         [self.delegate playerDidLoadLyrics:nil];
     }
     
-    NSURL *fileUrl = [[NSBundle mainBundle] URLForResource:fileName withExtension:nil];
+    // 🔧 修复：支持完整路径和文件名两种方式
+    NSURL *fileUrl = nil;
+    
+    if ([fileName hasPrefix:@"/"]) {
+        // 如果是完整路径（以 / 开头），直接使用
+        fileUrl = [NSURL fileURLWithPath:fileName];
+        NSLog(@"🎵 使用完整路径播放: %@", fileName);
+    } else {
+        // 如果是文件名，从 Bundle 中查找
+        fileUrl = [[NSBundle mainBundle] URLForResource:fileName withExtension:nil];
+        NSLog(@"🎵 从 Bundle 加载: %@", fileName);
+    }
+    
+    if (!fileUrl) {
+        NSLog(@"❌ 找不到音频文件: %@", fileName);
+        return;
+    }
+    
     NSError *error = nil;
     self.file = [[AVAudioFile alloc] initForReading:fileUrl error:&error];
     if (error) {
-        NSLog(@"create AVAudioFile error: %@", error);
+        NSLog(@"❌ 创建 AVAudioFile 失败: %@", error);
+        NSLog(@"   文件路径: %@", fileUrl.path);
+        NSLog(@"   文件是否存在: %@", [[NSFileManager defaultManager] fileExistsAtPath:fileUrl.path] ? @"是" : @"否");
         return;
     }
     
@@ -218,23 +280,26 @@
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (!strongSelf) return;
         
-        if (error) {
-            NSLog(@"加载歌词失败: %@", error);
-            strongSelf.lyricsParser = nil;
-            
-            // 通知代理歌词加载失败（传入nil），以便界面显示"暂无lrc文件歌词"
-            if ([strongSelf.delegate respondsToSelector:@selector(playerDidLoadLyrics:)]) {
-                [strongSelf.delegate playerDidLoadLyrics:nil];
+        // ⚠️ 关键修复：确保代理回调在主线程执行
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (error) {
+                NSLog(@"加载歌词失败: %@", error);
+                strongSelf.lyricsParser = nil;
+                
+                // 通知代理歌词加载失败（传入nil），以便界面显示"暂无lrc文件歌词"
+                if ([strongSelf.delegate respondsToSelector:@selector(playerDidLoadLyrics:)]) {
+                    [strongSelf.delegate playerDidLoadLyrics:nil];
+                }
+            } else {
+                strongSelf.lyricsParser = parser;
+                NSLog(@"歌词加载成功，共 %lu 行", (unsigned long)parser.lyrics.count);
+                
+                // 通知代理歌词加载完成
+                if ([strongSelf.delegate respondsToSelector:@selector(playerDidLoadLyrics:)]) {
+                    [strongSelf.delegate playerDidLoadLyrics:parser];
+                }
             }
-        } else {
-            strongSelf.lyricsParser = parser;
-            NSLog(@"歌词加载成功，共 %lu 行", (unsigned long)parser.lyrics.count);
-            
-            // 通知代理歌词加载完成
-            if ([strongSelf.delegate respondsToSelector:@selector(playerDidLoadLyrics:)]) {
-                [strongSelf.delegate playerDidLoadLyrics:parser];
-            }
-        }
+        });
     }];
 }
 
@@ -250,6 +315,36 @@
         _player = [[AVAudioPlayerNode alloc] init];
     }
     return _player;
+}
+
+- (AVAudioUnitTimePitch *)timePitchNode {
+    if (!_timePitchNode) {
+        _timePitchNode = [[AVAudioUnitTimePitch alloc] init];
+        _timePitchNode.pitch = 0.0f;  // 默认原调（单位：cent，100 cent = 1 半音）
+        _timePitchNode.rate = 1.0f;   // 默认原速
+    }
+    return _timePitchNode;
+}
+
+#pragma mark - 🎵 音高/速率控制
+
+- (void)setPitchShift:(float)pitchShift {
+    // 限制范围：-12 到 +12 半音
+    _pitchShift = fmaxf(-12.0f, fminf(12.0f, pitchShift));
+    
+    // AVAudioUnitTimePitch 使用 cent 作为单位（1 半音 = 100 cents）
+    self.timePitchNode.pitch = _pitchShift * 100.0f;
+    
+    NSLog(@"🎵 [背景音乐] 音高调整: %.1f 半音 (%.0f cents)", _pitchShift, _pitchShift * 100.0f);
+}
+
+- (void)setPlaybackRate:(float)playbackRate {
+    // 限制范围：0.5 到 2.0
+    _playbackRate = fmaxf(0.5f, fminf(2.0f, playbackRate));
+    
+    self.timePitchNode.rate = _playbackRate;
+    
+    NSLog(@"🎵 [背景音乐] 速率调整: %.2fx", _playbackRate);
 }
 
 @end

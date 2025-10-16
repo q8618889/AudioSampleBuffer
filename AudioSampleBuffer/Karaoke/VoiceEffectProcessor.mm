@@ -49,6 +49,15 @@
 @property (nonatomic, assign) NSUInteger pitchBufferSize;
 @property (nonatomic, assign) float *pitchFloatBuffer;  // 浮点缓冲区
 
+// 🆕 自动增益控制（AGC）状态变量
+@property (nonatomic, assign) float agcTargetLevel;      // 目标RMS电平
+@property (nonatomic, assign) float agcCurrentGain;      // 当前自适应增益
+@property (nonatomic, assign) float agcMaxGain;          // 最大增益限制
+@property (nonatomic, assign) float agcMinGain;          // 最小增益限制
+@property (nonatomic, assign) float agcAttackCoef;       // 增益上升平滑系数
+@property (nonatomic, assign) float agcReleaseCoef;      // 增益下降平滑系数
+@property (nonatomic, assign) float agcSmoothedRMS;      // 平滑的RMS值
+
 @end
 
 @implementation VoiceEffectProcessor
@@ -94,10 +103,18 @@
         _pitchTempBuffer = (SInt16 *)malloc(_pitchBufferSize * sizeof(SInt16));
         _pitchFloatBuffer = (float *)malloc(_pitchBufferSize * sizeof(float));
         
+        // 🆕 初始化 AGC（自动增益控制）参数
+        _enableAGC = NO;  // 默认关闭，让用户手动开启
+        _agcStrength = 0.5f;  // 默认中等强度
+        _agcCurrentGain = 1.0f;  // 初始增益为1.0
+        _agcSmoothedRMS = 0.0f;
+        [self updateAGCParameters];  // 根据强度更新AGC参数
+        
         NSLog(@"✅ 音效处理器初始化完成 (采样率: %.0f Hz)", sampleRate);
         NSLog(@"   🔊 降噪处理器: %@", _noiseReducer ? @"已加载" : @"未加载");
         NSLog(@"   🎵 音高修正器: %@", _pitchCorrector ? @"已加载" : @"未加载");
         NSLog(@"   💾 音高缓冲区: %lu samples", (unsigned long)_pitchBufferSize);
+        NSLog(@"   🎚️ AGC 状态: %@, 强度: %.1f", _enableAGC ? @"启用" : @"禁用", _agcStrength);
     }
     return self;
 }
@@ -128,8 +145,17 @@
         }
     }
     
-    // 🆕 2. 音高修正处理（使用堆内存，安全处理）
-    if ((_pitchShift != 0.0f || _enableAutoTune) && _pitchCorrector) {
+    // 🆕 2. 自动增益控制（AGC，在降噪后、音效前）
+    if (_enableAGC) {
+        [self applyAGC:buffer sampleCount:sampleCount];
+        if (shouldLog) {
+            NSLog(@"🎚️ AGC 处理完成，当前增益: %.2fx, RMS: %.4f", _agcCurrentGain, _agcSmoothedRMS);
+        }
+    }
+    
+    // ❌ 已禁用人声音高修正（改为调整背景音乐）
+    // 如需升降调，请使用 player.pitchShift 调整背景音乐
+    if (NO && (_pitchShift != 0.0f || _enableAutoTune) && _pitchCorrector) {
         // 确保缓冲区足够大（现在输出样本数=输入样本数，不会增加）
         NSUInteger requiredSize = sampleCount * 2;  // 预留一些空间
         if (requiredSize > _pitchBufferSize) {
@@ -209,6 +235,106 @@
             NSLog(@"   ✅ 开始应用延迟: %.0f%%", _delayMix * 100);
         }
         [self applyDelay:buffer sampleCount:sampleCount];
+    }
+}
+
+#pragma mark - 🆕 AGC（自动增益控制）模块
+
+/**
+ * 根据AGC强度更新参数
+ * 强度范围: 0.0(弱) ~ 0.5(中) ~ 1.0(强)
+ */
+- (void)updateAGCParameters {
+    // 根据强度设置不同的参数
+    if (_agcStrength <= 0.33f) {
+        // 弱（0.0 - 0.33）：温和的增益调整，更自然
+        _agcTargetLevel = 0.25f;     // 目标25% RMS
+        _agcMaxGain = 3.0f;          // 最大3倍增益（约9.5dB）
+        _agcMinGain = 0.5f;          // 最小0.5倍增益
+        _agcAttackCoef = 0.98f;      // 慢速上升（约43ms @ 44100Hz）
+        _agcReleaseCoef = 0.995f;    // 慢速下降（约200ms）
+    } else if (_agcStrength <= 0.66f) {
+        // 中（0.34 - 0.66）：平衡的增益调整
+        _agcTargetLevel = 0.30f;     // 目标30% RMS
+        _agcMaxGain = 5.0f;          // 最大5倍增益（约14dB）
+        _agcMinGain = 0.4f;          // 最小0.4倍增益
+        _agcAttackCoef = 0.96f;      // 中速上升（约25ms）
+        _agcReleaseCoef = 0.992f;    // 中速下降（约125ms）
+    } else {
+        // 强（0.67 - 1.0）：激进的增益调整，最大化音量稳定性
+        _agcTargetLevel = 0.35f;     // 目标35% RMS
+        _agcMaxGain = 8.0f;          // 最大8倍增益（约18dB）
+        _agcMinGain = 0.3f;          // 最小0.3倍增益
+        _agcAttackCoef = 0.93f;      // 快速上升（约14ms）
+        _agcReleaseCoef = 0.988f;    // 快速下降（约83ms）
+    }
+    
+    NSLog(@"🎚️ AGC 参数更新 - 强度:%.2f, 目标:%.0f%%, 增益范围:%.1f-%.1fx",
+          _agcStrength, _agcTargetLevel * 100, _agcMinGain, _agcMaxGain);
+}
+
+/**
+ * AGC核心算法：自适应增益控制
+ * 原理：
+ * 1. 计算音频块的RMS（均方根）电平
+ * 2. 与目标电平比较，计算所需增益
+ * 3. 平滑调整增益（带Attack/Release时间）
+ * 4. 应用增益到音频信号
+ */
+- (void)applyAGC:(SInt16 *)buffer sampleCount:(UInt32)sampleCount {
+    // 1. 计算当前音频块的RMS电平（均方根）
+    float sumSquares = 0.0f;
+    for (UInt32 i = 0; i < sampleCount; i++) {
+        float sample = buffer[i] / 32768.0f;
+        sumSquares += sample * sample;
+    }
+    float currentRMS = sqrtf(sumSquares / sampleCount);
+    
+    // 2. 平滑RMS值（避免增益突变导致的咔嗒声）
+    // 使用一阶低通滤波器
+    float rmsAlpha = 0.8f;  // 平滑系数
+    _agcSmoothedRMS = rmsAlpha * _agcSmoothedRMS + (1.0f - rmsAlpha) * currentRMS;
+    
+    // 3. 计算目标增益
+    // 如果当前RMS太小（接近静音），不要过度放大（防止噪声放大）
+    float minRMSThreshold = 0.001f;  // 静音阈值（约-60dB）
+    float targetGain = 1.0f;
+    
+    if (_agcSmoothedRMS > minRMSThreshold) {
+        // 计算达到目标电平所需的增益
+        targetGain = _agcTargetLevel / _agcSmoothedRMS;
+        
+        // 限制增益范围
+        targetGain = fmaxf(_agcMinGain, fminf(targetGain, _agcMaxGain));
+    } else {
+        // 静音段落，保持当前增益或缓慢降低
+        targetGain = _agcCurrentGain * 0.95f;
+        targetGain = fmaxf(_agcMinGain, targetGain);
+    }
+    
+    // 4. 平滑增益调整（带Attack/Release特性）
+    // Attack: 增益上升时的速度（快速响应音量增大）
+    // Release: 增益下降时的速度（缓慢响应音量减小，避免突变）
+    float gainCoef = (targetGain > _agcCurrentGain) ? _agcAttackCoef : _agcReleaseCoef;
+    _agcCurrentGain = gainCoef * _agcCurrentGain + (1.0f - gainCoef) * targetGain;
+    
+    // 5. 应用增益到音频缓冲区
+    for (UInt32 i = 0; i < sampleCount; i++) {
+        // 转换为浮点数并应用增益
+        float sample = (buffer[i] / 32768.0f) * _agcCurrentGain;
+        
+        // 软限幅（防止削波失真）
+        // 使用tanh软削波，比硬削波更平滑
+        if (fabsf(sample) > 0.9f) {
+            sample = 0.9f * tanhf(sample / 0.9f);
+        }
+        
+        // 最终硬限幅（安全保护）
+        if (sample > 1.0f) sample = 1.0f;
+        if (sample < -1.0f) sample = -1.0f;
+        
+        // 转回int16
+        buffer[i] = (SInt16)(sample * 32767.0f);
     }
 }
 
@@ -518,48 +644,8 @@
             _volumeGain = 2.0;  // 降低音量增益
             break;
             
-        // 🆕 新增音效类型（音高修正功能已启用）
-        case VoiceEffectTypeAutoTune:
-            // 自动修音（基础实现：轻微音高修正 + 增强音效）
-            _reverbMix = 0.25;
-            _delayMix = 0.05;
-            _compressionRatio = 4.5;  // 增强压缩，稳定音量
-            _bassGain = 0.5;          // 轻微低频增强
-            _trebleGain = 2.0;        // 轻微高频增强
-            _volumeGain = 1.8;
-            _enableAutoTune = YES;    // ✅ 启用 Auto-Tune
-            _pitchShift = 0.0f;       // Auto-Tune 模式下不固定偏移
-            [_pitchCorrector setAutoTuneEnabled:YES key:0 scale:0];  // C 大调
-            NSLog(@"✅ Auto-Tune 已启用（基础实现）");
-            break;
-            
-        case VoiceEffectTypePitchUp:
-            // 升调 +3 半音
-            _reverbMix = 0.20;
-            _delayMix = 0.05;
-            _compressionRatio = 3.5;
-            _bassGain = -0.5;         // 轻微降低低频（升调后低频会相对减少）
-            _trebleGain = 1.5;        // 轻微增强高频（保持清晰度）
-            _volumeGain = 1.7;
-            _enableAutoTune = NO;
-            _pitchShift = 3.0f;       // ✅ 升高 3 半音
-            [_pitchCorrector setPitchShift:3.0f];
-            NSLog(@"✅ 升调 +3 半音已启用");
-            break;
-            
-        case VoiceEffectTypePitchDown:
-            // 降调 -3 半音
-            _reverbMix = 0.20;
-            _delayMix = 0.05;
-            _compressionRatio = 3.5;
-            _bassGain = 1.5;          // 增强低频（降调后需要补偿）
-            _trebleGain = -0.5;       // 轻微降低高频（避免尖锐）
-            _volumeGain = 1.8;
-            _enableAutoTune = NO;
-            _pitchShift = -3.0f;      // ✅ 降低 3 半音
-            [_pitchCorrector setPitchShift:-3.0f];
-            NSLog(@"✅ 降调 -3 半音已启用");
-            break;
+        // ❌ 已移除人声升降调音效
+        // 如需调整伴奏音高，请使用：player.pitchShift = ±3.0f
     }
     
     NSLog(@"🎵 音效切换: %@", [VoiceEffectProcessor nameForEffectType:effectType]);
@@ -608,9 +694,7 @@
         case VoiceEffectTypeEthereal: return @"空灵";
         case VoiceEffectTypeMagnetic: return @"磁性";
         case VoiceEffectTypeBright: return @"明亮";
-        case VoiceEffectTypeAutoTune: return @"自动修音";
-        case VoiceEffectTypePitchUp: return @"升调+3";
-        case VoiceEffectTypePitchDown: return @"降调-3";
+        // ❌ 已移除升降调音效（改为调整背景音乐）
         default: return @"未知";
     }
 }
@@ -648,6 +732,31 @@
           enabled ? @"启用" : @"禁用", 
           (long)key, 
           scale == 0 ? @"Major" : @"Minor");
+}
+
+#pragma mark - 🆕 AGC 控制方法
+
+- (void)setAGCEnabled:(BOOL)enabled strength:(float)strength {
+    _enableAGC = enabled;
+    _agcStrength = fmaxf(0.0f, fminf(1.0f, strength));  // 限制范围 [0.0, 1.0]
+    
+    // 更新AGC参数
+    [self updateAGCParameters];
+    
+    // 如果启用AGC，重置增益状态
+    if (enabled) {
+        _agcCurrentGain = 1.0f;
+        _agcSmoothedRMS = 0.0f;
+    }
+    
+    NSLog(@"🎚️ AGC %@, 强度: %.2f (%@)", 
+          enabled ? @"启用" : @"禁用",
+          _agcStrength,
+          _agcStrength < 0.34f ? @"弱" : (_agcStrength < 0.67f ? @"中" : @"强"));
+}
+
+- (float)getCurrentAGCGain {
+    return _agcCurrentGain;
 }
 
 @end
