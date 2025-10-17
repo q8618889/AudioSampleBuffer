@@ -402,12 +402,13 @@
 
 // EQ均衡器（增强的低通/高通滤波）- 修复版
 - (void)applyEQ:(SInt16 *)buffer sampleCount:(UInt32)sampleCount {
-    // 低频增强（低通滤波器增益）- 降低系数防止过载
-    float bassCoef = 0.2;  // 降低滤波系数
+    // 🔧 修复：更温和的EQ处理，避免音频被挤压
+    // 低频增强（低通滤波器增益）- 进一步降低系数
+    float bassCoef = 0.15;  // 进一步降低滤波系数
     float bassMultiplier = powf(10.0f, _bassGain / 20.0f);  // dB转线性
     
-    // 高频增强（高通滤波器增益）- 降低系数防止过载
-    float trebleCoef = 0.7;  // 调整高通滤波器系数
+    // 高频增强（高通滤波器增益）- 进一步降低系数
+    float trebleCoef = 0.6;  // 进一步调整高通滤波器系数
     float trebleMultiplier = powf(10.0f, _trebleGain / 20.0f);
     
     for (UInt32 i = 0; i < sampleCount; i++) {
@@ -422,14 +423,14 @@
         _highPassPrev = _highPassPrev * (1.0f - trebleCoef) + sample * trebleCoef;
         highFreq *= (trebleMultiplier - 1.0f);  // 只增强差值部分
         
-        // 重组信号 - 降低混合比例防止过载
-        float output = sample + lowFreq * 0.5f + highFreq * 0.5f;  // 降低混合比例
+        // 🔧 修复：更温和的信号重组，保持动态范围
+        float output = sample + lowFreq * 0.3f + highFreq * 0.3f;  // 进一步降低混合比例
         
-        // 软削波
-        if (output > 0.95f) {
-            output = 0.95f + 0.05f * tanhf((output - 0.95f) * 10.0f);
-        } else if (output < -0.95f) {
-            output = -0.95f + 0.05f * tanhf((output + 0.95f) * 10.0f);
+        // 🔧 修复：更温和的软削波，保持更多动态范围
+        if (output > 0.98f) {
+            output = 0.98f + 0.02f * tanhf((output - 0.98f) * 5.0f);  // 更温和的削波
+        } else if (output < -0.98f) {
+            output = -0.98f + 0.02f * tanhf((output + 0.98f) * 5.0f);  // 更温和的削波
         }
         
         // 最终限幅
@@ -483,9 +484,9 @@
         _reverbPos3 = (_reverbPos3 + 1) % delay3;
         _reverbPos4 = (_reverbPos4 + 1) % delay4;
         
-        // 混合原始信号和混响信号 - 大幅降低增益防止爆音
-        float dryGain = 1.0f - _reverbMix * 0.6f;  // 保留更多原声
-        float wetGain = _reverbMix * 1.2f;  // 降低混响增益（原来是3.0）
+        // 🔧 修复：更温和的混响混合，保持动态范围
+        float dryGain = 1.0f - _reverbMix * 0.4f;  // 保留更多原声
+        float wetGain = _reverbMix * 0.8f;  // 进一步降低混响增益
         float output = input * dryGain + reverbSum * wetGain;
         
         if (shouldLog && i == 0) {
@@ -528,9 +529,9 @@
         _delayBuffer[_delayPos] = (SInt16)(dampedInput * 32767.0f);
         _delayPos = (_delayPos + 1) % delayTime;
         
-        // 混合原始信号和延迟信号 - 降低增益防止爆音
-        float dryGain = 1.0f - _delayMix * 0.5f;  // 保留更多原声
-        float wetGain = _delayMix * 1.0f;  // 降低延迟增益（原来是3.0）
+        // 🔧 修复：更温和的延迟混合，保持动态范围
+        float dryGain = 1.0f - _delayMix * 0.3f;  // 保留更多原声
+        float wetGain = _delayMix * 0.6f;  // 进一步降低延迟增益
         float output = input * dryGain + delayed * wetGain;
         
         // 软削波防止爆音

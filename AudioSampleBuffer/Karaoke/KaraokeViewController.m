@@ -1340,6 +1340,11 @@ static void CheckError(OSStatus error, const char *operation) {
 }
 
 - (NSString *)formatTime:(NSTimeInterval)time {
+    // 🔧 修复：处理负数时间和异常值
+    if (time < 0 || isnan(time) || isinf(time)) {
+        return @"0:00";
+    }
+    
     int minutes = (int)time / 60;
     int seconds = (int)time % 60;
     return [NSString stringWithFormat:@"%d:%02d", minutes, seconds];
@@ -1613,11 +1618,20 @@ static void CheckError(OSStatus error, const char *operation) {
     titleLabel.frame = CGRectMake(0, 8, panelWidth, 22);
     [self.previewControlView addSubview:titleLabel];
     
-    // 段落信息
+    // 段落信息（显示合成总时长和实际录音时长）
     NSInteger segmentCount = self.karaokeAudioEngine.recordingSegments.count;
-    NSTimeInterval recordedDuration = [self.karaokeAudioEngine getTotalRecordedDuration];
+    NSTimeInterval totalDuration = [self.karaokeAudioEngine getTotalRecordedDuration];  // 合成后总时长
+    NSTimeInterval vocalDuration = [self.karaokeAudioEngine getActualVocalDuration];  // 实际录音时长
+    
     UILabel *infoLabel = [[UILabel alloc] init];
-    infoLabel.text = [NSString stringWithFormat:@"%ld个段落 | 已录制%.1f秒", (long)segmentCount, recordedDuration];
+    // 如果有跳转（总时长 > 实际录音时长），显示两个时长
+    if (totalDuration > vocalDuration + 0.5) {
+        infoLabel.text = [NSString stringWithFormat:@"%ld个段落 | 合成%.1f秒 (录音%.1f秒)", 
+                         (long)segmentCount, totalDuration, vocalDuration];
+    } else {
+        infoLabel.text = [NSString stringWithFormat:@"%ld个段落 | 录制%.1f秒", 
+                         (long)segmentCount, totalDuration];
+    }
     infoLabel.textColor = [UIColor colorWithWhite:0.8 alpha:1.0];
     infoLabel.font = [UIFont systemFontOfSize:12];
     infoLabel.textAlignment = NSTextAlignmentCenter;

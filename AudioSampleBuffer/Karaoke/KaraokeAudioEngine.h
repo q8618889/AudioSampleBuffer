@@ -100,7 +100,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)clearAllSegments;  // 清空所有段落
 
 - (NSString *)getRecordingFilePath;  // 获取最终合成的文件路径
-- (NSTimeInterval)getTotalRecordedDuration;  // 获取已录制的总时长
+- (NSTimeInterval)getTotalRecordedDuration;  // 获取已录制的总时长（合成后的总时长，包括BGM填充）
+- (NSTimeInterval)getActualVocalDuration;  // 获取实际录音时长（只计算有人声的段落）
 
 // 耳返控制
 - (void)setEarReturnEnabled:(BOOL)enabled;
