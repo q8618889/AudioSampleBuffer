@@ -64,6 +64,7 @@ static void CheckError(OSStatus error, const char *operation) {
 @property (nonatomic, assign, readwrite) AUGraph auGraph;
 @property (nonatomic, assign) AudioUnit remoteIOUnit;
 @property (nonatomic, assign) AUNode remoteIONode;
+@property (nonatomic, assign) double actualSampleRate;  // 🔧 实际采样率（从AudioUnit获取）
 
 // 🆕 BGM播放引擎（AVAudioEngine）
 @property (nonatomic, strong) AVAudioEngine *bgmEngine;
@@ -77,6 +78,7 @@ static void CheckError(OSStatus error, const char *operation) {
 @property (nonatomic, assign) NSUInteger bgmPCMDataLength;  // PCM数据长度（样本数）
 @property (atomic, assign) NSUInteger bgmReadPosition;  // 当前读取位置（样本索引）- 使用 atomic
 @property (nonatomic, assign) BOOL shouldLoopBGM;
+@property (nonatomic, assign) double bgmPCMSampleRate;  // 🔧 BGM PCM数据的实际采样率
 
 // 🆕 播放进度追踪
 @property (nonatomic, strong) NSTimer *playbackTimer;  // 播放进度定时器
@@ -445,6 +447,18 @@ static void CheckError(OSStatus error, const char *operation) {
     NSLog(@"🔧 Initialize AUGraph");
     CheckError(AUGraphInitialize(_auGraph), "AUGraphInitialize");
     
+    // 🔧 保存实际采样率（从AudioUnit获取）
+    AudioStreamBasicDescription actualFormat;
+    UInt32 size = sizeof(actualFormat);
+    AudioUnitGetProperty(_remoteIOUnit,
+                        kAudioUnitProperty_StreamFormat,
+                        kAudioUnitScope_Output,
+                        1,  // 输入bus
+                        &actualFormat,
+                        &size);
+    self.actualSampleRate = actualFormat.mSampleRate;
+    NSLog(@"   🔍 实际采样率已保存: %.0f Hz", self.actualSampleRate);
+    
     NSLog(@"✅ AudioUnit设置完成");
 }
 
@@ -509,13 +523,32 @@ static OSStatus RenderCallback(void *inRefCon,
         
         // 🐛 调试日志：每100次回调打印一次（避免日志过多）
         static int recordingCallbackCount = 0;
+        static double lastReportedDuration = 0;
         recordingCallbackCount++;
         if (recordingCallbackCount % 100 == 0) {
+            // 🔧 关键：检查实际的采样率（从AudioUnit格式）
+            AudioStreamBasicDescription actualFormat;
+            UInt32 size = sizeof(actualFormat);
+            AudioUnitGetProperty(engine->_remoteIOUnit,
+                               kAudioUnitProperty_StreamFormat,
+                               kAudioUnitScope_Output,
+                               1,  // 输入bus
+                               &actualFormat,
+                               &size);
+            double actualSampleRate = actualFormat.mSampleRate;
+            double calculatedDuration = (double)(engine.currentSegment.audioData.length / sizeof(SInt16)) / actualSampleRate;
+            double timeDelta = calculatedDuration - lastReportedDuration;
+            lastReportedDuration = calculatedDuration;
+            
             NSLog(@"📊 录音回调 #%d: sampleCount=%u, vocalData=%lu, audioData=%lu", 
                   recordingCallbackCount, 
                   sampleCount,
                   (unsigned long)engine.currentSegment.vocalData.length,
                   (unsigned long)engine.currentSegment.audioData.length);
+            NSLog(@"   🔍 采样率: AudioUnit=%.0fHz, AudioSession=%.0fHz", 
+                  actualSampleRate, 
+                  [AVAudioSession sharedInstance].sampleRate);
+            NSLog(@"   ⏱️ 时长: %.2f秒 (增量: %.2f秒)", calculatedDuration, timeDelta);
         }
         
         // 检查缓冲区大小是否足够
@@ -531,24 +564,21 @@ static OSStatus RenderCallback(void *inRefCon,
                 }
             }
             
-            // 🔧 Bug修复：保存原始人声数据（应用音量但未应用音效）
-            // 这样预览时可以重新应用不同的音效
+            // 🔧 保存原始人声数据（应用音量但未应用音效）
             NSData *vocalChunkData = [NSData dataWithBytes:mixedSamples length:sampleCount * sizeof(SInt16)];
             [engine.currentSegment.vocalData appendData:vocalChunkData];
             
-            // 应用音效处理（在混合BGM之前，仅用于录音文件）
+            // 应用音效处理（在混合BGM之前）
             if (engine.voiceEffectProcessor) {
                 [engine.voiceEffectProcessor processAudioBuffer:mixedSamples sampleCount:sampleCount];
             }
             
-            // 如果有BGM，混入BGM数据（仅用于录音文件）
-            if (engine.bgmPCMData && engine.bgmPCMDataLength > 0) {
-                [engine mixBGMIntoBuffer:mixedSamples sampleCount:sampleCount];
-            }
+            // ✅ 关键修复：audioData 只保存人声+音效（不含BGM）
+            // BGM 会在预览/合成时动态混入，这样可以调整BGM音量
+            NSData *processedVocalData = [NSData dataWithBytes:mixedSamples length:sampleCount * sizeof(SInt16)];
+            [engine.currentSegment.audioData appendData:processedVocalData];
             
-            // ✅ 写入当前段落的混合音频缓冲区（带音效+BGM，用于兼容旧逻辑）
-            NSData *mixedChunkData = [NSData dataWithBytes:mixedSamples length:sampleCount * sizeof(SInt16)];
-            [engine.currentSegment.audioData appendData:mixedChunkData];
+            // 🔧 注意：不再在这里混入BGM，BGM会在输出时实时混入（见下面的输出混音）
         } else {
             NSLog(@"⚠️ 混音缓冲区太小: 需要 %u, 可用 %u", sampleCount, engine->_mixBufferSize);
         }
@@ -875,12 +905,14 @@ static OSStatus RenderCallback(void *inRefCon,
     
     NSLog(@"🛑 停止当前段落录音");
     
-    // 保存当前段落
-    [self saveCurrentSegment];
-    
-    // 停止录音状态（但不停止播放）
+    // 🔧 关键修复：先停止录音标志，立即阻止录音回调继续写入数据
     self.isRecording = NO;
     self.isRecordingPaused = NO;
+    
+    // 然后再保存当前段落（此时录音回调已停止写入）
+    [self saveCurrentSegment];
+    
+    // 清理当前段落引用
     self.currentSegment = nil;
     
     NSLog(@"✅ 当前段落已保存，共 %lu 个段落", (unsigned long)self.recordingSegments.count);
@@ -922,10 +954,18 @@ static OSStatus RenderCallback(void *inRefCon,
         return;
     }
     
-    // 🐛 调试：检查数据大小
-    NSLog(@"💾 准备保存段落:");
-    NSLog(@"   vocalData: %lu bytes", (unsigned long)self.currentSegment.vocalData.length);
-    NSLog(@"   audioData: %lu bytes", (unsigned long)self.currentSegment.audioData.length);
+    // 🐛 详细调试：检查数据大小和调用栈
+    // 🔧 关键修复：使用实际采样率（从AudioUnit），而不是AudioSession的采样率
+    double correctSampleRate = self.actualSampleRate;
+    NSTimeInterval vocalDuration = (self.currentSegment.vocalData.length / sizeof(SInt16)) / correctSampleRate;
+    NSTimeInterval audioDuration = (self.currentSegment.audioData.length / sizeof(SInt16)) / correctSampleRate;
+    
+    NSLog(@"💾 准备保存段落 (调用栈检查):");
+    NSLog(@"   采样率: %.0f Hz (从AudioUnit)", correctSampleRate);
+    NSLog(@"   vocalData: %lu bytes (%.2f秒)", (unsigned long)self.currentSegment.vocalData.length, vocalDuration);
+    NSLog(@"   audioData: %lu bytes (%.2f秒)", (unsigned long)self.currentSegment.audioData.length, audioDuration);
+    NSLog(@"   startTime: %.2f秒", self.currentSegment.startTime);
+    NSLog(@"   已保存段落数: %lu", (unsigned long)self.recordingSegmentsInternal.count);
     
     // 🎯 关键修复：检查是否有数据，空段落不保存
     if (self.currentSegment.audioData.length == 0) {
@@ -934,11 +974,9 @@ static OSStatus RenderCallback(void *inRefCon,
         return;
     }
     
-    // 计算段落时长
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
+    // 计算段落时长（使用实际采样率）
     NSUInteger sampleCount = self.currentSegment.audioData.length / sizeof(SInt16);
-    self.currentSegment.duration = (NSTimeInterval)sampleCount / systemSampleRate;
+    self.currentSegment.duration = (NSTimeInterval)sampleCount / correctSampleRate;
     
     // 添加到段落数组
     [self.recordingSegmentsInternal addObject:self.currentSegment];
@@ -998,12 +1036,15 @@ static OSStatus RenderCallback(void *inRefCon,
         [self.bgmPlayerNode stop];
     }
     
-    // 更新BGM读取位置
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
-    self.bgmReadPosition = (NSUInteger)(targetTime * systemSampleRate);
+    // 🔧 修复：更新BGM读取位置（使用BGM PCM数据的实际采样率）
+    double bgmPCMSampleRate = self.bgmPCMSampleRate > 0 ? self.bgmPCMSampleRate : self.actualSampleRate;
+    self.bgmReadPosition = (NSUInteger)(targetTime * bgmPCMSampleRate);
     
     NSLog(@"⏭️ 跳转到 %.2f 秒（跳过 %.2f 秒）", targetTime, targetTime - currentTime);
+    NSLog(@"   BGM读取位置: %lu/%lu (%.0f Hz)", 
+          (unsigned long)self.bgmReadPosition, 
+          (unsigned long)self.bgmPCMDataLength,
+          bgmPCMSampleRate);
     
     // 🔧 Bug修复：如果之前在播放，确保跳转后继续播放
     if (wasPlaying) {
@@ -1040,15 +1081,16 @@ static OSStatus RenderCallback(void *inRefCon,
     
     // 删除目标时间之后的所有段落
     NSMutableArray *segmentsToKeep = [NSMutableArray array];
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
+    
+    // 🔧 修复：使用录音的实际采样率来计算段落截断
+    double recordingSampleRate = self.actualSampleRate > 0 ? self.actualSampleRate : 48000.0;
     
     for (RecordingSegment *segment in self.recordingSegmentsInternal) {
         if (segment.startTime < targetTime) {
             // 如果段落跨越目标时间，需要截断
             if (segment.startTime + segment.duration > targetTime) {
                 NSTimeInterval newDuration = targetTime - segment.startTime;
-                NSUInteger newSampleCount = (NSUInteger)(newDuration * systemSampleRate);
+                NSUInteger newSampleCount = (NSUInteger)(newDuration * recordingSampleRate);
                 NSUInteger newByteLength = newSampleCount * sizeof(SInt16);
                 
                 // 截断audioData和vocalData
@@ -1079,8 +1121,14 @@ static OSStatus RenderCallback(void *inRefCon,
         [self.bgmPlayerNode stop];
     }
     
-    // 更新BGM读取位置（使用前面已定义的audioSession和systemSampleRate）
-    self.bgmReadPosition = (NSUInteger)(targetTime * systemSampleRate);
+    // 🔧 修复：更新BGM读取位置（使用BGM PCM数据的实际采样率）
+    double bgmPCMSampleRate = self.bgmPCMSampleRate > 0 ? self.bgmPCMSampleRate : self.actualSampleRate;
+    self.bgmReadPosition = (NSUInteger)(targetTime * bgmPCMSampleRate);
+    
+    NSLog(@"   BGM读取位置: %lu/%lu (%.0f Hz)", 
+          (unsigned long)self.bgmReadPosition, 
+          (unsigned long)self.bgmPCMDataLength,
+          bgmPCMSampleRate);
     
     // 🔧 Bug修复：如果之前在播放/录音，回退后继续播放/录音
     if (wasPlaying || wasRecording) {
@@ -1425,12 +1473,11 @@ static OSStatus RenderCallback(void *inRefCon,
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsDirectory = [paths objectAtIndex:0];
     
-    // 🔧 关键修复：在文件名中嵌入采样率信息
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
+    // 🔧 关键修复：在文件名中嵌入采样率信息（使用实际采样率）
+    double correctSampleRate = self.actualSampleRate > 0 ? self.actualSampleRate : 48000.0;
     NSString *fileName = [NSString stringWithFormat:@"karaoke_final_%ld_%.0fHz.pcm", 
                           (long)[[NSDate date] timeIntervalSince1970], 
-                          systemSampleRate];
+                          correctSampleRate];
     NSString *filePath = [documentsDirectory stringByAppendingPathComponent:fileName];
     
     // 保存文件
@@ -1464,9 +1511,10 @@ static OSStatus RenderCallback(void *inRefCon,
           [VoiceEffectProcessor nameForEffectType:effectType],
           self.bgmPitchShift);
     
-    // 1. 获取系统采样率
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
+    // 🔧 关键修复：使用录音时的实际采样率，而不是AudioSession采样率
+    // 录音使用 AudioUnit 的 48000 Hz，合成也必须使用 48000 Hz
+    double systemSampleRate = self.actualSampleRate;
+    NSLog(@"   🔍 合成采样率: %.0f Hz (从AudioUnit)", systemSampleRate);
     
     // 2. 🆕 如果需要音高调整，使用SoundTouch批处理整个BGM
     NSData *processedBGM = self.bgmPCMData;
@@ -1531,6 +1579,13 @@ static OSStatus RenderCallback(void *inRefCon,
     }
     
     NSLog(@"🎬 合成起始时间: 0.00秒，当前处理位置: %.2f秒", currentTime);
+    NSLog(@"📊 段落详细信息:");
+    for (int i = 0; i < sortedSegments.count; i++) {
+        RecordingSegment *seg = sortedSegments[i];
+        NSLog(@"   段落 %d: %.2f~%.2fs (%.2fs), vocalData=%lu bytes, audioData=%lu bytes, isRecorded=%d",
+              i, seg.startTime, seg.startTime + seg.duration, seg.duration,
+              (unsigned long)seg.vocalData.length, (unsigned long)seg.audioData.length, seg.isRecorded);
+    }
     
     for (RecordingSegment *segment in sortedSegments) {
         
@@ -1752,20 +1807,18 @@ static OSStatus RenderCallback(void *inRefCon,
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *documentsDirectory = [paths objectAtIndex:0];
     
-    // 🔧 关键修复：在文件名中嵌入采样率信息，避免播放时采样率不匹配
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
+    // 🔧 关键修复：在文件名中嵌入采样率信息（使用实际采样率）
+    double correctSampleRate = self.actualSampleRate > 0 ? self.actualSampleRate : 48000.0;
     NSString *fileName = [NSString stringWithFormat:@"karaoke_final_%ld_%.0fHz.pcm", 
                           (long)[[NSDate date] timeIntervalSince1970], 
-                          systemSampleRate];
+                          correctSampleRate];
     self.recordingFilePath = [documentsDirectory stringByAppendingPathComponent:fileName];
     
     BOOL success = [finalAudio writeToFile:self.recordingFilePath atomically:YES];
     
     if (success) {
-        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-        double systemSampleRate = audioSession.sampleRate;
-        NSTimeInterval totalDuration = finalAudio.length / sizeof(SInt16) / systemSampleRate;
+        // 使用实际采样率计算时长
+        NSTimeInterval totalDuration = finalAudio.length / sizeof(SInt16) / correctSampleRate;
         NSLog(@"✅ 最终文件保存成功:");
         NSLog(@"   文件路径: %@", self.recordingFilePath);
         NSLog(@"   文件大小: %.2fMB", finalAudio.length / (1024.0 * 1024.0));
@@ -1782,22 +1835,30 @@ static OSStatus RenderCallback(void *inRefCon,
          effectProcessor:(VoiceEffectProcessor *)effectProcessor 
               sampleRate:(double)sampleRate {
     
-    if (!segment.vocalData || segment.vocalData.length == 0) {
-        NSLog(@"⚠️ 段落没有人声数据");
+    // 🔧 关键修复：使用 audioData（已包含音效）而不是 vocalData
+    // audioData 在录制时已经应用了音效，不需要重新处理
+    if (!segment.audioData || segment.audioData.length == 0) {
+        NSLog(@"⚠️ 段落没有音频数据");
         return nil;
     }
     
-    // 1. 获取人声数据
-    const SInt16 *vocalSamples = (const SInt16 *)segment.vocalData.bytes;
-    NSUInteger vocalSampleCount = segment.vocalData.length / sizeof(SInt16);
+    // 1. 获取已处理的音频数据（包含人声+音效，但不含BGM）
+    const SInt16 *audioSamples = (const SInt16 *)segment.audioData.bytes;
+    NSUInteger sampleCount = segment.audioData.length / sizeof(SInt16);
+    
+    NSLog(@"   🔍 remixSegment 输入:");
+    NSLog(@"      audioData: %lu bytes (%lu samples)", 
+          (unsigned long)segment.audioData.length, (unsigned long)sampleCount);
+    NSLog(@"      预期时长: %.2f秒（根据 duration）", segment.duration);
+    NSLog(@"      实际时长: %.2f秒（根据 audioData）", (double)sampleCount / sampleRate);
     
     // 2. 创建输出缓冲区
-    NSMutableData *outputData = [NSMutableData dataWithLength:segment.vocalData.length];
+    NSMutableData *outputData = [NSMutableData dataWithLength:segment.audioData.length];
     SInt16 *outputSamples = (SInt16 *)outputData.mutableBytes;
     
-    // 3. 复制并调整人声音量
-    for (NSUInteger i = 0; i < vocalSampleCount; i++) {
-        int32_t sample = (int32_t)(vocalSamples[i] * micVolume);
+    // 3. 复制并调整音量（不重新应用音效）
+    for (NSUInteger i = 0; i < sampleCount; i++) {
+        int32_t sample = (int32_t)(audioSamples[i] * micVolume);
         
         // 防止溢出
         if (sample > 32767) sample = 32767;
@@ -1806,20 +1867,11 @@ static OSStatus RenderCallback(void *inRefCon,
         outputSamples[i] = (SInt16)sample;
     }
     
-    // 4. 🔧 Bug修复：应用音效（vocalData是原始数据，未应用音效）
-    if (effectProcessor) {
-        if (effectProcessor.effectType != segment.appliedEffect) {
-            NSLog(@"   🎵 预览将应用音效: %@（录制时: %@）", 
-                  [VoiceEffectProcessor nameForEffectType:effectProcessor.effectType],
-                  [VoiceEffectProcessor nameForEffectType:segment.appliedEffect]);
-        } else {
-            NSLog(@"   🎵 预览将应用音效: %@（与录制时相同）", 
-                  [VoiceEffectProcessor nameForEffectType:effectProcessor.effectType]);
-        }
-        [effectProcessor processAudioBuffer:outputSamples sampleCount:(UInt32)vocalSampleCount];
-    } else {
-        NSLog(@"   ⚠️ 无音效处理器");
-    }
+    // 4. 🔧 不再重新应用音效（audioData 已包含音效）
+    // 重新应用音效会导致音频长度改变（10秒变20秒）
+    NSLog(@"   ✅ 使用录制时的音效（%@），时长: %.2f秒", 
+          [VoiceEffectProcessor nameForEffectType:segment.appliedEffect],
+          (double)sampleCount / sampleRate);
     
     // 5. 混合BGM
     NSData *bgmData = [self extractBGMFromTime:segment.startTime 
@@ -1827,10 +1879,17 @@ static OSStatus RenderCallback(void *inRefCon,
                                     sampleRate:sampleRate 
                                         volume:bgmVolume];
     
+    NSLog(@"   🔍 BGM 混入:");
+    NSLog(@"      bgmData: %lu bytes (%s)", 
+          (unsigned long)(bgmData ? bgmData.length : 0),
+          bgmData ? "成功" : "失败");
+    NSLog(@"      outputData: %lu bytes", (unsigned long)outputData.length);
+    NSLog(@"      长度匹配: %s", (bgmData && bgmData.length == outputData.length) ? "是" : "否");
+    
     if (bgmData && bgmData.length == outputData.length) {
         const SInt16 *bgmSamples = (const SInt16 *)bgmData.bytes;
         
-        for (NSUInteger i = 0; i < vocalSampleCount; i++) {
+        for (NSUInteger i = 0; i < sampleCount; i++) {
             int32_t vocalSample = outputSamples[i];
             int32_t bgmSample = bgmSamples[i];
             int32_t mixed = vocalSample + bgmSample;
@@ -1845,6 +1904,12 @@ static OSStatus RenderCallback(void *inRefCon,
         }
     }
     
+    NSLog(@"   🔍 remixSegment 输出:");
+    NSLog(@"      outputData: %lu bytes (%lu samples, %.2f秒)", 
+          (unsigned long)outputData.length,
+          (unsigned long)(outputData.length / sizeof(SInt16)),
+          (double)(outputData.length / sizeof(SInt16)) / sampleRate);
+    
     return outputData;
 }
 
@@ -1858,37 +1923,92 @@ static OSStatus RenderCallback(void *inRefCon,
         return nil;
     }
     
-    // 计算样本范围
-    NSUInteger startSample = (NSUInteger)(startTime * sampleRate);
-    NSUInteger sampleCount = (NSUInteger)(duration * sampleRate);
+    // 🔧 关键修复：使用BGM PCM数据的实际采样率来计算样本位置
+    // 而不是使用传入的录音采样率（它们可能不同）
+    double bgmActualSampleRate = self.bgmPCMSampleRate > 0 ? self.bgmPCMSampleRate : sampleRate;
+    
+    NSLog(@"   🔍 BGM提取参数:");
+    NSLog(@"      时间范围: %.2f ~ %.2f秒 (时长: %.2f秒)", startTime, startTime + duration, duration);
+    NSLog(@"      BGM采样率: %.0f Hz", bgmActualSampleRate);
+    NSLog(@"      录音采样率: %.0f Hz", sampleRate);
+    
+    // 计算样本范围（使用BGM的实际采样率）
+    NSUInteger startSample = (NSUInteger)(startTime * bgmActualSampleRate);
+    NSUInteger bgmSampleCount = (NSUInteger)(duration * bgmActualSampleRate);
     
     // 边界检查
     if (startSample >= self.bgmPCMDataLength) {
-        NSLog(@"⚠️ BGM起始位置超出范围");
+        NSLog(@"⚠️ BGM起始位置超出范围: startSample=%lu, bgmLength=%lu", 
+              (unsigned long)startSample, (unsigned long)self.bgmPCMDataLength);
         return nil;
     }
     
     // 调整样本数量
-    if (startSample + sampleCount > self.bgmPCMDataLength) {
-        sampleCount = self.bgmPCMDataLength - startSample;
+    if (startSample + bgmSampleCount > self.bgmPCMDataLength) {
+        bgmSampleCount = self.bgmPCMDataLength - startSample;
+        NSLog(@"   ⚠️ BGM样本数量被截断: %lu samples", (unsigned long)bgmSampleCount);
     }
     
-    // 提取并应用音量
     const SInt16 *bgmSamples = (const SInt16 *)self.bgmPCMData.bytes;
-    NSMutableData *extractedData = [NSMutableData dataWithLength:sampleCount * sizeof(SInt16)];
-    SInt16 *outputSamples = (SInt16 *)extractedData.mutableBytes;
     
-    for (NSUInteger i = 0; i < sampleCount; i++) {
-        int32_t sample = (int32_t)(bgmSamples[startSample + i] * volume);
+    // 🔧 关键修复：如果BGM采样率和录音采样率不同，需要重采样
+    if (fabs(bgmActualSampleRate - sampleRate) > 1.0) {
+        // 需要重采样
+        NSLog(@"   🔄 需要重采样: %.0f Hz -> %.0f Hz", bgmActualSampleRate, sampleRate);
         
-        // 防止溢出
-        if (sample > 32767) sample = 32767;
-        if (sample < -32768) sample = -32768;
+        // 计算输出样本数（录音采样率）
+        NSUInteger outputSampleCount = (NSUInteger)(duration * sampleRate);
+        NSMutableData *extractedData = [NSMutableData dataWithLength:outputSampleCount * sizeof(SInt16)];
+        SInt16 *outputSamples = (SInt16 *)extractedData.mutableBytes;
         
-        outputSamples[i] = (SInt16)sample;
+        // 线性插值重采样
+        double ratio = bgmActualSampleRate / sampleRate;
+        for (NSUInteger i = 0; i < outputSampleCount; i++) {
+            double srcPos = i * ratio;
+            NSUInteger srcIndex = (NSUInteger)srcPos;
+            double frac = srcPos - srcIndex;
+            
+            if (startSample + srcIndex + 1 < self.bgmPCMDataLength) {
+                // 线性插值
+                SInt16 sample1 = bgmSamples[startSample + srcIndex];
+                SInt16 sample2 = bgmSamples[startSample + srcIndex + 1];
+                int32_t interpolated = (int32_t)(sample1 * (1.0 - frac) + sample2 * frac);
+                
+                // 应用音量
+                interpolated = (int32_t)(interpolated * volume);
+                
+                // 防止溢出
+                if (interpolated > 32767) interpolated = 32767;
+                if (interpolated < -32768) interpolated = -32768;
+                
+                outputSamples[i] = (SInt16)interpolated;
+            } else {
+                outputSamples[i] = 0;
+            }
+        }
+        
+        NSLog(@"   ✅ 重采样完成: %lu samples (BGM) -> %lu samples (录音)", 
+              (unsigned long)bgmSampleCount, (unsigned long)outputSampleCount);
+        return extractedData;
+    } else {
+        // 采样率相同，直接提取并应用音量
+        NSLog(@"   ✅ 采样率匹配，直接提取 %lu samples", (unsigned long)bgmSampleCount);
+        
+        NSMutableData *extractedData = [NSMutableData dataWithLength:bgmSampleCount * sizeof(SInt16)];
+        SInt16 *outputSamples = (SInt16 *)extractedData.mutableBytes;
+        
+        for (NSUInteger i = 0; i < bgmSampleCount; i++) {
+            int32_t sample = (int32_t)(bgmSamples[startSample + i] * volume);
+            
+            // 防止溢出
+            if (sample > 32767) sample = 32767;
+            if (sample < -32768) sample = -32768;
+            
+            outputSamples[i] = (SInt16)sample;
+        }
+        
+        return extractedData;
     }
-    
-    return extractedData;
 }
 
 // 🆕 从BGM中提取指定时间段的数据（向后兼容，使用当前BGM音量）
@@ -1931,17 +2051,17 @@ static OSStatus RenderCallback(void *inRefCon,
         self.bgmPCMData = pcmData;
         NSUInteger originalLength = pcmData.length / sizeof(int16_t);
         
-        // 获取系统采样率用于计算时长
-        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-        double systemSampleRate = audioSession.sampleRate;
+        // 🔧 使用实际采样率计算时长（与录音一致）
+        double correctSampleRate = self.actualSampleRate > 0 ? self.actualSampleRate : 48000.0;
         
         NSLog(@"✅ BGM PCM数据转换成功:");
         NSLog(@"   文件大小: %.2f MB", self.bgmPCMData.length / (1024.0 * 1024.0));
         NSLog(@"   样本数: %lu", (unsigned long)originalLength);
-        NSLog(@"   系统采样率: %.0f Hz", systemSampleRate);
-        NSLog(@"   精确时长: %.2f秒", originalLength / systemSampleRate);
+        NSLog(@"   采样率: %.0f Hz (与录音一致)", correctSampleRate);
+        NSLog(@"   精确时长: %.2f秒", originalLength / correctSampleRate);
         
         self.bgmPCMDataLength = originalLength;
+        self.bgmPCMSampleRate = correctSampleRate;  // 🔧 保存BGM PCM数据的采样率
         self.bgmReadPosition = 0;
     } else {
         NSLog(@"❌ BGM文件转换失败");
@@ -1970,15 +2090,19 @@ static OSStatus RenderCallback(void *inRefCon,
     NSLog(@"   帧数: %lld", audioFile.length);
     NSLog(@"   精确时长: %.2f秒", (double)audioFile.length / audioFile.processingFormat.sampleRate);
     
-    // 🔧 关键修复：使用系统实际采样率而不是固定44100 Hz
+    // 🔧 关键修复：使用录音的实际采样率（从AudioUnit），确保BGM和录音采样率一致
+    // 录音使用 AudioUnit 的 48000 Hz，所以 BGM 也必须转换为 48000 Hz
+    double bgmSampleRate = self.actualSampleRate > 0 ? self.actualSampleRate : 48000.0;
+    
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
+    double audioSessionSampleRate = audioSession.sampleRate;
     
-    NSLog(@"🎵 系统实际采样率: %.0f Hz", systemSampleRate);
+    NSLog(@"🎵 BGM 转换采样率: %.0f Hz (录音采样率)", bgmSampleRate);
+    NSLog(@"   AudioSession 采样率: %.0f Hz (仅供参考)", audioSessionSampleRate);
     
-    // 设置PCM格式 (系统采样率, 单声道, 16bit)
+    // 设置PCM格式 (录音采样率, 单声道, 16bit)
     AVAudioFormat *pcmFormat = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
-                                                                sampleRate:systemSampleRate
+                                                                sampleRate:bgmSampleRate
                                                                   channels:1
                                                                interleaved:YES];
     
@@ -1999,10 +2123,10 @@ static OSStatus RenderCallback(void *inRefCon,
         NSLog(@"🔄 开始格式转换 (%.0f Hz, %uch -> %.0f Hz, 1ch)...", 
               audioFile.processingFormat.sampleRate, 
               audioFile.processingFormat.channelCount,
-              systemSampleRate);
+              bgmSampleRate);
         
         // 🔧 计算预期的输出帧数（考虑采样率转换）
-        double sampleRateRatio = systemSampleRate / audioFile.processingFormat.sampleRate;
+        double sampleRateRatio = bgmSampleRate / audioFile.processingFormat.sampleRate;
         AVAudioFrameCount expectedOutputFrames = (AVAudioFrameCount)(audioFile.length * sampleRateRatio);
         NSLog(@"   预期输出帧数: %u (转换比率: %.4f)", expectedOutputFrames, sampleRateRatio);
         
@@ -2149,9 +2273,19 @@ static OSStatus RenderCallback(void *inRefCon,
         startTime = 0;
     }
     
-    // 更新BGM读取位置（用于录音混合）
-    NSUInteger targetPosition = (NSUInteger)(startTime * systemSampleRate);
+    // 🔧 关键修复：使用BGM PCM数据的实际采样率来计算读取位置
+    // 而不是使用AudioSession的采样率（它们可能不同）
+    double bgmPCMSampleRate = self.bgmPCMSampleRate > 0 ? self.bgmPCMSampleRate : self.actualSampleRate;
+    NSUInteger targetPosition = (NSUInteger)(startTime * bgmPCMSampleRate);
     self.bgmReadPosition = targetPosition;
+    
+    NSLog(@"🎵 从 %.2f 秒开始播放 BGM", startTime);
+    NSLog(@"   音量: %.0f%%", self.bgmVolume * 100);
+    NSLog(@"   音高: %.1f 半音", self.bgmPitchShift);
+    NSLog(@"   BGM读取位置: %lu/%lu (%.0f Hz)", 
+          (unsigned long)targetPosition, 
+          (unsigned long)self.bgmPCMDataLength,
+          bgmPCMSampleRate);
     
     // 调度音频段落播放
     __weak typeof(self) weakSelf = self;
@@ -2257,10 +2391,11 @@ static OSStatus RenderCallback(void *inRefCon,
         // 计算当前播放时间
         NSTimeInterval currentTime = self.lastPlaybackTime + (NSTimeInterval)playerTime.sampleTime / playerTime.sampleRate;
         
-        // 更新BGM读取位置（用于录音混合）
-        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-        double systemSampleRate = audioSession.sampleRate;
-        self.bgmReadPosition = (NSUInteger)(currentTime * systemSampleRate);
+        // 🔧 关键修复：使用BGM PCM数据的实际采样率来更新读取位置
+        double bgmPCMSampleRate = self.bgmPCMSampleRate > 0 ? self.bgmPCMSampleRate : self.actualSampleRate;
+        if (bgmPCMSampleRate > 0) {
+            self.bgmReadPosition = (NSUInteger)(currentTime * bgmPCMSampleRate);
+        }
         
         // 通知代理更新播放时间（用于歌词同步等）
         if ([self.delegate respondsToSelector:@selector(audioEngineDidUpdatePlaybackTime:)]) {
@@ -2399,11 +2534,14 @@ static OSStatus RenderCallback(void *inRefCon,
         return 0.0;
     }
     
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    double systemSampleRate = audioSession.sampleRate;
+    // 🔧 关键修复：使用BGM PCM数据的实际采样率来计算播放时间
+    double bgmPCMSampleRate = self.bgmPCMSampleRate > 0 ? self.bgmPCMSampleRate : self.actualSampleRate;
+    if (bgmPCMSampleRate <= 0) {
+        bgmPCMSampleRate = 48000.0;  // 默认值
+    }
     
     NSUInteger currentPos = self.bgmReadPosition;
-    NSTimeInterval calculatedTime = (NSTimeInterval)currentPos / systemSampleRate;
+    NSTimeInterval calculatedTime = (NSTimeInterval)currentPos / bgmPCMSampleRate;
     
     // 🔧 修复：确保计算出的时间不为负数，并且不超过歌曲总长度
     calculatedTime = MAX(0.0, calculatedTime);
