@@ -21,6 +21,7 @@
 #import "AudioFileFormats.h"  // 🆕 音频格式工具
 #import "KaraokeViewController.h"
 #import "MusicLibraryManager.h"  // 🆕 音乐库管理器
+#import "ViewController+CloudDownload.h"  // 🆕 云端下载功能
 #import <AVFoundation/AVFoundation.h>
 
 @interface ViewController ()<CAAnimationDelegate,UITableViewDelegate, UITableViewDataSource, AudioSpectrumPlayerDelegate, VisualEffectManagerDelegate, GalaxyControlDelegate, CyberpunkControlDelegate, PerformanceControlDelegate, LyricsEffectControlDelegate, UISearchBarDelegate>
@@ -480,6 +481,9 @@
     
     // 添加歌词视图
     [self setupLyricsView];
+    
+    // 🆕 启用云端下载功能
+    [self setupCloudDownloadFeature];
 }
 
 - (void)setupBackgroundLayers {

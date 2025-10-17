@@ -22,6 +22,21 @@
 		4C2C6A302EA2170A00D18118 /* mdf.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A082EA2170A00D18118 /* mdf.c */; };
 		4C2C6A312EA2170A00D18118 /* SpeexDSPBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A222EA2170A00D18118 /* SpeexDSPBridge.mm */; };
 		4C2C6A322EA2170A00D18118 /* filterbank.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C69FC2EA2170A00D18118 /* filterbank.c */; };
+		4C2C6A3B2EA22A1C00D18118 /* MusicDownloadManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A362EA22A1C00D18118 /* MusicDownloadManager.m */; };
+		4C2C6A3C2EA22A1C00D18118 /* ViewController+CloudDownload.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A392EA22A1C00D18118 /* ViewController+CloudDownload.m */; };
+		4C2C6A422EA236ED00D18118 /* KugouMusicDownloader.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A412EA236ED00D18118 /* KugouMusicDownloader.m */; };
+		4C2C6A822EA24E4D00D18118 /* 周杰伦-最伟大的作品.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A7F2EA24E4D00D18118 /* 周杰伦-最伟大的作品.mp3 */; };
+		4C2C6A832EA24E4D00D18118 /* 周杰伦-错过的烟火.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A772EA24E4D00D18118 /* 周杰伦-错过的烟火.mp3 */; };
+		4C2C6A842EA24E4D00D18118 /* 周杰伦-Intro.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A802EA24E4D00D18118 /* 周杰伦-Intro.mp3 */; };
+		4C2C6A852EA24E4D00D18118 /* 周杰伦-等你下课 (with 杨瑞代).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A792EA24E4D00D18118 /* 周杰伦-等你下课 (with 杨瑞代).mp3 */; };
+		4C2C6A862EA24E4D00D18118 /* 周杰伦-说好不哭 (with 五月天阿信).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A7D2EA24E4D00D18118 /* 周杰伦-说好不哭 (with 五月天阿信).mp3 */; };
+		4C2C6A872EA24E4D00D18118 /* 周杰伦-Mojito.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A812EA24E4D00D18118 /* 周杰伦-Mojito.mp3 */; };
+		4C2C6A882EA24E4D00D18118 /* 周杰伦-还在流浪.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A7B2EA24E4D00D18118 /* 周杰伦-还在流浪.mp3 */; };
+		4C2C6A892EA24E4D00D18118 /* 周杰伦-不爱我就拉倒.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A762EA24E4D00D18118 /* 周杰伦-不爱我就拉倒.mp3 */; };
+		4C2C6A8A2EA24E4D00D18118 /* 周杰伦-倒影.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A782EA24E4D00D18118 /* 周杰伦-倒影.mp3 */; };
+		4C2C6A8B2EA24E4D00D18118 /* 周杰伦-粉色海洋.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A7A2EA24E4D00D18118 /* 周杰伦-粉色海洋.mp3 */; };
+		4C2C6A8C2EA24E4D00D18118 /* 周杰伦-红颜如霜.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A7C2EA24E4D00D18118 /* 周杰伦-红颜如霜.mp3 */; };
+		4C2C6A8D2EA24E4D00D18118 /* 周杰伦-我是如此相信.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C6A7E2EA24E4D00D18118 /* 周杰伦-我是如此相信.mp3 */; };
 		4C49068E2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C49068D2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 */; };
 		4C4906902E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C49068F2E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 */; };
 		4C5167EC2E9DED6200853960 /* KaraokeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5167E92E9DED6200853960 /* KaraokeViewController.m */; };
@@ -241,6 +256,24 @@
 		4C2C6A1F2EA2170A00D18118 /* vorbis_psy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vorbis_psy.h; sourceTree = "<group>"; };
 		4C2C6A212EA2170A00D18118 /* SpeexDSPBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SpeexDSPBridge.h; sourceTree = "<group>"; };
 		4C2C6A222EA2170A00D18118 /* SpeexDSPBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SpeexDSPBridge.mm; sourceTree = "<group>"; };
+		4C2C6A352EA22A1C00D18118 /* MusicDownloadManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MusicDownloadManager.h; sourceTree = "<group>"; };
+		4C2C6A362EA22A1C00D18118 /* MusicDownloadManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MusicDownloadManager.m; sourceTree = "<group>"; };
+		4C2C6A382EA22A1C00D18118 /* ViewController+CloudDownload.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ViewController+CloudDownload.h"; sourceTree = "<group>"; };
+		4C2C6A392EA22A1C00D18118 /* ViewController+CloudDownload.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ViewController+CloudDownload.m"; sourceTree = "<group>"; };
+		4C2C6A402EA236ED00D18118 /* KugouMusicDownloader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KugouMusicDownloader.h; sourceTree = "<group>"; };
+		4C2C6A412EA236ED00D18118 /* KugouMusicDownloader.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = KugouMusicDownloader.m; sourceTree = "<group>"; };
+		4C2C6A762EA24E4D00D18118 /* 周杰伦-不爱我就拉倒.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-不爱我就拉倒.mp3"; sourceTree = "<group>"; };
+		4C2C6A772EA24E4D00D18118 /* 周杰伦-错过的烟火.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-错过的烟火.mp3"; sourceTree = "<group>"; };
+		4C2C6A782EA24E4D00D18118 /* 周杰伦-倒影.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-倒影.mp3"; sourceTree = "<group>"; };
+		4C2C6A792EA24E4D00D18118 /* 周杰伦-等你下课 (with 杨瑞代).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-等你下课 (with 杨瑞代).mp3"; sourceTree = "<group>"; };
+		4C2C6A7A2EA24E4D00D18118 /* 周杰伦-粉色海洋.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-粉色海洋.mp3"; sourceTree = "<group>"; };
+		4C2C6A7B2EA24E4D00D18118 /* 周杰伦-还在流浪.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-还在流浪.mp3"; sourceTree = "<group>"; };
+		4C2C6A7C2EA24E4D00D18118 /* 周杰伦-红颜如霜.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-红颜如霜.mp3"; sourceTree = "<group>"; };
+		4C2C6A7D2EA24E4D00D18118 /* 周杰伦-说好不哭 (with 五月天阿信).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-说好不哭 (with 五月天阿信).mp3"; sourceTree = "<group>"; };
+		4C2C6A7E2EA24E4D00D18118 /* 周杰伦-我是如此相信.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-我是如此相信.mp3"; sourceTree = "<group>"; };
+		4C2C6A7F2EA24E4D00D18118 /* 周杰伦-最伟大的作品.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-最伟大的作品.mp3"; sourceTree = "<group>"; };
+		4C2C6A802EA24E4D00D18118 /* 周杰伦-Intro.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-Intro.mp3"; sourceTree = "<group>"; };
+		4C2C6A812EA24E4D00D18118 /* 周杰伦-Mojito.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周杰伦-Mojito.mp3"; sourceTree = "<group>"; };
 		4C49068D2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Imagine Dragons - Shots.mp3"; sourceTree = "<group>"; };
 		4C49068F2E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3"; sourceTree = "<group>"; };
 		4C5161DAEDAB185F481B94D3 /* VoiceEffectProcessor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VoiceEffectProcessor.h; sourceTree = "<group>"; };
@@ -533,6 +566,19 @@
 			path = SpeexDSP;
 			sourceTree = "<group>";
 		};
+		4C2C6A3A2EA22A1C00D18118 /* Download */ = {
+			isa = PBXGroup;
+			children = (
+				4C2C6A352EA22A1C00D18118 /* MusicDownloadManager.h */,
+				4C2C6A362EA22A1C00D18118 /* MusicDownloadManager.m */,
+				4C2C6A382EA22A1C00D18118 /* ViewController+CloudDownload.h */,
+				4C2C6A392EA22A1C00D18118 /* ViewController+CloudDownload.m */,
+				4C2C6A402EA236ED00D18118 /* KugouMusicDownloader.h */,
+				4C2C6A412EA236ED00D18118 /* KugouMusicDownloader.m */,
+			);
+			path = Download;
+			sourceTree = "<group>";
+		};
 		4C5167EB2E9DED6200853960 /* Karaoke */ = {
 			isa = PBXGroup;
 			children = (
@@ -704,6 +750,18 @@
 				4C5E4BAA2EA10825009B5708 /* Jessie J,李玟,KZ Tandingan - Bang Bang + 龙拳 (Live).mp3 */,
 				4C5E4BAB2EA10825009B5708 /* Jessie J,Luke James - I'll Be There (Live).mp3 */,
 				4C5E4BAC2EA10825009B5708 /* KDA,Madison Beer,i-dle - POPSTARS.mp3 */,
+				4C2C6A762EA24E4D00D18118 /* 周杰伦-不爱我就拉倒.mp3 */,
+				4C2C6A772EA24E4D00D18118 /* 周杰伦-错过的烟火.mp3 */,
+				4C2C6A782EA24E4D00D18118 /* 周杰伦-倒影.mp3 */,
+				4C2C6A792EA24E4D00D18118 /* 周杰伦-等你下课 (with 杨瑞代).mp3 */,
+				4C2C6A7A2EA24E4D00D18118 /* 周杰伦-粉色海洋.mp3 */,
+				4C2C6A7B2EA24E4D00D18118 /* 周杰伦-还在流浪.mp3 */,
+				4C2C6A7C2EA24E4D00D18118 /* 周杰伦-红颜如霜.mp3 */,
+				4C2C6A7D2EA24E4D00D18118 /* 周杰伦-说好不哭 (with 五月天阿信).mp3 */,
+				4C2C6A7E2EA24E4D00D18118 /* 周杰伦-我是如此相信.mp3 */,
+				4C2C6A7F2EA24E4D00D18118 /* 周杰伦-最伟大的作品.mp3 */,
+				4C2C6A802EA24E4D00D18118 /* 周杰伦-Intro.mp3 */,
+				4C2C6A812EA24E4D00D18118 /* 周杰伦-Mojito.mp3 */,
 				4C5E4BBD2EA10DA5009B5708 /* 赵雷 - 吉姆餐厅.ncm */,
 				4C5E4BBE2EA10DA5009B5708 /* G.E.M.邓紫棋 - 句号.ncm */,
 				4C5E4BBF2EA10DA5009B5708 /* Jessie J - Thunder.ncm */,
@@ -871,6 +929,7 @@
 				4C5C27B62E9CFE7F00D9AEA9 /* Lyrics */,
 				4C5167EB2E9DED6200853960 /* Karaoke */,
 				4C65487B2EA0C500006DD8DD /* Tools */,
+				4C2C6A3A2EA22A1C00D18118 /* Download */,
 			);
 			path = AudioSampleBuffer;
 			sourceTree = "<group>";
@@ -968,6 +1027,18 @@
 				4C66E6E62E8A89E8003200DA /* Varien - Future Funk.mp3 in Resources */,
 				4C66E6E72E8A89E8003200DA /* Imagine Dragons - Warriors.mp3 in Resources */,
 				4C66E6E92E8A89E8003200DA /* 马頔 - 无畏.mp3 in Resources */,
+				4C2C6A822EA24E4D00D18118 /* 周杰伦-最伟大的作品.mp3 in Resources */,
+				4C2C6A832EA24E4D00D18118 /* 周杰伦-错过的烟火.mp3 in Resources */,
+				4C2C6A842EA24E4D00D18118 /* 周杰伦-Intro.mp3 in Resources */,
+				4C2C6A852EA24E4D00D18118 /* 周杰伦-等你下课 (with 杨瑞代).mp3 in Resources */,
+				4C2C6A862EA24E4D00D18118 /* 周杰伦-说好不哭 (with 五月天阿信).mp3 in Resources */,
+				4C2C6A872EA24E4D00D18118 /* 周杰伦-Mojito.mp3 in Resources */,
+				4C2C6A882EA24E4D00D18118 /* 周杰伦-还在流浪.mp3 in Resources */,
+				4C2C6A892EA24E4D00D18118 /* 周杰伦-不爱我就拉倒.mp3 in Resources */,
+				4C2C6A8A2EA24E4D00D18118 /* 周杰伦-倒影.mp3 in Resources */,
+				4C2C6A8B2EA24E4D00D18118 /* 周杰伦-粉色海洋.mp3 in Resources */,
+				4C2C6A8C2EA24E4D00D18118 /* 周杰伦-红颜如霜.mp3 in Resources */,
+				4C2C6A8D2EA24E4D00D18118 /* 周杰伦-我是如此相信.mp3 in Resources */,
 				4C49068E2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 in Resources */,
 				4C66E6EA2E8A89E8003200DA /* Lenka - Crystal Ball.mp3 in Resources */,
 				4C77CD0C2E98DC71008EA7C6 /* 黑豹乐队 - 散，作鸟兽.mp3 in Resources */,
@@ -1095,6 +1166,7 @@
 				4C699F8D2E9F951A009090AB /* cpu_detect_x86.cpp in Sources */,
 				4C699F8E2E9F951A009090AB /* SoundTouchBridge.cpp in Sources */,
 				4C699F8F2E9F951A009090AB /* AAFilter.cpp in Sources */,
+				4C2C6A422EA236ED00D18118 /* KugouMusicDownloader.m in Sources */,
 				4C66E7162E8A9255003200DA /* EffectSelectorView.m in Sources */,
 				4C66E7172E8A9255003200DA /* VisualEffectType.m in Sources */,
 				4C5167F92E9E032E00853960 /* PCMAudioPlayer.m in Sources */,
@@ -1116,6 +1188,8 @@
 				4C66E7372E8A9255003200DA /* GalaxyShader.metal in Sources */,
 				4C66E7382E8A9256003200DA /* LightningShader.metal in Sources */,
 				4C5167EC2E9DED6200853960 /* KaraokeViewController.m in Sources */,
+				4C2C6A3B2EA22A1C00D18118 /* MusicDownloadManager.m in Sources */,
+				4C2C6A3C2EA22A1C00D18118 /* ViewController+CloudDownload.m in Sources */,
 				4C66E7192E8A9255003200DA /* VisualEffectManager.m in Sources */,
 				4C66E71A2E8A9255003200DA /* MetalRenderer.m in Sources */,
 				64C5448E28C83A7700C23393 /* AudioSpectrumPlayer.m in Sources */,
