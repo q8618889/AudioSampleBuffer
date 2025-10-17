@@ -928,14 +928,11 @@ typedef NS_ENUM(NSInteger, NCMDecryptorError) {
     
     NSLog(@"📊 音频文件统计:");
     NSLog(@"   MP3: %ld 个", (long)mp3Count);
-    NSLog(@"   NCM: %ld 个 %@", (long)ncmCount, ncmCount > 0 ? @"(需要解密)" : @"");
+    NSLog(@"   NCM: %ld 个 %@", (long)ncmCount, ncmCount > 0 ? @"(需要转换)" : @"");
     NSLog(@"   其他: %ld 个", (long)otherCount);
     NSLog(@"   总计: %lu 个", (unsigned long)audioFiles.count);
     
-    // 如果有 NCM 文件，自动启动后台解密
-    if (ncmCount > 0) {
-        [self decryptNCMFilesInBackgroundFromDirectory:audioDirectory];
-    }
+    // ⚠️ 不再自动解密，改为在歌曲列表中按需转换
     
     return [audioFiles copy];
 }

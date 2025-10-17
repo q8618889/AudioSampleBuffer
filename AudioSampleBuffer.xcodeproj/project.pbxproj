@@ -7,6 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4C2C69F02EA216AF00D18118 /* 队长 - 楼顶上的小斑鸠.ncm in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C69EC2EA216AF00D18118 /* 队长 - 楼顶上的小斑鸠.ncm */; };
+		4C2C69F12EA216AF00D18118 /* 小霞,海洋Bo - 向云端.ncm in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C69EF2EA216AF00D18118 /* 小霞,海洋Bo - 向云端.ncm */; };
+		4C2C69F22EA216AF00D18118 /* 郭顶 - 凄美地.ncm in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C69ED2EA216AF00D18118 /* 郭顶 - 凄美地.ncm */; };
+		4C2C69F32EA216AF00D18118 /* 黄绮珊 - 离不开你 (Live).ncm in Resources */ = {isa = PBXBuildFile; fileRef = 4C2C69EE2EA216AF00D18118 /* 黄绮珊 - 离不开你 (Live).ncm */; };
+		4C2C6A232EA2170A00D18118 /* smallft.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A122EA2170A00D18118 /* smallft.c */; };
+		4C2C6A252EA2170A00D18118 /* resample.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A0D2EA2170A00D18118 /* resample.c */; };
+		4C2C6A282EA2170A00D18118 /* jitter.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A022EA2170A00D18118 /* jitter.c */; };
+		4C2C6A292EA2170A00D18118 /* fftwrap.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C69FA2EA2170A00D18118 /* fftwrap.c */; };
+		4C2C6A2B2EA2170A00D18118 /* kiss_fftr.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A062EA2170A00D18118 /* kiss_fftr.c */; };
+		4C2C6A2C2EA2170A00D18118 /* preprocess.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A0B2EA2170A00D18118 /* preprocess.c */; };
+		4C2C6A2D2EA2170A00D18118 /* kiss_fft.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A042EA2170A00D18118 /* kiss_fft.c */; };
+		4C2C6A2F2EA2170A00D18118 /* buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C69F72EA2170A00D18118 /* buffer.c */; };
+		4C2C6A302EA2170A00D18118 /* mdf.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A082EA2170A00D18118 /* mdf.c */; };
+		4C2C6A312EA2170A00D18118 /* SpeexDSPBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C6A222EA2170A00D18118 /* SpeexDSPBridge.mm */; };
+		4C2C6A322EA2170A00D18118 /* filterbank.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C2C69FC2EA2170A00D18118 /* filterbank.c */; };
 		4C49068E2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C49068D2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 */; };
 		4C4906902E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C49068F2E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 */; };
 		4C5167EC2E9DED6200853960 /* KaraokeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5167E92E9DED6200853960 /* KaraokeViewController.m */; };
@@ -25,7 +40,7 @@
 		4C51693FE5D91950459F8E6D /* VoiceEffectProcessor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4C51DB61D13DB2C847B685D5 /* VoiceEffectProcessor.mm */; };
 		4C5C27A92E9CB0A400D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27A72E9CB0A400D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.mp3 */; };
 		4C5C27AA2E9CB0A400D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27A82E9CB0A400D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3 */; };
-		4C5C27AB2E9CB0A400D9AEA9 /* 爱宝 - bangbang.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27A62E9CB0A400D9AEA9 /* 爱宝 - bangbang.mp3 */; };
+		4C5C27AB2E9CB0A400D9AEA9 /* DOUDOU - 嗵嗵.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C5C27A62E9CB0A400D9AEA9 /* DOUDOU - 嗵嗵.mp3 */; };
 		4C5C27AE2E9CC24D00D9AEA9 /* PerformanceControlPanel.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C5C27AD2E9CC24D00D9AEA9 /* PerformanceControlPanel.m */; };
 		4C5E4BAD2EA10825009B5708 /* Jessie J - I Will Always Love You (Live).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C5E4BA42EA10825009B5708 /* Jessie J - I Will Always Love You (Live).mp3 */; };
 		4C5E4BAE2EA10825009B5708 /* Jessie J,Luke James - I'll Be There (Live).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C5E4BAB2EA10825009B5708 /* Jessie J,Luke James - I'll Be There (Live).mp3 */; };
@@ -164,8 +179,6 @@
 		4C699F8F2E9F951A009090AB /* AAFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C699F662E9F951A009090AB /* AAFilter.cpp */; };
 		4C77CD0A2E98DB75008EA7C6 /* Jonah Kagen - God Needs The Devil.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD092E98DB75008EA7C6 /* Jonah Kagen - God Needs The Devil.mp3 */; };
 		4C77CD0C2E98DC71008EA7C6 /* 黑豹乐队 - 散，作鸟兽.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD0B2E98DC71008EA7C6 /* 黑豹乐队 - 散，作鸟兽.mp3 */; };
-		4C77CD132E98F31B008EA7C6 /* A公馆 - 与时间赛跑的人.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD112E98F31B008EA7C6 /* A公馆 - 与时间赛跑的人.mp3 */; };
-		4C77CD142E98F31B008EA7C6 /* A公馆 - 海浪回潮.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD102E98F31B008EA7C6 /* A公馆 - 海浪回潮.mp3 */; };
 		4C77CD152E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD0F2E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 */; };
 		4C77CD162E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD122E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 */; };
 		4C77CD172E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 4C77CD0E2E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 */; };
@@ -191,6 +204,43 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		4C2C69EC2EA216AF00D18118 /* 队长 - 楼顶上的小斑鸠.ncm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "队长 - 楼顶上的小斑鸠.ncm"; sourceTree = "<group>"; };
+		4C2C69ED2EA216AF00D18118 /* 郭顶 - 凄美地.ncm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "郭顶 - 凄美地.ncm"; sourceTree = "<group>"; };
+		4C2C69EE2EA216AF00D18118 /* 黄绮珊 - 离不开你 (Live).ncm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "黄绮珊 - 离不开你 (Live).ncm"; sourceTree = "<group>"; };
+		4C2C69EF2EA216AF00D18118 /* 小霞,海洋Bo - 向云端.ncm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "小霞,海洋Bo - 向云端.ncm"; sourceTree = "<group>"; };
+		4C2C69F42EA2170A00D18118 /* _kiss_fft_guts.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _kiss_fft_guts.h; sourceTree = "<group>"; };
+		4C2C69F52EA2170A00D18118 /* arch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = arch.h; sourceTree = "<group>"; };
+		4C2C69F62EA2170A00D18118 /* bfin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bfin.h; sourceTree = "<group>"; };
+		4C2C69F72EA2170A00D18118 /* buffer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = buffer.c; sourceTree = "<group>"; };
+		4C2C69F82EA2170A00D18118 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		4C2C69F92EA2170A00D18118 /* fftwrap.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fftwrap.h; sourceTree = "<group>"; };
+		4C2C69FA2EA2170A00D18118 /* fftwrap.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = fftwrap.c; sourceTree = "<group>"; };
+		4C2C69FB2EA2170A00D18118 /* filterbank.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = filterbank.h; sourceTree = "<group>"; };
+		4C2C69FC2EA2170A00D18118 /* filterbank.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = filterbank.c; sourceTree = "<group>"; };
+		4C2C69FD2EA2170A00D18118 /* fixed_arm4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fixed_arm4.h; sourceTree = "<group>"; };
+		4C2C69FE2EA2170A00D18118 /* fixed_arm5e.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fixed_arm5e.h; sourceTree = "<group>"; };
+		4C2C69FF2EA2170A00D18118 /* fixed_bfin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fixed_bfin.h; sourceTree = "<group>"; };
+		4C2C6A002EA2170A00D18118 /* fixed_debug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fixed_debug.h; sourceTree = "<group>"; };
+		4C2C6A012EA2170A00D18118 /* fixed_generic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fixed_generic.h; sourceTree = "<group>"; };
+		4C2C6A022EA2170A00D18118 /* jitter.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = jitter.c; sourceTree = "<group>"; };
+		4C2C6A032EA2170A00D18118 /* kiss_fft.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kiss_fft.h; sourceTree = "<group>"; };
+		4C2C6A042EA2170A00D18118 /* kiss_fft.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = kiss_fft.c; sourceTree = "<group>"; };
+		4C2C6A052EA2170A00D18118 /* kiss_fftr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kiss_fftr.h; sourceTree = "<group>"; };
+		4C2C6A062EA2170A00D18118 /* kiss_fftr.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = kiss_fftr.c; sourceTree = "<group>"; };
+		4C2C6A072EA2170A00D18118 /* math_approx.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = math_approx.h; sourceTree = "<group>"; };
+		4C2C6A082EA2170A00D18118 /* mdf.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mdf.c; sourceTree = "<group>"; };
+		4C2C6A092EA2170A00D18118 /* misc_bfin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = misc_bfin.h; sourceTree = "<group>"; };
+		4C2C6A0A2EA2170A00D18118 /* os_support.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = os_support.h; sourceTree = "<group>"; };
+		4C2C6A0B2EA2170A00D18118 /* preprocess.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = preprocess.c; sourceTree = "<group>"; };
+		4C2C6A0C2EA2170A00D18118 /* pseudofloat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pseudofloat.h; sourceTree = "<group>"; };
+		4C2C6A0D2EA2170A00D18118 /* resample.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = resample.c; sourceTree = "<group>"; };
+		4C2C6A0E2EA2170A00D18118 /* resample_neon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = resample_neon.h; sourceTree = "<group>"; };
+		4C2C6A0F2EA2170A00D18118 /* resample_sse.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = resample_sse.h; sourceTree = "<group>"; };
+		4C2C6A112EA2170A00D18118 /* smallft.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = smallft.h; sourceTree = "<group>"; };
+		4C2C6A122EA2170A00D18118 /* smallft.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = smallft.c; sourceTree = "<group>"; };
+		4C2C6A1F2EA2170A00D18118 /* vorbis_psy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vorbis_psy.h; sourceTree = "<group>"; };
+		4C2C6A212EA2170A00D18118 /* SpeexDSPBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SpeexDSPBridge.h; sourceTree = "<group>"; };
+		4C2C6A222EA2170A00D18118 /* SpeexDSPBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SpeexDSPBridge.mm; sourceTree = "<group>"; };
 		4C49068D2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Imagine Dragons - Shots.mp3"; sourceTree = "<group>"; };
 		4C49068F2E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3"; sourceTree = "<group>"; };
 		4C5161DAEDAB185F481B94D3 /* VoiceEffectProcessor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VoiceEffectProcessor.h; sourceTree = "<group>"; };
@@ -221,7 +271,7 @@
 		4C51687C2E9E5FD500853960 /* LyricsView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LyricsView.h; sourceTree = "<group>"; };
 		4C51687D2E9E5FD500853960 /* LyricsView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LyricsView.m; sourceTree = "<group>"; };
 		4C51DB61D13DB2C847B685D5 /* VoiceEffectProcessor.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = VoiceEffectProcessor.mm; sourceTree = "<group>"; };
-		4C5C27A62E9CB0A400D9AEA9 /* 爱宝 - bangbang.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "爱宝 - bangbang.mp3"; sourceTree = "<group>"; };
+		4C5C27A62E9CB0A400D9AEA9 /* DOUDOU - 嗵嗵.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "DOUDOU - 嗵嗵.mp3"; sourceTree = "<group>"; };
 		4C5C27A72E9CB0A400D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "吴垚滔,DOUDOU - 暮野荒原.mp3"; sourceTree = "<group>"; };
 		4C5C27A82E9CB0A400D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3"; sourceTree = "<group>"; };
 		4C5C27AC2E9CC24D00D9AEA9 /* PerformanceControlPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PerformanceControlPanel.h; sourceTree = "<group>"; };
@@ -399,8 +449,6 @@
 		4C77CD0B2E98DC71008EA7C6 /* 黑豹乐队 - 散，作鸟兽.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "黑豹乐队 - 散，作鸟兽.mp3"; sourceTree = "<group>"; };
 		4C77CD0E2E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "梁博 - 出现又离开 (Live).mp3"; sourceTree = "<group>"; };
 		4C77CD0F2E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "周深 - 光亮 (Live版).mp3"; sourceTree = "<group>"; };
-		4C77CD102E98F31B008EA7C6 /* A公馆 - 海浪回潮.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "A公馆 - 海浪回潮.mp3"; sourceTree = "<group>"; };
-		4C77CD112E98F31B008EA7C6 /* A公馆 - 与时间赛跑的人.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "A公馆 - 与时间赛跑的人.mp3"; sourceTree = "<group>"; };
 		4C77CD122E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "LOVE PSYCHEDELICO - Last Smile.mp3"; sourceTree = "<group>"; };
 		4C77CD192E990F61008EA7C6 /* CyberpunkControlPanel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CyberpunkControlPanel.h; sourceTree = "<group>"; };
 		4C77CD1A2E990F61008EA7C6 /* CyberpunkControlPanel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CyberpunkControlPanel.m; sourceTree = "<group>"; };
@@ -447,6 +495,44 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4C2C6A202EA2170A00D18118 /* SpeexDSP */ = {
+			isa = PBXGroup;
+			children = (
+				4C2C69F42EA2170A00D18118 /* _kiss_fft_guts.h */,
+				4C2C69F52EA2170A00D18118 /* arch.h */,
+				4C2C69F62EA2170A00D18118 /* bfin.h */,
+				4C2C69F72EA2170A00D18118 /* buffer.c */,
+				4C2C69F82EA2170A00D18118 /* config.h */,
+				4C2C69F92EA2170A00D18118 /* fftwrap.h */,
+				4C2C69FA2EA2170A00D18118 /* fftwrap.c */,
+				4C2C69FB2EA2170A00D18118 /* filterbank.h */,
+				4C2C69FC2EA2170A00D18118 /* filterbank.c */,
+				4C2C69FD2EA2170A00D18118 /* fixed_arm4.h */,
+				4C2C69FE2EA2170A00D18118 /* fixed_arm5e.h */,
+				4C2C69FF2EA2170A00D18118 /* fixed_bfin.h */,
+				4C2C6A002EA2170A00D18118 /* fixed_debug.h */,
+				4C2C6A012EA2170A00D18118 /* fixed_generic.h */,
+				4C2C6A022EA2170A00D18118 /* jitter.c */,
+				4C2C6A032EA2170A00D18118 /* kiss_fft.h */,
+				4C2C6A042EA2170A00D18118 /* kiss_fft.c */,
+				4C2C6A052EA2170A00D18118 /* kiss_fftr.h */,
+				4C2C6A062EA2170A00D18118 /* kiss_fftr.c */,
+				4C2C6A072EA2170A00D18118 /* math_approx.h */,
+				4C2C6A082EA2170A00D18118 /* mdf.c */,
+				4C2C6A092EA2170A00D18118 /* misc_bfin.h */,
+				4C2C6A0A2EA2170A00D18118 /* os_support.h */,
+				4C2C6A0B2EA2170A00D18118 /* preprocess.c */,
+				4C2C6A0C2EA2170A00D18118 /* pseudofloat.h */,
+				4C2C6A0D2EA2170A00D18118 /* resample.c */,
+				4C2C6A0E2EA2170A00D18118 /* resample_neon.h */,
+				4C2C6A0F2EA2170A00D18118 /* resample_sse.h */,
+				4C2C6A112EA2170A00D18118 /* smallft.h */,
+				4C2C6A122EA2170A00D18118 /* smallft.c */,
+				4C2C6A1F2EA2170A00D18118 /* vorbis_psy.h */,
+			);
+			path = SpeexDSP;
+			sourceTree = "<group>";
+		};
 		4C5167EB2E9DED6200853960 /* Karaoke */ = {
 			isa = PBXGroup;
 			children = (
@@ -564,8 +650,6 @@
 				4C49068D2E99F96E00075C82 /* Imagine Dragons - Shots.mp3 */,
 				4C77CD0E2E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 */,
 				4C77CD0F2E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 */,
-				4C77CD102E98F31B008EA7C6 /* A公馆 - 海浪回潮.mp3 */,
-				4C77CD112E98F31B008EA7C6 /* A公馆 - 与时间赛跑的人.mp3 */,
 				4C77CD122E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 */,
 				4C77CD092E98DB75008EA7C6 /* Jonah Kagen - God Needs The Devil.mp3 */,
 				4C66E6BA2E8A89E8003200DA /* 陈致逸,HOYO-MiX - Symphony of Boreal Wind 冰封交响曲.mp3 */,
@@ -597,7 +681,7 @@
 				4C77CD222E9925A5008EA7C6 /* DOUDOU - 拂过沙的光.mp3 */,
 				4C77CD232E9925A5008EA7C6 /* DOUDOU - 南三环东路.mp3 */,
 				4C49068F2E99FF6E00075C82 /* Imagine Dragons,JID,英雄联盟 - Enemy (from the series Arcane League of Legends).mp3 */,
-				4C5C27A62E9CB0A400D9AEA9 /* 爱宝 - bangbang.mp3 */,
+				4C5C27A62E9CB0A400D9AEA9 /* DOUDOU - 嗵嗵.mp3 */,
 				4C5C27A72E9CB0A400D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.mp3 */,
 				4C5C27A82E9CB0A400D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3 */,
 				4C5167FD2E9E211000853960 /* A公馆 - 放漾.mp3 */,
@@ -623,6 +707,10 @@
 				4C5E4BBD2EA10DA5009B5708 /* 赵雷 - 吉姆餐厅.ncm */,
 				4C5E4BBE2EA10DA5009B5708 /* G.E.M.邓紫棋 - 句号.ncm */,
 				4C5E4BBF2EA10DA5009B5708 /* Jessie J - Thunder.ncm */,
+				4C2C69EC2EA216AF00D18118 /* 队长 - 楼顶上的小斑鸠.ncm */,
+				4C2C69ED2EA216AF00D18118 /* 郭顶 - 凄美地.ncm */,
+				4C2C69EE2EA216AF00D18118 /* 黄绮珊 - 离不开你 (Live).ncm */,
+				4C2C69EF2EA216AF00D18118 /* 小霞,海洋Bo - 向云端.ncm */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -731,6 +819,9 @@
 				4C699F582E9F6F5E009090AB /* SoundTouch */,
 				4C699F592E9F6F5E009090AB /* DSPBridge.h */,
 				4C699F5A2E9F6F5E009090AB /* DSPBridge.mm */,
+				4C2C6A202EA2170A00D18118 /* SpeexDSP */,
+				4C2C6A212EA2170A00D18118 /* SpeexDSPBridge.h */,
+				4C2C6A222EA2170A00D18118 /* SpeexDSPBridge.mm */,
 			);
 			path = DSP;
 			sourceTree = "<group>";
@@ -882,8 +973,6 @@
 				4C77CD0C2E98DC71008EA7C6 /* 黑豹乐队 - 散，作鸟兽.mp3 in Resources */,
 				4C66E6EB2E8A89E8003200DA /* Elektronomia - Vision.mp3 in Resources */,
 				4C66E6EC2E8A89E8003200DA /* Zero Venture - Northern Skies (Original Mix).mp3 in Resources */,
-				4C77CD132E98F31B008EA7C6 /* A公馆 - 与时间赛跑的人.mp3 in Resources */,
-				4C77CD142E98F31B008EA7C6 /* A公馆 - 海浪回潮.mp3 in Resources */,
 				4C77CD152E98F31B008EA7C6 /* 周深 - 光亮 (Live版).mp3 in Resources */,
 				4C77CD162E98F31B008EA7C6 /* LOVE PSYCHEDELICO - Last Smile.mp3 in Resources */,
 				4C77CD172E98F31B008EA7C6 /* 梁博 - 出现又离开 (Live).mp3 in Resources */,
@@ -896,7 +985,7 @@
 				4C66E6F32E8A89E8003200DA /* 岩崎琢 - Bang! Bang! Bang! Bang! Have a Nice Dream.mp3 in Resources */,
 				4C5C27A92E9CB0A400D9AEA9 /* 吴垚滔,DOUDOU - 暮野荒原.mp3 in Resources */,
 				4C5C27AA2E9CB0A400D9AEA9 /* DOUDOU - 春夏秋冬（Live in 昆明 20231210）.mp3 in Resources */,
-				4C5C27AB2E9CB0A400D9AEA9 /* 爱宝 - bangbang.mp3 in Resources */,
+				4C5C27AB2E9CB0A400D9AEA9 /* DOUDOU - 嗵嗵.mp3 in Resources */,
 				4C66E6F42E8A89E8003200DA /* 鈴木瑛美子 - フロントメモリー.mp3 in Resources */,
 				4C66E6F52E8A89E8003200DA /* 初音ミク,CosMo@暴走P - 初音未来的消失.mp3 in Resources */,
 				4C6548B52EA0E643006DD8DD /* 福禄寿FloruitShow - 我用什么把你留住.ncm in Resources */,
@@ -959,6 +1048,10 @@
 				4C5E4BB82EA10825009B5708 /* 队长 - 哪里都是你.mp3 in Resources */,
 				4C5E4BB92EA10825009B5708 /* Jessie J - Ain't No Mountain High Enough (Live).mp3 in Resources */,
 				4C5E4BBA2EA10825009B5708 /* Jessie J - Domino (Live).mp3 in Resources */,
+				4C2C69F02EA216AF00D18118 /* 队长 - 楼顶上的小斑鸠.ncm in Resources */,
+				4C2C69F12EA216AF00D18118 /* 小霞,海洋Bo - 向云端.ncm in Resources */,
+				4C2C69F22EA216AF00D18118 /* 郭顶 - 凄美地.ncm in Resources */,
+				4C2C69F32EA216AF00D18118 /* 黄绮珊 - 离不开你 (Live).ncm in Resources */,
 				4C5E4BBB2EA10825009B5708 /* Jessie J,李玟,KZ Tandingan - Bang Bang + 龙拳 (Live).mp3 in Resources */,
 				4C5E4BBC2EA10825009B5708 /* Jessie J - Purple Rain (Live).mp3 in Resources */,
 				4C6548FF2EA0ECE0006DD8DD /* Jessie J - Reflection (Live).lrc in Resources */,
@@ -1029,6 +1122,17 @@
 				64C5446828C838D100C23393 /* ViewController.m in Sources */,
 				4C51687E2E9E5FD500853960 /* LyricsEffectCell.m in Sources */,
 				4C51687F2E9E5FD500853960 /* LyricsEffectControlPanel.m in Sources */,
+				4C2C6A232EA2170A00D18118 /* smallft.c in Sources */,
+				4C2C6A252EA2170A00D18118 /* resample.c in Sources */,
+				4C2C6A282EA2170A00D18118 /* jitter.c in Sources */,
+				4C2C6A292EA2170A00D18118 /* fftwrap.c in Sources */,
+				4C2C6A2B2EA2170A00D18118 /* kiss_fftr.c in Sources */,
+				4C2C6A2C2EA2170A00D18118 /* preprocess.c in Sources */,
+				4C2C6A2D2EA2170A00D18118 /* kiss_fft.c in Sources */,
+				4C2C6A2F2EA2170A00D18118 /* buffer.c in Sources */,
+				4C2C6A302EA2170A00D18118 /* mdf.c in Sources */,
+				4C2C6A312EA2170A00D18118 /* SpeexDSPBridge.mm in Sources */,
+				4C2C6A322EA2170A00D18118 /* filterbank.c in Sources */,
 				4C5168802E9E5FD500853960 /* LyricsManager.m in Sources */,
 				4C5168812E9E5FD500853960 /* LyricsEffectType.m in Sources */,
 				4C699F5C2E9F6F5E009090AB /* DSPBridge.mm in Sources */,

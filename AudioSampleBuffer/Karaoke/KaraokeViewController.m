@@ -1224,9 +1224,16 @@ static void CheckError(OSStatus error, const char *operation) {
 
 - (void)loadCurrentSong {
     if (self.currentSongName) {
-        // 加载到卡拉OK音频引擎（用于播放、耳返和录音）
-        NSString *filePath = [[NSBundle mainBundle] pathForResource:self.currentSongName ofType:nil];
-        if (filePath) {
+        // 🔧 优先使用完整路径，支持 ncm 解密后的文件
+        NSString *filePath = self.currentSongPath;
+        
+        // 如果没有完整路径，尝试从 Bundle 查找
+        if (!filePath || ![[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+            filePath = [[NSBundle mainBundle] pathForResource:self.currentSongName ofType:nil];
+        }
+        
+        if (filePath && [[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+            NSLog(@"🎵 加载音频文件: %@", filePath);
             [self.karaokeAudioEngine loadAudioFile:filePath];
             
             // 🔧 加载完成后，同步 UI 的 BGM 音量到音频引擎
@@ -1238,7 +1245,7 @@ static void CheckError(OSStatus error, const char *operation) {
             
             NSLog(@"✅ 音频文件已加载，等待用户点击开始录音按钮");
         } else {
-            NSLog(@"❌ 未找到音频文件: %@", self.currentSongName);
+            NSLog(@"❌ 未找到音频文件: %@ (path: %@)", self.currentSongName, filePath);
         }
         
         // 加载歌词
@@ -2182,13 +2189,21 @@ static void CheckError(OSStatus error, const char *operation) {
         return;
     }
     
-    // 获取BGM文件路径
-    NSString *bgmPath = [[NSBundle mainBundle] pathForResource:self.currentSongName ofType:nil];
-    if (!bgmPath) {
+    // 🔧 获取BGM文件路径（优先使用完整路径）
+    NSString *bgmPath = self.currentSongPath;
+    
+    // 如果没有完整路径，尝试从 Bundle 查找
+    if (!bgmPath || ![[NSFileManager defaultManager] fileExistsAtPath:bgmPath]) {
+        bgmPath = [[NSBundle mainBundle] pathForResource:self.currentSongName ofType:nil];
+    }
+    
+    if (!bgmPath || ![[NSFileManager defaultManager] fileExistsAtPath:bgmPath]) {
         NSLog(@"⚠️ 未找到BGM文件，只保存纯人声");
         [self showRecordingPlaybackDialog];
         return;
     }
+    
+    NSLog(@"🎵 BGM文件路径: %@", bgmPath);
     
     // 显示处理提示
     UIAlertController *processingAlert = [UIAlertController alertControllerWithTitle:@"🎵 正在处理"

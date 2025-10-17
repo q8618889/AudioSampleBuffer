@@ -47,6 +47,13 @@ typedef NS_ENUM(NSInteger, VoiceEffectType) {
 @property (nonatomic, assign) BOOL enableAGC;             // 启用AGC
 @property (nonatomic, assign) float agcStrength;          // AGC强度 (0.0=弱, 0.5=中, 1.0=强)
 
+// 🆕 SpeexDSP 高级音频处理
+@property (nonatomic, assign) BOOL useSpeexDSP;           // 使用 SpeexDSP (更专业的AGC和降噪)
+@property (nonatomic, assign) BOOL enableSpeexAGC;        // 启用 SpeexDSP AGC (替代简单AGC)
+@property (nonatomic, assign) BOOL enableSpeexDenoise;    // 启用 SpeexDSP 降噪 (补充 RNNoise)
+@property (nonatomic, assign) BOOL enableVAD;             // 启用语音活动检测 (VAD)
+@property (nonatomic, assign) BOOL enableEchoCancellation; // 启用回声消除 (AEC)
+
 /**
  * 创建音效处理引擎
  * @param sampleRate 采样率 (通常是 44100 Hz)
@@ -108,6 +115,61 @@ typedef NS_ENUM(NSInteger, VoiceEffectType) {
  * @return 当前应用的增益倍数
  */
 - (float)getCurrentAGCGain;
+
+#pragma mark - SpeexDSP 配置方法
+
+/**
+ * 🆕 配置 SpeexDSP 预处理器
+ * @param enabled 是否启用 SpeexDSP
+ * @param agc 启用自动增益控制
+ * @param denoise 启用降噪
+ * @param vad 启用语音活动检测
+ */
+- (void)configureSpeexDSP:(BOOL)enabled 
+                       agc:(BOOL)agc 
+                   denoise:(BOOL)denoise 
+                       vad:(BOOL)vad;
+
+/**
+ * 🆕 设置 SpeexDSP AGC 参数
+ * @param level 目标电平 (推荐: 8000-24000)
+ * @param maxGain 最大增益 (dB, 推荐: 10-30)
+ */
+- (void)setSpeexAGCLevel:(int)level maxGain:(int)maxGain;
+
+/**
+ * 🆕 设置 SpeexDSP 降噪级别
+ * @param level 降噪级别 (dB, -30 to 0, 推荐: -15)
+ */
+- (void)setSpeexDenoiseLevel:(int)level;
+
+/**
+ * 🆕 启用回声消除 (需要提供 BGM 参考信号)
+ * @param enabled 是否启用
+ * @param filterLength 滤波器长度 (ms, 推荐: 200-400)
+ */
+- (void)setEchoCancellation:(BOOL)enabled filterLength:(int)filterLength;
+
+/**
+ * 🆕 处理音频帧（带回声消除）
+ * @param micBuffer 麦克风输入缓冲区
+ * @param bgmBuffer BGM 参考缓冲区 (用于回声消除)
+ * @param sampleCount 样本数量
+ */
+- (void)processAudioWithEcho:(SInt16 *)micBuffer 
+                bgmReference:(SInt16 *)bgmBuffer 
+                 sampleCount:(UInt32)sampleCount;
+
+/**
+ * 🆕 获取 VAD 状态（语音活动检测）
+ * @return 当前是否检测到语音 (0=静音, 1=有声)
+ */
+- (int)getVADStatus;
+
+/**
+ * 🆕 获取 SpeexDSP 信息（用于调试）
+ */
+- (NSString *)getSpeexDSPInfo;
 
 @end
 

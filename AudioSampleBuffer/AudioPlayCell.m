@@ -70,6 +70,20 @@
         self.playBtn.titleLabel.font = [UIFont systemFontOfSize:20];
         [self.playBtn addTarget:self action:@selector(clickPlayButton:) forControlEvents:UIControlEventTouchUpInside];
         [self.contentView addSubview:self.playBtn];
+        
+        // NCM转换按钮（初始隐藏）
+        self.convertButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        self.convertButton.frame = CGRectMake(ScreenWidth - 145, 10, 50, 40);
+        [self.convertButton setTitle:@"转换" forState:UIControlStateNormal];
+        [self.convertButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        self.convertButton.titleLabel.font = [UIFont boldSystemFontOfSize:13];
+        self.convertButton.backgroundColor = [UIColor colorWithRed:1.0 green:0.6 blue:0.0 alpha:0.9];
+        self.convertButton.layer.cornerRadius = 8;
+        self.convertButton.layer.borderWidth = 1.0;
+        self.convertButton.layer.borderColor = [UIColor orangeColor].CGColor;
+        self.convertButton.hidden = YES; // 默认隐藏
+        [self.convertButton addTarget:self action:@selector(clickConvertButton:) forControlEvents:UIControlEventTouchUpInside];
+        [self.contentView addSubview:self.convertButton];
     }
     return self;
 }
@@ -96,6 +110,16 @@
     }];
 }
 
+- (void)clickConvertButton:(UIButton *)button {
+    if (self.convertBlock) {
+        // 禁用按钮防止重复点击
+        button.enabled = NO;
+        [button setTitle:@"转换中..." forState:UIControlStateNormal];
+        
+        self.convertBlock();
+    }
+}
+
 // 使用 MusicItem 配置 cell
 - (void)configureWithMusicItem:(MusicItem *)musicItem {
     self.currentMusicItem = musicItem;
@@ -120,10 +144,22 @@
     // 设置收藏状态
     self.favoriteButton.selected = musicItem.isFavorite;
     
-    // 如果是NCM文件，添加标记
+    // 如果是NCM文件，添加标记并显示转换按钮
     if (musicItem.isNCM) {
-        NSString *status = musicItem.isDecrypted ? @"🔓" : @"🔒";
-        self.nameLabel.text = [NSString stringWithFormat:@"%@ %@", status, self.nameLabel.text];
+        if (musicItem.isDecrypted) {
+            // 已解密，显示🔓标记，隐藏转换按钮
+            self.nameLabel.text = [NSString stringWithFormat:@"🔓 %@", self.nameLabel.text];
+            self.convertButton.hidden = YES;
+        } else {
+            // 未解密，显示🔒标记，显示转换按钮
+            self.nameLabel.text = [NSString stringWithFormat:@"🔒 %@", self.nameLabel.text];
+            self.convertButton.hidden = NO;
+            self.convertButton.enabled = YES;
+            [self.convertButton setTitle:@"转换" forState:UIControlStateNormal];
+        }
+    } else {
+        // 非NCM文件，隐藏转换按钮
+        self.convertButton.hidden = YES;
     }
     
     // 如果有播放次数，显示热度标记

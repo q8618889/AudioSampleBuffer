@@ -7,6 +7,7 @@
 
 #import "VoiceEffectProcessor.h"
 #import "DSP/DSPBridge.h"
+#import "DSP/SpeexDSPBridge.h"
 #import <Accelerate/Accelerate.h>
 
 // 混响参数
@@ -43,6 +44,10 @@
 // 🆕 高级 DSP 处理器
 @property (nonatomic, strong) NoiseReductionProcessor *noiseReducer;
 @property (nonatomic, strong) PitchCorrectionProcessor *pitchCorrector;
+
+// 🆕 SpeexDSP 专业处理器
+@property (nonatomic, strong) SpeexPreprocessor *speexPreprocessor;
+@property (nonatomic, assign) int lastVADStatus;  // VAD 状态
 
 // 🆕 音高处理缓冲区（堆内存，避免栈溢出）
 @property (nonatomic, assign) SInt16 *pitchTempBuffer;
@@ -103,12 +108,24 @@
         _pitchTempBuffer = (SInt16 *)malloc(_pitchBufferSize * sizeof(SInt16));
         _pitchFloatBuffer = (float *)malloc(_pitchBufferSize * sizeof(float));
         
-        // 🆕 初始化 AGC（自动增益控制）参数
-        _enableAGC = NO;  // 默认关闭，让用户手动开启
-        _agcStrength = 0.5f;  // 默认中等强度
-        _agcCurrentGain = 1.0f;  // 初始增益为1.0
+        // 🆕 初始化 SpeexDSP 预处理器（专业 AGC + VAD）
+        int frameSize = (int)(sampleRate * 0.005);  // 5ms 帧
+        _speexPreprocessor = [[SpeexPreprocessor alloc] initWithFrameSize:frameSize 
+                                                               sampleRate:(int)sampleRate];
+        
+        // 默认配置（关闭所有功能）
+        _enableAGC = NO;
+        _agcStrength = 0.5f;
+        _useSpeexDSP = YES;  // 默认使用 SpeexDSP
+        _enableSpeexAGC = NO;
+        _enableSpeexDenoise = NO;
+        _enableVAD = YES;  // 默认启用 VAD
+        _lastVADStatus = 0;
+        
+        // 保留旧 AGC 参数（用于向后兼容）
+        _agcCurrentGain = 1.0f;
         _agcSmoothedRMS = 0.0f;
-        [self updateAGCParameters];  // 根据强度更新AGC参数
+        [self updateAGCParameters];
         
         NSLog(@"✅ 音效处理器初始化完成 (采样率: %.0f Hz)", sampleRate);
         NSLog(@"   🔊 降噪处理器: %@", _noiseReducer ? @"已加载" : @"未加载");
@@ -147,9 +164,21 @@
     
     // 🆕 2. 自动增益控制（AGC，在降噪后、音效前）
     if (_enableAGC) {
-        [self applyAGC:buffer sampleCount:sampleCount];
-        if (shouldLog) {
-            NSLog(@"🎚️ AGC 处理完成，当前增益: %.2fx, RMS: %.4f", _agcCurrentGain, _agcSmoothedRMS);
+        if (_useSpeexDSP && _speexPreprocessor) {
+            // 使用 SpeexDSP 专业 AGC
+            float vadProb = [_speexPreprocessor processSamples:buffer count:sampleCount];
+            _lastVADStatus = (vadProb > 0.5f) ? 1 : 0;
+            
+            if (shouldLog) {
+                NSLog(@"🎚️ SpeexDSP AGC 处理完成, VAD: %.1f%% (%@)", 
+                      vadProb * 100, _lastVADStatus ? @"语音" : @"静音");
+            }
+        } else {
+            // 使用旧的简单 AGC（向后兼容）
+            [self applyAGC:buffer sampleCount:sampleCount];
+            if (shouldLog) {
+                NSLog(@"🎚️ 简单 AGC 处理完成，当前增益: %.2fx, RMS: %.4f", _agcCurrentGain, _agcSmoothedRMS);
+            }
         }
     }
     
@@ -679,6 +708,12 @@
     [_noiseReducer reset];
     [_pitchCorrector clear];
     
+    // 🆕 重置 SpeexDSP 处理器
+    if (_speexPreprocessor) {
+        [_speexPreprocessor reset];
+    }
+    _lastVADStatus = 0;
+    
     NSLog(@"🔄 音效处理器已重置");
 }
 
@@ -741,23 +776,136 @@
     _enableAGC = enabled;
     _agcStrength = fmaxf(0.0f, fminf(1.0f, strength));  // 限制范围 [0.0, 1.0]
     
-    // 更新AGC参数
-    [self updateAGCParameters];
-    
-    // 如果启用AGC，重置增益状态
-    if (enabled) {
-        _agcCurrentGain = 1.0f;
-        _agcSmoothedRMS = 0.0f;
+    if (_useSpeexDSP && _speexPreprocessor) {
+        // 配置 SpeexDSP 专业 AGC
+        _enableSpeexAGC = enabled;
+        [_speexPreprocessor setAGCEnabled:enabled];
+        
+        if (enabled) {
+            // 根据强度设置 AGC 参数
+            if (_agcStrength < 0.34f) {
+                // 弱 AGC
+                [_speexPreprocessor setAGCLevel:8000];
+                [_speexPreprocessor setAGCMaxGain:15];
+            } else if (_agcStrength < 0.67f) {
+                // 中等 AGC（推荐）
+                [_speexPreprocessor setAGCLevel:12000];
+                [_speexPreprocessor setAGCMaxGain:25];
+            } else {
+                // 强 AGC
+                [_speexPreprocessor setAGCLevel:16000];
+                [_speexPreprocessor setAGCMaxGain:30];
+            }
+            
+            // 设置快速响应
+            [_speexPreprocessor setAGCIncrement:12];
+            [_speexPreprocessor setAGCDecrement:-40];
+        }
+        
+        NSLog(@"🎚️ SpeexDSP AGC %@, 强度: %.2f (%@)", 
+              enabled ? @"启用" : @"禁用",
+              _agcStrength,
+              _agcStrength < 0.34f ? @"弱" : (_agcStrength < 0.67f ? @"中" : @"强"));
+    } else {
+        // 使用旧的简单 AGC
+        [self updateAGCParameters];
+        
+        if (enabled) {
+            _agcCurrentGain = 1.0f;
+            _agcSmoothedRMS = 0.0f;
+        }
+        
+        NSLog(@"🎚️ 简单 AGC %@, 强度: %.2f (%@)", 
+              enabled ? @"启用" : @"禁用",
+              _agcStrength,
+              _agcStrength < 0.34f ? @"弱" : (_agcStrength < 0.67f ? @"中" : @"强"));
     }
-    
-    NSLog(@"🎚️ AGC %@, 强度: %.2f (%@)", 
-          enabled ? @"启用" : @"禁用",
-          _agcStrength,
-          _agcStrength < 0.34f ? @"弱" : (_agcStrength < 0.67f ? @"中" : @"强"));
 }
 
 - (float)getCurrentAGCGain {
     return _agcCurrentGain;
+}
+
+#pragma mark - SpeexDSP 配置方法
+
+- (void)configureSpeexDSP:(BOOL)enabled 
+                       agc:(BOOL)agc 
+                   denoise:(BOOL)denoise 
+                       vad:(BOOL)vad {
+    _useSpeexDSP = enabled;
+    _enableSpeexAGC = agc;
+    _enableSpeexDenoise = denoise;
+    _enableVAD = vad;
+    
+    if (!enabled || !_speexPreprocessor) {
+        NSLog(@"⚠️ SpeexDSP 已禁用");
+        return;
+    }
+    
+    // 配置 AGC
+    [_speexPreprocessor setAGCEnabled:agc];
+    if (agc) {
+        [_speexPreprocessor setAGCLevel:12000];
+        [_speexPreprocessor setAGCMaxGain:25];
+    }
+    
+    // 配置降噪
+    [_speexPreprocessor setDenoiseEnabled:denoise];
+    if (denoise) {
+        [_speexPreprocessor setNoiseSuppress:-15];
+    }
+    
+    // 配置 VAD
+    [_speexPreprocessor setVADEnabled:vad];
+    
+    NSLog(@"✅ SpeexDSP 配置完成: AGC=%@, 降噪=%@, VAD=%@", 
+          agc ? @"开" : @"关", denoise ? @"开" : @"关", vad ? @"开" : @"关");
+}
+
+- (void)setSpeexAGCLevel:(int)level maxGain:(int)maxGain {
+    if (_speexPreprocessor) {
+        [_speexPreprocessor setAGCLevel:level];
+        [_speexPreprocessor setAGCMaxGain:maxGain];
+        NSLog(@"🎚️ SpeexDSP AGC: 目标=%d, 最大增益=%ddB", level, maxGain);
+    }
+}
+
+- (void)setSpeexDenoiseLevel:(int)level {
+    if (_speexPreprocessor) {
+        [_speexPreprocessor setNoiseSuppress:level];
+        NSLog(@"🔇 SpeexDSP 降噪: %ddB", level);
+    }
+}
+
+- (void)setEchoCancellation:(BOOL)enabled filterLength:(int)filterLength {
+    _enableEchoCancellation = enabled;
+    NSLog(@"⚠️ 回声消除功能尚未实现");
+}
+
+- (void)processAudioWithEcho:(SInt16 *)micBuffer 
+                bgmReference:(SInt16 *)bgmBuffer 
+                 sampleCount:(UInt32)sampleCount {
+    // 暂时直接调用普通处理
+    [self processAudioBuffer:micBuffer sampleCount:sampleCount];
+}
+
+- (int)getVADStatus {
+    return _lastVADStatus;
+}
+
+- (NSString *)getSpeexDSPInfo {
+    if (!_useSpeexDSP || !_speexPreprocessor) {
+        return @"SpeexDSP: 未启用";
+    }
+    
+    return [NSString stringWithFormat:@"SpeexDSP 状态:\n"
+            @"  AGC: %@\n"
+            @"  降噪: %@\n"
+            @"  VAD: %@ (当前: %@)",
+            _enableSpeexAGC ? @"启用" : @"禁用",
+            _enableSpeexDenoise ? @"启用" : @"禁用",
+            _enableVAD ? @"启用" : @"禁用",
+            _lastVADStatus ? @"语音" : @"静音"];
 }
 
 @end

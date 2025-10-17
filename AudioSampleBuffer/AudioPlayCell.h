@@ -18,9 +18,11 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong) UILabel *fileSizeLabel;     // 文件大小标签
 @property (nonatomic, strong) UIButton *favoriteButton;   // 收藏按钮
 @property (nonatomic, strong) UIButton *playBtn;
+@property (nonatomic, strong) UIButton *convertButton;    // NCM转换按钮
 
 @property (nonatomic, copy) void (^playBlock)(BOOL isPlaying); // 点击播放、暂停
 @property (nonatomic, copy) void (^favoriteBlock)(void); // 点击收藏
+@property (nonatomic, copy) void (^convertBlock)(void); // 点击转换NCM
 
 // 使用 MusicItem 配置 cell
 - (void)configureWithMusicItem:(MusicItem *)musicItem;

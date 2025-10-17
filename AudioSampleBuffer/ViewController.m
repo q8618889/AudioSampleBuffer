@@ -42,6 +42,7 @@
 @property (nonatomic, strong) NSMutableArray<UIButton *> *categoryButtons;  // 分类按钮数组
 @property (nonatomic, strong) UISearchBar *searchBar;  // 搜索栏
 @property (nonatomic, strong) UIButton *sortButton;  // 排序按钮
+@property (nonatomic, strong) UIButton *reloadButton;  // 刷新音乐库按钮
 @property (nonatomic, assign) MusicSortType currentSortType;  // 当前排序方式
 @property (nonatomic, assign) BOOL sortAscending;  // 排序方向
 
@@ -718,6 +719,20 @@
     [self.sortButton addTarget:self action:@selector(sortButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:self.sortButton];
     
+    // 🆕 刷新音乐库按钮 - 放在排序按钮下方
+    CGFloat reloadButtonY = sortButtonY + buttonHeight + spacing;
+    self.reloadButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [self.reloadButton setTitle:@"🔄 重新扫描" forState:UIControlStateNormal];
+    [self.reloadButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.reloadButton.titleLabel.font = [UIFont boldSystemFontOfSize:13];
+    self.reloadButton.backgroundColor = [UIColor colorWithRed:0.8 green:0.4 blue:0.2 alpha:0.85];
+    self.reloadButton.layer.cornerRadius = 8;
+    self.reloadButton.layer.borderWidth = 1.5;
+    self.reloadButton.layer.borderColor = [UIColor colorWithRed:1.0 green:0.5 blue:0.3 alpha:0.8].CGColor;
+    self.reloadButton.frame = CGRectMake(leftX, reloadButtonY, buttonWidth, buttonHeight);
+    [self.reloadButton addTarget:self action:@selector(reloadMusicLibraryButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.reloadButton];
+    
     // 🆕 添加搜索栏 - 放在右侧
     CGFloat searchBarX = leftX + buttonWidth + 15;
     CGFloat searchBarWidth = self.view.frame.size.width - searchBarX - 10;
@@ -799,6 +814,11 @@
         }
     };
     
+    // 🆕 NCM转换回调
+    cell.convertBlock = ^{
+        [weakSelf convertNCMFile:musicItem atIndexPath:indexPath];
+    };
+    
     return cell;
 }
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
@@ -818,6 +838,85 @@
     NSString *playableFileName = [AudioFileFormats prepareAudioFileForPlayback:fileName];
     
     [self.player playWithFileName:playableFileName];
+}
+
+// 🆕 转换NCM文件
+- (void)convertNCMFile:(MusicItem *)musicItem atIndexPath:(NSIndexPath *)indexPath {
+    NSLog(@"🔄 开始转换 NCM 文件: %@", musicItem.fileName);
+    
+    // 显示加载提示
+    UIAlertController *loadingAlert = [UIAlertController alertControllerWithTitle:@"⏳ 转换中" 
+                                                                          message:@"正在转换 NCM 文件，请稍候..."
+                                                                   preferredStyle:UIAlertControllerStyleAlert];
+    [self presentViewController:loadingAlert animated:YES completion:nil];
+    
+    // 在后台线程执行转换
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        // 获取NCM文件路径
+        NSURL *fileURL = [[NSBundle mainBundle] URLForResource:musicItem.fileName withExtension:nil];
+        if (!fileURL) {
+            NSString *audioPath = [[NSBundle mainBundle] pathForResource:@"Audio" ofType:nil];
+            NSString *fullPath = [audioPath stringByAppendingPathComponent:musicItem.fileName];
+            fileURL = [NSURL fileURLWithPath:fullPath];
+        }
+        
+        if (!fileURL) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [loadingAlert dismissViewControllerAnimated:YES completion:^{
+                    [self showAlert:@"❌ 错误" message:@"找不到文件"];
+                }];
+            });
+            return;
+        }
+        
+        // 生成输出路径（在 Documents 目录）
+        NSString *documentsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+        NSString *outputFilename = [[musicItem.fileName stringByDeletingPathExtension] stringByAppendingPathExtension:@"mp3"];
+        NSString *outputPath = [documentsPath stringByAppendingPathComponent:outputFilename];
+        
+        // 执行解密
+        NSError *error = nil;
+        NSString *result = [NCMDecryptor decryptNCMFile:fileURL.path
+                                             outputPath:outputPath
+                                                  error:&error];
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [loadingAlert dismissViewControllerAnimated:YES completion:^{
+                if (result) {
+                    NSLog(@"✅ NCM 转换成功: %@", result);
+                    
+                    // 更新 MusicItem 状态
+                    [self.musicLibrary updateNCMDecryptionStatus:musicItem decryptedPath:result];
+                    
+                    // 刷新 cell
+                    [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+                    
+                    // 显示成功提示
+                    [self showAlert:@"✅ 转换成功" message:[NSString stringWithFormat:@"已成功转换: %@\n现在可以播放了！", musicItem.displayName ?: musicItem.fileName]];
+                } else {
+                    NSLog(@"❌ NCM 转换失败: %@", error.localizedDescription);
+                    
+                    // 显示失败提示
+                    [self showAlert:@"❌ 转换失败" message:error.localizedDescription ?: @"未知错误"];
+                    
+                    // 刷新 cell 以重置按钮状态
+                    [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+                }
+            }];
+        });
+    });
+}
+
+// 辅助方法：显示提示框
+- (void)showAlert:(NSString *)title message:(NSString *)message {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:title 
+                                                                   message:message
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"好的" 
+                                                       style:UIAlertActionStyleDefault 
+                                                     handler:nil];
+    [alert addAction:okAction];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)updateAudioSelection {
@@ -1220,9 +1319,14 @@
     MusicItem *musicItem = self.displayedMusicItems[index];
     karaokeVC.currentSongName = musicItem.fileName;
     
+    // 🔧 获取可播放的文件路径（自动处理 ncm 解密）
+    NSString *playablePath = [musicItem playableFilePath];
+    karaokeVC.currentSongPath = playablePath;
+    
+    NSLog(@"🎤 进入卡拉OK模式: %@ -> %@", musicItem.fileName, playablePath);
+    
     // 推送到卡拉OK页面（现在有NavigationController了）
     [self.navigationController pushViewController:karaokeVC animated:YES];
-    NSLog(@"🎤 进入卡拉OK模式: %@", musicItem.fileName);
 }
 
 - (void)lyricsEffectButtonTapped:(UIButton *)sender {
@@ -1471,6 +1575,40 @@
     [self refreshMusicList];
     
     NSLog(@"📂 切换分类: %@ (%ld 首)", [MusicLibraryManager nameForCategory:self.currentCategory], (long)self.displayedMusicItems.count);
+}
+
+- (void)reloadMusicLibraryButtonTapped:(UIButton *)sender {
+    NSLog(@"🔄 开始重新扫描音乐库...");
+    
+    // 显示加载提示
+    UIAlertController *loadingAlert = [UIAlertController alertControllerWithTitle:@"正在扫描"
+                                                                          message:@"正在重新扫描音频文件..."
+                                                                   preferredStyle:UIAlertControllerStyleAlert];
+    [self presentViewController:loadingAlert animated:YES completion:nil];
+    
+    // 异步执行重新加载
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        // 重新加载音乐库（会重新扫描文件）
+        [self.musicLibrary reloadMusicLibrary];
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // 刷新列表
+            [self refreshMusicList];
+            
+            // 关闭加载提示
+            [loadingAlert dismissViewControllerAnimated:YES completion:^{
+                // 显示完成提示
+                NSString *message = [NSString stringWithFormat:@"发现 %ld 首歌曲", (long)self.musicLibrary.totalMusicCount];
+                UIAlertController *successAlert = [UIAlertController alertControllerWithTitle:@"✅ 扫描完成"
+                                                                                      message:message
+                                                                               preferredStyle:UIAlertControllerStyleAlert];
+                [successAlert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
+                [self presentViewController:successAlert animated:YES completion:nil];
+                
+                NSLog(@"✅ 音乐库重新加载完成: %ld 首歌曲", (long)self.musicLibrary.totalMusicCount);
+            }];
+        });
+    });
 }
 
 - (void)sortButtonTapped:(UIButton *)sender {
