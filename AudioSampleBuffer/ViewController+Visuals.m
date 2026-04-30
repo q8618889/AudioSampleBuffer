@@ -19,6 +19,20 @@ static NSString * const kSpectrumPositionXDefaultsKey = @"SpectrumLayoutOffsetX"
 static NSString * const kSpectrumPositionYDefaultsKey = @"SpectrumLayoutOffsetY";
 static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
 
+static UIEdgeInsets RhythmEffectiveSafeAreaInsets(UIView *view) {
+    UIEdgeInsets insets = UIEdgeInsetsZero;
+    if (!view) {
+        return insets;
+    }
+    if (@available(iOS 11.0, *)) {
+        insets = view.safeAreaInsets;
+        if (insets.bottom < 0.5 && view.window) {
+            insets = view.window.safeAreaInsets;
+        }
+    }
+    return insets;
+}
+
 @implementation ViewController (Visuals)
 
 #pragma mark - Setup
@@ -42,12 +56,9 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     }
 
     CGFloat panelWidth = MIN(320.0, self.view.bounds.size.width - 96.0);
-    CGFloat safeTop = 0.0;
-    CGFloat safeBottom = 0.0;
-    if (@available(iOS 11.0, *)) {
-        safeTop = self.view.safeAreaInsets.top;
-        safeBottom = self.view.safeAreaInsets.bottom;
-    }
+    UIEdgeInsets safeInsets = RhythmEffectiveSafeAreaInsets(self.view);
+    CGFloat safeTop = safeInsets.top;
+    CGFloat safeBottom = safeInsets.bottom;
     CGFloat topOffset = MAX(safeTop, 44.0) + 8.0;
     CGFloat panelHeight = self.view.bounds.size.height - topOffset - safeBottom - 120.0;
     CGFloat originX = self.view.bounds.size.width - panelWidth - 68.0;
@@ -92,12 +103,12 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     self.backgroundMediaEnableButton = enableButton;
 
     UIButton *rhythmButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    CGFloat rhythmW = 66.0;
+    CGFloat rhythmW = 72.0;
     CGFloat rhythmX = CGRectGetMinX(enableButton.frame) - headerBtnSpacing - rhythmW;
     rhythmButton.frame = CGRectMake(MAX(16.0, rhythmX), 12, rhythmW, headerBtnH);
     rhythmButton.layer.cornerRadius = 15.0;
     rhythmButton.titleLabel.font = [UIFont boldSystemFontOfSize:13];
-    [rhythmButton setTitle:@"律动" forState:UIControlStateNormal];
+    [rhythmButton setTitle:@"效果" forState:UIControlStateNormal];
     [rhythmButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     rhythmButton.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.10];
     [rhythmButton addTarget:self action:@selector(backgroundMediaRhythmButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
@@ -240,6 +251,98 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     [panel addSubview:emptyLabel];
     self.backgroundMediaEmptyLabel = emptyLabel;
 
+    CGFloat bottomSafe = safeBottom;
+    CGFloat maxSheetHeight = self.view.bounds.size.height - MAX(safeTop, 20.0) - 24.0;
+    CGFloat sheetHeight = MIN(maxSheetHeight, MAX(360.0, self.view.bounds.size.height * 0.56));
+    RhythmEffectSelectionPanelView *effectPanel = [[RhythmEffectSelectionPanelView alloc] initWithFrame:CGRectMake(0.0,
+                                                                                                                   self.view.bounds.size.height - sheetHeight - bottomSafe,
+                                                                                                                   self.view.bounds.size.width,
+                                                                                                                   sheetHeight + bottomSafe)];
+    effectPanel.hidden = YES;
+    effectPanel.alpha = 0.0;
+    __weak typeof(self) weakSelf = self;
+    effectPanel.closeHandler = ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        [strongSelf setBackgroundMediaEffectSelectionVisible:NO animated:YES];
+    };
+    effectPanel.toggleEnabledHandler = ^(BOOL enabled) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        [strongSelf setBackgroundVisualEffectsEnabled:enabled];
+        [strongSelf refreshBackgroundMediaButtonState];
+    };
+    effectPanel.dispersionSelectionHandler = ^(RhythmDispersionEffectType type) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        strongSelf.backgroundRhythmDispersionEffectType = type;
+        strongSelf.backgroundRhythmColorMaskView.dispersionEffectType = type;
+        [strongSelf syncRhythmColorMaskInHierarchy];
+    };
+    effectPanel.featureSelectionHandler = ^(RhythmFeatureEffectType type) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf.backgroundRhythmFeatureController) {
+            strongSelf.backgroundRhythmFeatureController = [[RhythmFeatureEffectController alloc] init];
+        }
+        RhythmFeatureEffectType previousType = strongSelf.backgroundRhythmFeatureController.selectedEffectType;
+        BOOL wasTransform = strongSelf.backgroundRhythmFeatureController.prefersTransformRenderer;
+        strongSelf.backgroundRhythmFeatureController.selectedEffectType = type;
+        BOOL isTransform = strongSelf.backgroundRhythmFeatureController.prefersTransformRenderer;
+        strongSelf.backgroundRhythmFeatureRenderer.effectType = type;
+        [strongSelf syncRhythmFeatureRendererInHierarchy];
+        if (wasTransform && isTransform && previousType != type) {
+            [strongSelf rebuildBackgroundTransformRendererForEffectSwitch];
+        } else {
+            strongSelf.backgroundRhythmTransformRenderer.effectType = type;
+            [strongSelf syncBackgroundTransformRendererInHierarchy];
+        }
+    };
+    effectPanel.featureParameterChangedHandler = ^(CGFloat intensity, CGFloat beatBoost, CGFloat radius, CGFloat speed) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf.backgroundRhythmFeatureController) {
+            strongSelf.backgroundRhythmFeatureController = [[RhythmFeatureEffectController alloc] init];
+        }
+        strongSelf.backgroundRhythmFeatureController.transformIntensity = intensity;
+        strongSelf.backgroundRhythmFeatureController.transformBeatBoost = beatBoost;
+        strongSelf.backgroundRhythmFeatureController.transformRadius = radius;
+        strongSelf.backgroundRhythmFeatureController.transformSpeed = speed;
+        strongSelf.backgroundRhythmTransformRenderer.baseIntensity = intensity;
+        strongSelf.backgroundRhythmTransformRenderer.beatBoost = beatBoost;
+        strongSelf.backgroundRhythmTransformRenderer.radius = radius;
+        strongSelf.backgroundRhythmTransformRenderer.speed = speed;
+    };
+    effectPanel.beatSyncChangedHandler = ^(BOOL beatSyncEnabled) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) return;
+        if (!strongSelf.backgroundRhythmFeatureController) {
+            strongSelf.backgroundRhythmFeatureController = [[RhythmFeatureEffectController alloc] init];
+        }
+        NSLog(@"🎵 beatSyncChanged: %@ featureRenderer=%@ transformRenderer=%@ transformView=%@ visualsEnabled=%d",
+              beatSyncEnabled ? @"ON" : @"OFF",
+              strongSelf.backgroundRhythmFeatureRenderer ? @"exists" : @"nil",
+              strongSelf.backgroundRhythmTransformRenderer ? @"exists" : @"nil",
+              strongSelf.backgroundRhythmTransformRenderer.view.superview ? @"inHierarchy" : @"detached",
+              strongSelf.isBackgroundVisualEffectsEnabled);
+        strongSelf.backgroundRhythmFeatureController.beatSyncEnabled = beatSyncEnabled;
+        strongSelf.backgroundRhythmFeatureRenderer.beatSyncEnabled = beatSyncEnabled;
+        strongSelf.backgroundRhythmTransformRenderer.beatSyncEnabled = beatSyncEnabled;
+        if (beatSyncEnabled) {
+            [strongSelf syncRhythmFeatureRendererInHierarchy];
+            [strongSelf syncBackgroundTransformRendererInHierarchy];
+            [strongSelf.backgroundRhythmFeatureRenderer resetEnvelope];
+            [strongSelf.backgroundRhythmTransformRenderer resetEnvelope];
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.08 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                __strong typeof(weakSelf) s = weakSelf;
+                if (!s) return;
+                NSLog(@"🎵 beatSync demo trigger firing");
+                [s.backgroundRhythmFeatureRenderer triggerBeatWithStrongMix:0.9f];
+                [s.backgroundRhythmTransformRenderer triggerBeatWithStrongMix:0.9f];
+                if (s.backgroundRhythmFeatureController.selectedEffectType != RhythmFeatureEffectTypeDroplet) {
+                    [s rhythmPerformVisibleBeatPlaybackWithStrongMix:0.9f];
+                }
+            });
+        }
+    };
+    [self.view addSubview:effectPanel];
+    self.backgroundMediaEffectSelectionPanel = effectPanel;
+
     [self.view addSubview:panel];
     [self reloadBackgroundMediaLibrary];
     [self refreshBackgroundMediaButtonState];
@@ -349,6 +452,23 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     [self.controlButtons addObject:self.aiModeButton];
     rightY += btnSize + btnSpacing;
 
+    // HPSS 高精度DSP开关按钮（默认关闭，低功耗模式）
+    self.hpssModeButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    UIImage *hpssImage = nil;
+    if (@available(iOS 13.0, *)) {
+        hpssImage = [UIImage systemImageNamed:@"cpu"];
+    }
+    [self.hpssModeButton setImage:hpssImage forState:UIControlStateNormal];
+    [self.hpssModeButton setTitle:@"" forState:UIControlStateNormal];
+    self.hpssModeButton.tintColor = [UIColor whiteColor];
+    self.hpssModeButton.layer.cornerRadius = btnSize / 2;
+    self.hpssModeButton.layer.borderWidth = 1.0;
+    self.hpssModeButton.frame = CGRectMake(rightX, rightY, btnSize, btnSize);
+    [self.hpssModeButton addTarget:self action:@selector(hpssModeButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.hpssModeButton];
+    [self.controlButtons addObject:self.hpssModeButton];
+    rightY += btnSize + btnSpacing;
+
     // 性能设置按钮
     self.performanceControlButton = [UIButton buttonWithType:UIButtonTypeSystem];
     UIImage *perfImage = nil;
@@ -366,8 +486,31 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     [self.performanceControlButton addTarget:self action:@selector(performanceControlButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:self.performanceControlButton];
     [self.controlButtons addObject:self.performanceControlButton];
+    rightY += btnSize + btnSpacing;
+
+    // 动态照片编辑按钮
+    self.motionPhotoButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    UIImage *motionPhotoImage = nil;
+    if (@available(iOS 13.0, *)) {
+        motionPhotoImage = [UIImage systemImageNamed:@"sparkles.rectangle.stack.fill"];
+        if (!motionPhotoImage) {
+            motionPhotoImage = [UIImage systemImageNamed:@"sparkles"];
+        }
+    }
+    [self.motionPhotoButton setImage:motionPhotoImage forState:UIControlStateNormal];
+    [self.motionPhotoButton setTitle:@"" forState:UIControlStateNormal];
+    self.motionPhotoButton.tintColor = [UIColor whiteColor];
+    self.motionPhotoButton.backgroundColor = [UIColor colorWithRed:0.64 green:0.34 blue:0.14 alpha:0.92];
+    self.motionPhotoButton.layer.cornerRadius = btnSize / 2;
+    self.motionPhotoButton.layer.borderWidth = 1.0;
+    self.motionPhotoButton.layer.borderColor = [UIColor colorWithRed:1.0 green:0.72 blue:0.28 alpha:0.5].CGColor;
+    self.motionPhotoButton.frame = CGRectMake(rightX, rightY, btnSize, btnSize);
+    [self.motionPhotoButton addTarget:self action:@selector(motionPhotoButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.motionPhotoButton];
+    [self.controlButtons addObject:self.motionPhotoButton];
 
     [self updateAIModeButtonState];
+    [self updateHPSSModeButtonState];
     [self createKaraokeButton];
     [self bringControlButtonsToFront];
 }
@@ -387,7 +530,7 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
 }
 
 - (void)createKaraokeButton {
-    // 卡拉OK 按钮 - 接续右侧竖排（在 performanceControlButton 下方继续）
+    // 卡拉OK 按钮 - 接续右侧竖排（在动态照片按钮下方继续）
     CGFloat safeTop = 0;
     if (@available(iOS 11.0, *)) {
         safeTop = self.view.safeAreaInsets.top;
@@ -397,8 +540,8 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     CGFloat btnSize = 44;
     CGFloat btnSpacing = 10;
     CGFloat rightX = self.view.bounds.size.width - btnSize - 12;
-    // 跳过前4个按钮(特效+频谱+AI+性能)的位置
-    CGFloat rightY = topOffset + (btnSize + btnSpacing) * 4;
+    // 跳过前6个按钮(特效+频谱+AI+HPSS+性能+动态照片)的位置
+    CGFloat rightY = topOffset + (btnSize + btnSpacing) * 6;
 
     self.karaokeButton = [UIButton buttonWithType:UIButtonTypeSystem];
     UIImage *micImage = nil;
@@ -430,8 +573,8 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     CGFloat btnSize = 44;
     CGFloat btnSpacing = 10;
     CGFloat rightX = self.view.bounds.size.width - btnSize - 12;
-    // 跳过前5个按钮(特效+频谱+AI+性能+卡拉OK)的位置
-    CGFloat rightY = topOffset + (btnSize + btnSpacing) * 5;
+    // 跳过前6个按钮(特效+频谱+AI+性能+动态照片+卡拉OK)的位置
+    CGFloat rightY = topOffset + (btnSize + btnSpacing) * 6;
 
     // 歌词特效按钮
     self.lyricsEffectButton = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -487,8 +630,8 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     CGFloat btnSize = 44;
     CGFloat btnSpacing = 10;
     CGFloat rightX = self.view.bounds.size.width - btnSize - 12;
-    // 跳过前7个按钮的位置(特效+频谱+AI+性能+卡拉OK+歌词+导入歌词)
-    CGFloat rightY = topOffset + (btnSize + btnSpacing) * 7;
+    // 跳过前8个按钮的位置(特效+频谱+AI+性能+动态照片+卡拉OK+歌词+导入歌词)
+    CGFloat rightY = topOffset + (btnSize + btnSpacing) * 8;
 
     self.mixAudioControlView = [[UIView alloc] initWithFrame:CGRectMake(rightX, rightY, btnSize, btnSize)];
     self.mixAudioControlView.backgroundColor = [UIColor colorWithRed:0.1 green:0.25 blue:0.4 alpha:0.85];
@@ -1790,6 +1933,34 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     }
 }
 
+- (void)hpssModeButtonTapped:(UIButton *)sender {
+    BOOL newState = !self.player.extendedAnalysisEnabled;
+    self.player.extendedAnalysisEnabled = newState;
+    if (!newState) {
+        // 关闭高开销分析后，立即回退到旧路径状态，避免沿用旧缓存特征。
+        self.latestAudioFeatures = nil;
+        [[AudioFeatureExtractor sharedExtractor] reset];
+    }
+    [self updateHPSSModeButtonState];
+
+    NSString *message = newState ? @"高精度DSP已开启\nCPU占用会更高" : @"高精度DSP已关闭\n已回退低能耗模式";
+    [self showToastMessage:message];
+    NSLog(@"🎛️ HPSS扩展分析: %@", newState ? @"开启" : @"关闭");
+}
+
+- (void)updateHPSSModeButtonState {
+    BOOL isEnabled = self.player.extendedAnalysisEnabled;
+    if (isEnabled) {
+        [self.hpssModeButton setTitle:@"H" forState:UIControlStateNormal];
+        self.hpssModeButton.backgroundColor = [UIColor colorWithRed:0.72 green:0.25 blue:0.16 alpha:0.92];
+        self.hpssModeButton.layer.borderColor = [UIColor colorWithRed:1.0 green:0.58 blue:0.45 alpha:1.0].CGColor;
+    } else {
+        [self.hpssModeButton setTitle:@"L" forState:UIControlStateNormal];
+        self.hpssModeButton.backgroundColor = [UIColor colorWithRed:0.16 green:0.42 blue:0.24 alpha:0.9];
+        self.hpssModeButton.layer.borderColor = [UIColor colorWithRed:0.42 green:0.85 blue:0.55 alpha:0.7].CGColor;
+    }
+}
+
 - (void)showToastMessage:(NSString *)message {
     UILabel *toast = [[UILabel alloc] init];
     toast.text = message;
@@ -1894,11 +2065,15 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     }
     CGFloat topOffset = MAX(safeTop, 44) + 10;
 
-    // agentStatusButton 放在右侧竖排（混音控件 mixAudioControlView 下方）
+    // agentStatusButton 接续右侧竖排，默认跟在混音控件下方，避免遮挡已有按钮
     CGFloat btnSize = 44;
     CGFloat btnSpacing = 10;
     CGFloat rightX = self.view.bounds.size.width - btnSize - 12;
-    CGFloat rightY = topOffset + (btnSize + btnSpacing) * 7;
+    CGFloat rightY = topOffset + (btnSize + btnSpacing) * 9;
+    if (self.mixAudioControlView) {
+        rightX = CGRectGetMinX(self.mixAudioControlView.frame);
+        rightY = CGRectGetMaxY(self.mixAudioControlView.frame) + btnSpacing;
+    }
 
     self.agentStatusButton = [UIButton buttonWithType:UIButtonTypeSystem];
     UIImage *agentIcon = nil;
@@ -1917,6 +2092,7 @@ static NSString * const kSpectrumScaleDefaultsKey     = @"SpectrumLayoutScale";
     [self.agentStatusButton addTarget:self action:@selector(agentStatusButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:self.agentStatusButton];
     [self.controlButtons addObject:self.agentStatusButton];
+    [self bringControlButtonsToFront];
 
     CGFloat panelWidth = 320;
     CGFloat panelHeight = 400;

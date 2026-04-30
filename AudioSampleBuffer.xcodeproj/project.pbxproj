@@ -113,7 +113,6 @@
 		4C7D33972EFEEC8D0027CBC8 /* ViewController+PlaybackProgress.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D33962EFEEC8D0027CBC8 /* ViewController+PlaybackProgress.m */; };
 		4C7D339A2EFEEC950027CBC8 /* AudioProgressView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D33992EFEEC950027CBC8 /* AudioProgressView.m */; };
 		4C7D33A02F00000000000001 /* VinylRecordView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D33A22F00000000000002 /* VinylRecordView.m */; };
-		4CCD33A02F30000000000001 /* RhythmColorMaskEffect.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCD33A02F30000000000003 /* RhythmColorMaskEffect.m */; };
 		4C7D33C02F11200000000001 /* LRCGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D33B02F11100000000002 /* LRCGenerator.m */; };
 		4C7D33C02F11200000000002 /* LyricsEditorViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D33B02F11100000000004 /* LyricsEditorViewController.m */; };
 		4C7D33C02F11200000000003 /* LyricsLineCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D33B02F11100000000006 /* LyricsLineCell.m */; };
@@ -123,6 +122,7 @@
 		4C7D33C02F11200000000007 /* LocalLyricsListViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D33B02F1110000000000E /* LocalLyricsListViewController.m */; };
 		4C8A100130BA500000ACCA11 /* PrismResonanceShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4C8A100230BA500000ACCA11 /* PrismResonanceShader.metal */; };
 		4C8B200130BA600000ACCA11 /* VisualLyricsTunnelShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4C8B200230BA600000ACCA11 /* VisualLyricsTunnelShader.metal */; };
+		4CCD33A02F30000000000001 /* RhythmColorMaskEffect.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCD33A02F30000000000003 /* RhythmColorMaskEffect.m */; };
 		4CCDEFC82F497C7C00A2DB9C /* VisualEffectAIController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCDEFC72F497C7C00A2DB9C /* VisualEffectAIController.m */; };
 		4CCDEFC92F497C7C00A2DB9C /* UserPreferenceEngine.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCDEFC52F497C7C00A2DB9C /* UserPreferenceEngine.m */; };
 		4CCDEFCA2F497C7C00A2DB9C /* EffectDecisionAgent.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCDEFBB2F497C7C00A2DB9C /* EffectDecisionAgent.m */; };
@@ -134,6 +134,7 @@
 		4CCFF6022F3B1DAC004FFF9A /* MusicAIAnalyzer.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCFF6002F3B1DAC004FFF9A /* MusicAIAnalyzer.m */; };
 		4CCFF6032F3B1DAC004FFF9A /* AIColorConfiguration.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCFF5FE2F3B1DAC004FFF9A /* AIColorConfiguration.m */; };
 		4CDSP00012F24CF0000000001 /* RealtimeAnalyzerDSP.c in Sources */ = {isa = PBXBuildFile; fileRef = 4CDSP00012F24CF0000000003 /* RealtimeAnalyzerDSP.c */; };
+		4CE2D33A2FA3555B0006CE2C /* HPSSValidation.md in Resources */ = {isa = PBXBuildFile; fileRef = 4CE2D3392FA3555B0006CE2C /* HPSSValidation.md */; };
 		4CF7A11230A1000000000003 /* LLMAPISettings.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CF7A11130A1000000000002 /* LLMAPISettings.m */; };
 		4CSPC00012F25000000000001 /* SpectrumViewShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4CSPC00012F25000000000002 /* SpectrumViewShader.metal */; };
 		4c4e68e181504d63bdcceeb4 /* QQMusicAPIService.m in Sources */ = {isa = PBXBuildFile; fileRef = 8f06cadb652e4fd8b81f19fb /* QQMusicAPIService.m */; };
@@ -154,6 +155,19 @@
 		8A5F000130A2000000000013 /* ViewController+Lyrics.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A5F000130A2000000000003 /* ViewController+Lyrics.m */; };
 		8A5F000130A2000000000014 /* ViewController+Library.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A5F000130A2000000000004 /* ViewController+Library.m */; };
 		8A5F000130A2000000000015 /* ViewController+Visuals.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A5F000130A2000000000005 /* ViewController+Visuals.m */; };
+		90A1000130C1000000000011 /* MotionPhotoEditorViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 90A1000130C1000000000003 /* MotionPhotoEditorViewController.m */; };
+		90A1000130C1000000000012 /* ViewController+MotionPhoto.m in Sources */ = {isa = PBXBuildFile; fileRef = 90A1000130C1000000000005 /* ViewController+MotionPhoto.m */; };
+		90A1000130C1000000000013 /* MotionPhotoEditorTypes.m in Sources */ = {isa = PBXBuildFile; fileRef = 90A1000130C1000000000008 /* MotionPhotoEditorTypes.m */; };
+		90A1000130C1000000000014 /* MotionPhotoCanvasView.m in Sources */ = {isa = PBXBuildFile; fileRef = 90A1000130C100000000000A /* MotionPhotoCanvasView.m */; };
+		90A1000130C1000000000015 /* MotionPhotoFlowRenderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 90A1000130C100000000000C /* MotionPhotoFlowRenderer.m */; };
+		90A1000130C1000000000016 /* MotionPhotoFlowShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = 90A1000130C100000000000D /* MotionPhotoFlowShader.metal */; };
+		9B10000130A3000000000011 /* RhythmFeatureEffectController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9B10000130A3000000000004 /* RhythmFeatureEffectController.m */; };
+		9B10000130A3000000000012 /* RhythmEffectSelectionPanelView.m in Sources */ = {isa = PBXBuildFile; fileRef = 9B10000130A3000000000006 /* RhythmEffectSelectionPanelView.m */; };
+		9B10000130A3000000000013 /* RhythmEffectDescriptor.m in Sources */ = {isa = PBXBuildFile; fileRef = 9B10000130A3000000000008 /* RhythmEffectDescriptor.m */; };
+		9B10000130A3000000000014 /* RhythmFeatureMetalRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9B10000130A300000000000C /* RhythmFeatureMetalRenderer.mm */; };
+		9B10000130A3000000000015 /* RhythmFeatureEffects.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9B10000130A300000000000E /* RhythmFeatureEffects.metal */; };
+		9B10000130A3000000000111 /* RhythmTransformMetalRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9B10000130A3000000000101 /* RhythmTransformMetalRenderer.mm */; };
+		9B10000130A3000000000112 /* RhythmTransformEffects.metal in Sources */ = {isa = PBXBuildFile; fileRef = 9B10000130A3000000000103 /* RhythmTransformEffects.metal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -345,8 +359,6 @@
 		4C7D33992EFEEC950027CBC8 /* AudioProgressView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AudioProgressView.m; sourceTree = "<group>"; };
 		4C7D33A12F00000000000001 /* VinylRecordView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VinylRecordView.h; sourceTree = "<group>"; };
 		4C7D33A22F00000000000002 /* VinylRecordView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = VinylRecordView.m; sourceTree = "<group>"; };
-		4CCD33A02F30000000000002 /* RhythmColorMaskEffect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RhythmColorMaskEffect.h; sourceTree = "<group>"; };
-		4CCD33A02F30000000000003 /* RhythmColorMaskEffect.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RhythmColorMaskEffect.m; sourceTree = "<group>"; };
 		4C7D33B02F11100000000001 /* LRCGenerator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LRCGenerator.h; sourceTree = "<group>"; };
 		4C7D33B02F11100000000002 /* LRCGenerator.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LRCGenerator.m; sourceTree = "<group>"; };
 		4C7D33B02F11100000000003 /* LyricsEditorViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LyricsEditorViewController.h; sourceTree = "<group>"; };
@@ -363,6 +375,8 @@
 		4C7D33B02F1110000000000E /* LocalLyricsListViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LocalLyricsListViewController.m; sourceTree = "<group>"; };
 		4C8A100230BA500000ACCA11 /* PrismResonanceShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = PrismResonanceShader.metal; sourceTree = "<group>"; };
 		4C8B200230BA600000ACCA11 /* VisualLyricsTunnelShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = VisualLyricsTunnelShader.metal; sourceTree = "<group>"; };
+		4CCD33A02F30000000000002 /* RhythmColorMaskEffect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RhythmColorMaskEffect.h; sourceTree = "<group>"; };
+		4CCD33A02F30000000000003 /* RhythmColorMaskEffect.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RhythmColorMaskEffect.m; sourceTree = "<group>"; };
 		4CCDEFB82F497C7C00A2DB9C /* AudioFeatureExtractor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioFeatureExtractor.h; sourceTree = "<group>"; };
 		4CCDEFB92F497C7C00A2DB9C /* AudioFeatureExtractor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AudioFeatureExtractor.m; sourceTree = "<group>"; };
 		4CCDEFBA2F497C7C00A2DB9C /* EffectDecisionAgent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EffectDecisionAgent.h; sourceTree = "<group>"; };
@@ -385,6 +399,7 @@
 		4CCFF6002F3B1DAC004FFF9A /* MusicAIAnalyzer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MusicAIAnalyzer.m; sourceTree = "<group>"; };
 		4CDSP00012F24CF0000000002 /* RealtimeAnalyzerDSP.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RealtimeAnalyzerDSP.h; sourceTree = "<group>"; };
 		4CDSP00012F24CF0000000003 /* RealtimeAnalyzerDSP.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = RealtimeAnalyzerDSP.c; sourceTree = "<group>"; };
+		4CE2D3392FA3555B0006CE2C /* HPSSValidation.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = HPSSValidation.md; sourceTree = "<group>"; };
 		4CF7A11030A1000000000001 /* LLMAPISettings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LLMAPISettings.h; sourceTree = "<group>"; };
 		4CF7A11130A1000000000002 /* LLMAPISettings.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LLMAPISettings.m; sourceTree = "<group>"; };
 		4CSPC00012F25000000000002 /* SpectrumViewShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SpectrumViewShader.metal; sourceTree = "<group>"; };
@@ -418,6 +433,29 @@
 		8A5F000130A2000000000004 /* ViewController+Library.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ViewController+Library.m"; sourceTree = "<group>"; };
 		8A5F000130A2000000000005 /* ViewController+Visuals.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ViewController+Visuals.m"; sourceTree = "<group>"; };
 		8f06cadb652e4fd8b81f19fb /* QQMusicAPIService.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = QQMusicAPIService.m; sourceTree = "<group>"; };
+		90A1000130C1000000000002 /* MotionPhotoEditorViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MotionPhotoEditorViewController.h; sourceTree = "<group>"; };
+		90A1000130C1000000000003 /* MotionPhotoEditorViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MotionPhotoEditorViewController.m; sourceTree = "<group>"; };
+		90A1000130C1000000000004 /* ViewController+MotionPhoto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ViewController+MotionPhoto.h"; sourceTree = "<group>"; };
+		90A1000130C1000000000005 /* ViewController+MotionPhoto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ViewController+MotionPhoto.m"; sourceTree = "<group>"; };
+		90A1000130C1000000000007 /* MotionPhotoEditorTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MotionPhotoEditorTypes.h; sourceTree = "<group>"; };
+		90A1000130C1000000000008 /* MotionPhotoEditorTypes.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MotionPhotoEditorTypes.m; sourceTree = "<group>"; };
+		90A1000130C1000000000009 /* MotionPhotoCanvasView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MotionPhotoCanvasView.h; sourceTree = "<group>"; };
+		90A1000130C100000000000A /* MotionPhotoCanvasView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MotionPhotoCanvasView.m; sourceTree = "<group>"; };
+		90A1000130C100000000000B /* MotionPhotoFlowRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MotionPhotoFlowRenderer.h; sourceTree = "<group>"; };
+		90A1000130C100000000000C /* MotionPhotoFlowRenderer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MotionPhotoFlowRenderer.m; sourceTree = "<group>"; };
+		90A1000130C100000000000D /* MotionPhotoFlowShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MotionPhotoFlowShader.metal; sourceTree = "<group>"; };
+		9B10000130A3000000000004 /* RhythmFeatureEffectController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RhythmFeatureEffectController.m; sourceTree = "<group>"; };
+		9B10000130A3000000000006 /* RhythmEffectSelectionPanelView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RhythmEffectSelectionPanelView.m; sourceTree = "<group>"; };
+		9B10000130A3000000000008 /* RhythmEffectDescriptor.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RhythmEffectDescriptor.m; sourceTree = "<group>"; };
+		9B10000130A3000000000009 /* RhythmFeatureEffectController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RhythmFeatureEffectController.h; sourceTree = "<group>"; };
+		9B10000130A300000000000A /* RhythmEffectSelectionPanelView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RhythmEffectSelectionPanelView.h; sourceTree = "<group>"; };
+		9B10000130A300000000000B /* RhythmEffectDescriptor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RhythmEffectDescriptor.h; sourceTree = "<group>"; };
+		9B10000130A300000000000C /* RhythmFeatureMetalRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = RhythmFeatureMetalRenderer.mm; sourceTree = "<group>"; };
+		9B10000130A300000000000D /* RhythmFeatureMetalRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RhythmFeatureMetalRenderer.h; sourceTree = "<group>"; };
+		9B10000130A300000000000E /* RhythmFeatureEffects.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = RhythmFeatureEffects.metal; sourceTree = "<group>"; };
+		9B10000130A3000000000101 /* RhythmTransformMetalRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = RhythmTransformMetalRenderer.mm; sourceTree = "<group>"; };
+		9B10000130A3000000000102 /* RhythmTransformMetalRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RhythmTransformMetalRenderer.h; sourceTree = "<group>"; };
+		9B10000130A3000000000103 /* RhythmTransformEffects.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = RhythmTransformEffects.metal; sourceTree = "<group>"; };
 		c51b7ee3f029482798b1302c /* QQMusicAPIService.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = QQMusicAPIService.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -808,6 +846,7 @@
 			children = (
 				4CCFF6012F3B1DAC004FFF9A /* AI */,
 				4C66E6D82E8A89E8003200DA /* Audio */,
+				90A1000130C1000000000001 /* MotionPhoto */,
 				64C544CC28C83B1200C23393 /* AudioSampleBuffer.entitlements */,
 				64C544D028C83B5A00C23393 /* AudioSampleBuffer */,
 				64C5446028C838D100C23393 /* AppDelegate.h */,
@@ -816,9 +855,12 @@
 				4C65485B2EA0A47E006DD8DD /* AudioFileFormats.m */,
 				4C5E4BC32EA10E13009B5708 /* MusicLibraryManager.h */,
 				4C5E4BC42EA10E13009B5708 /* MusicLibraryManager.m */,
+				9B10000130A3000000000001 /* RhythmEffects */,
 				64C5446628C838D100C23393 /* ViewController.h */,
 				64C5446728C838D100C23393 /* ViewController.m */,
 				8A5F000130A2000000000001 /* ViewController+Private.h */,
+				90A1000130C1000000000004 /* ViewController+MotionPhoto.h */,
+				90A1000130C1000000000005 /* ViewController+MotionPhoto.m */,
 				8A5F000130A2000000000002 /* ViewController+Playback.m */,
 				8A5F000130A2000000000003 /* ViewController+Lyrics.m */,
 				8A5F000130A2000000000004 /* ViewController+Library.m */,
@@ -827,8 +869,6 @@
 				64C5447E28C8395200C23393 /* AudioPlayCell.m */,
 				4C7D33A12F00000000000001 /* VinylRecordView.h */,
 				4C7D33A22F00000000000002 /* VinylRecordView.m */,
-				4CCD33A02F30000000000002 /* RhythmColorMaskEffect.h */,
-				4CCD33A02F30000000000003 /* RhythmColorMaskEffect.m */,
 				4C7D33952EFEEC8D0027CBC8 /* ViewController+PlaybackProgress.h */,
 				4C7D33962EFEEC8D0027CBC8 /* ViewController+PlaybackProgress.m */,
 				64C5448028C83A0700C23393 /* TTi.h */,
@@ -873,8 +913,86 @@
 				64C5448328C83A7600C23393 /* SpectrumView.h */,
 				64C5448528C83A7700C23393 /* SpectrumView.m */,
 				4CSPC00012F25000000000002 /* SpectrumViewShader.metal */,
+				4CE2D3392FA3555B0006CE2C /* HPSSValidation.md */,
 			);
 			path = AudioSampleBuffer;
+			sourceTree = "<group>";
+		};
+		90A1000130C1000000000001 /* MotionPhoto */ = {
+			isa = PBXGroup;
+			children = (
+				90A1000130C1000000000002 /* MotionPhotoEditorViewController.h */,
+				90A1000130C1000000000003 /* MotionPhotoEditorViewController.m */,
+				90A1000130C1000000000007 /* MotionPhotoEditorTypes.h */,
+				90A1000130C1000000000008 /* MotionPhotoEditorTypes.m */,
+				90A1000130C1000000000009 /* MotionPhotoCanvasView.h */,
+				90A1000130C100000000000A /* MotionPhotoCanvasView.m */,
+				90A1000130C100000000000B /* MotionPhotoFlowRenderer.h */,
+				90A1000130C100000000000C /* MotionPhotoFlowRenderer.m */,
+				90A1000130C100000000000D /* MotionPhotoFlowShader.metal */,
+			);
+			path = MotionPhoto;
+			sourceTree = "<group>";
+		};
+		9B10000130A3000000000001 /* RhythmEffects */ = {
+			isa = PBXGroup;
+			children = (
+				9B10000130A3000000000002 /* Dispersion */,
+				9B10000130A3000000000003 /* FeatureEffects */,
+				9B10000130A3000000000007 /* Core */,
+				9B10000130A3000000000005 /* UI */,
+				9B10000130A3000000000100 /* TransformEffects */,
+			);
+			path = RhythmEffects;
+			sourceTree = "<group>";
+		};
+		9B10000130A3000000000002 /* Dispersion */ = {
+			isa = PBXGroup;
+			children = (
+				4CCD33A02F30000000000002 /* RhythmColorMaskEffect.h */,
+				4CCD33A02F30000000000003 /* RhythmColorMaskEffect.m */,
+			);
+			path = Dispersion;
+			sourceTree = "<group>";
+		};
+		9B10000130A3000000000003 /* FeatureEffects */ = {
+			isa = PBXGroup;
+			children = (
+				9B10000130A3000000000004 /* RhythmFeatureEffectController.m */,
+				9B10000130A3000000000009 /* RhythmFeatureEffectController.h */,
+				9B10000130A300000000000C /* RhythmFeatureMetalRenderer.mm */,
+				9B10000130A300000000000D /* RhythmFeatureMetalRenderer.h */,
+				9B10000130A300000000000E /* RhythmFeatureEffects.metal */,
+			);
+			path = FeatureEffects;
+			sourceTree = "<group>";
+		};
+		9B10000130A3000000000005 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				9B10000130A3000000000006 /* RhythmEffectSelectionPanelView.m */,
+				9B10000130A300000000000A /* RhythmEffectSelectionPanelView.h */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		9B10000130A3000000000007 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				9B10000130A3000000000008 /* RhythmEffectDescriptor.m */,
+				9B10000130A300000000000B /* RhythmEffectDescriptor.h */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		9B10000130A3000000000100 /* TransformEffects */ = {
+			isa = PBXGroup;
+			children = (
+				9B10000130A3000000000101 /* RhythmTransformMetalRenderer.mm */,
+				9B10000130A3000000000102 /* RhythmTransformMetalRenderer.h */,
+				9B10000130A3000000000103 /* RhythmTransformEffects.metal */,
+			);
+			path = TransformEffects;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -947,6 +1065,7 @@
 				4C6548852EA0C500006DD8DD /* extract_ncm_lyrics.sh in Resources */,
 				4C6548862EA0C500006DD8DD /* ncm_lyrics_extractor.py in Resources */,
 				4C6548872EA0C500006DD8DD /* decrypt_ncm_to_mp3.py in Resources */,
+				4CE2D33A2FA3555B0006CE2C /* HPSSValidation.md in Resources */,
 				64C5446B28C838D100C23393 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1029,10 +1148,16 @@
 				4C66E71A2E8A9255003200DA /* MetalRenderer.m in Sources */,
 				64C5448E28C83A7700C23393 /* AudioSpectrumPlayer.m in Sources */,
 				64C5446828C838D100C23393 /* ViewController.m in Sources */,
+				90A1000130C1000000000012 /* ViewController+MotionPhoto.m in Sources */,
+				90A1000130C1000000000013 /* MotionPhotoEditorTypes.m in Sources */,
+				90A1000130C1000000000014 /* MotionPhotoCanvasView.m in Sources */,
+				90A1000130C1000000000015 /* MotionPhotoFlowRenderer.m in Sources */,
+				90A1000130C1000000000016 /* MotionPhotoFlowShader.metal in Sources */,
 				8A5F000130A2000000000012 /* ViewController+Playback.m in Sources */,
 				8A5F000130A2000000000013 /* ViewController+Lyrics.m in Sources */,
 				8A5F000130A2000000000014 /* ViewController+Library.m in Sources */,
 				8A5F000130A2000000000015 /* ViewController+Visuals.m in Sources */,
+				90A1000130C1000000000011 /* MotionPhotoEditorViewController.m in Sources */,
 				4C51687E2E9E5FD500853960 /* LyricsEffectCell.m in Sources */,
 				4C51687F2E9E5FD500853960 /* LyricsEffectControlPanel.m in Sources */,
 				4C2C6A232EA2170A00D18118 /* smallft.c in Sources */,
@@ -1057,6 +1182,13 @@
 				64C5447F28C8395200C23393 /* AudioPlayCell.m in Sources */,
 				4C7D33A02F00000000000001 /* VinylRecordView.m in Sources */,
 				4CCD33A02F30000000000001 /* RhythmColorMaskEffect.m in Sources */,
+				9B10000130A3000000000011 /* RhythmFeatureEffectController.m in Sources */,
+				9B10000130A3000000000012 /* RhythmEffectSelectionPanelView.m in Sources */,
+				9B10000130A3000000000013 /* RhythmEffectDescriptor.m in Sources */,
+				9B10000130A3000000000014 /* RhythmFeatureMetalRenderer.mm in Sources */,
+				9B10000130A3000000000015 /* RhythmFeatureEffects.metal in Sources */,
+				9B10000130A3000000000111 /* RhythmTransformMetalRenderer.mm in Sources */,
+				9B10000130A3000000000112 /* RhythmTransformEffects.metal in Sources */,
 				4C110D482EA9CD5100D59E12 /* AudioReactive3DShader.metal in Sources */,
 				4C110D492EA9CD5100D59E12 /* GeometricMorphShader.metal in Sources */,
 				4C110D4A2EA9CD5100D59E12 /* CircularWaveShader.metal in Sources */,

@@ -11,9 +11,24 @@
 #import <Photos/Photos.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <math.h>
+#import <string.h>
 
 static NSString * const kBackgroundMediaDirectoryName = @"BackgroundMedia";
 static NSString * const kBackgroundMediaManifestFileName = @"background_media_items.dat";
+
+static UIEdgeInsets RhythmEffectiveSafeAreaInsets(UIView *view) {
+    UIEdgeInsets insets = UIEdgeInsetsZero;
+    if (!view) {
+        return insets;
+    }
+    if (@available(iOS 11.0, *)) {
+        insets = view.safeAreaInsets;
+        if (insets.bottom < 0.5 && view.window) {
+            insets = view.window.safeAreaInsets;
+        }
+    }
+    return insets;
+}
 
 @implementation BackgroundMediaItem
 
@@ -1080,20 +1095,19 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 - (void)backgroundMediaRhythmButtonTapped:(UIButton *)sender {
     if (self.backgroundMediaItems.count == 0) {
         [self showAlert:@"没有可用背景媒体" message:@"请先点击“导入”添加视频或 Live Photo。"];
-        [self setBackgroundRhythmEnabled:NO];
         return;
     }
 
     if (![self isBackgroundMediaEnabled]) {
         [self showAlert:@"请先开启背景媒体" message:@"开启背景媒体后，才能使用律动效果。"];
-        [self setBackgroundRhythmEnabled:NO];
         return;
     }
 
-    [self setBackgroundRhythmEnabled:!self.isBackgroundRhythmEnabled];
+    [self setBackgroundMediaEffectSelectionVisible:!self.isBackgroundMediaEffectSelectionVisible animated:YES];
 }
 
 - (void)backgroundMediaRhythmRateSliderChanged:(UISlider *)sender {
+    [self setBackgroundRhythmEnabled:YES];
     // 重新映射为 "震颤强度"：0..1
     // 旧的 rate 调速废弃（视频始终 1.0× 播放），这里只作为整体效果强度
     CGFloat span = sender.maximumValue - sender.minimumValue;
@@ -1109,6 +1123,7 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 }
 
 - (void)backgroundMediaRhythmShakeSliderChanged:(UISlider *)sender {
+    [self setBackgroundVisualEffectsEnabled:YES];
     // "色散" slider：控制色彩蒙版的 alpha 上限和位移上限
     // 注意：实际效果是有色蒙版叠加 + 蒙版位移，不是 RGB 通道分离（避免白闪刺眼）
     CGFloat t = MAX(0.0, MIN(sender.value, 1.0));
@@ -1119,13 +1134,61 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 
 // beat 叠层需要压过 Metal/spectrum 等全屏视觉层，但仍低于控制 UI。
 - (void)refreshBackgroundRhythmOverlayZOrder {
+    if (self.backgroundRhythmTransformRenderer.view.superview == self.view) {
+        [self.view sendSubviewToBack:self.backgroundRhythmTransformRenderer.view];
+    }
     if (self.backgroundRhythmColorMaskView.superview == self.view) {
         [self.view bringSubviewToFront:self.backgroundRhythmColorMaskView];
+    }
+    if (self.backgroundRhythmFeatureRenderer.view.superview == self.view) {
+        [self.view bringSubviewToFront:self.backgroundRhythmFeatureRenderer.view];
     }
     if (self.backgroundRhythmFlashView.superview == self.view) {
         [self.view bringSubviewToFront:self.backgroundRhythmFlashView];
     }
     [self bringControlButtonsToFront];
+    if (self.isBackgroundMediaEffectSelectionVisible &&
+        self.backgroundMediaEffectSelectionPanel &&
+        !self.backgroundMediaEffectSelectionPanel.hidden) {
+        [self.view bringSubviewToFront:self.backgroundMediaEffectSelectionPanel];
+    }
+}
+
+- (BOOL)isBackgroundReactivePipelineEnabled {
+    return self.isBackgroundRhythmEnabled || self.isBackgroundVisualEffectsEnabled;
+}
+
+- (void)syncBackgroundReactiveDisplayLink {
+    BOOL shouldRun = [self isBackgroundReactivePipelineEnabled] && self.isBackgroundMediaEffectActive;
+    if (!shouldRun) {
+        [self.backgroundRhythmDisplayLink invalidate];
+        self.backgroundRhythmDisplayLink = nil;
+        return;
+    }
+    if (!self.backgroundRhythmDisplayLink) {
+        self.backgroundRhythmDisplayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(backgroundRhythmTick:)];
+        if (@available(iOS 10.0, *)) {
+            self.backgroundRhythmDisplayLink.preferredFramesPerSecond = 60;
+        }
+        [self.backgroundRhythmDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+    }
+}
+
+- (void)teardownBackgroundVisualEffects {
+    [self.backgroundRhythmColorMaskView reset];
+    [self.backgroundRhythmFeatureRenderer reset];
+    [self.backgroundRhythmTransformRenderer attachToPlayer:nil];
+    [self.backgroundRhythmTransformRenderer reset];
+    if (self.backgroundRhythmColorMaskView.superview) {
+        [self.backgroundRhythmColorMaskView removeFromSuperview];
+    }
+    if (self.backgroundRhythmFeatureRenderer.view.superview) {
+        [self.backgroundRhythmFeatureRenderer.view removeFromSuperview];
+    }
+    if (self.backgroundRhythmTransformRenderer.view.superview) {
+        [self.backgroundRhythmTransformRenderer.view removeFromSuperview];
+    }
+    self.backgroundVideoLayer.hidden = NO;
 }
 
 // 同步色散模块到视图层级 + 更新 alpha/位移上限。slider=0 → 完全移除（不残留）
@@ -1138,7 +1201,7 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     CGFloat maxAlpha = 0.55 * t;   // 0..0.55，beat 上能明显看到色脉
     CGFloat shiftMax = 10.0 * t;   // 0..10 px
 
-    if (!self.isBackgroundRhythmEnabled || maxAlpha < 0.005) {
+    if (!self.isBackgroundVisualEffectsEnabled || maxAlpha < 0.005) {
         if (self.backgroundRhythmColorMaskView.superview) {
             [self.backgroundRhythmColorMaskView removeFromSuperview];
         }
@@ -1147,8 +1210,10 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     }
     if (!self.backgroundRhythmColorMaskView) {
         RhythmColorMaskEffect *mask = [[RhythmColorMaskEffect alloc] initWithFrame:self.view.bounds];
+        mask.dispersionEffectType = self.backgroundRhythmDispersionEffectType;
         self.backgroundRhythmColorMaskView = mask;
     }
+    self.backgroundRhythmColorMaskView.dispersionEffectType = self.backgroundRhythmDispersionEffectType;
     self.backgroundRhythmColorMaskView.maxAlpha = maxAlpha;
     self.backgroundRhythmColorMaskView.shiftMax = shiftMax;
     if (self.backgroundRhythmColorMaskView.superview != self.view) {
@@ -1158,6 +1223,76 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     self.backgroundRhythmColorMaskView.frame = self.view.bounds;
     self.backgroundRhythmColorMaskView.hidden = NO;
     [self refreshBackgroundRhythmOverlayZOrder];
+}
+
+- (void)syncRhythmFeatureRendererInHierarchy {
+    BOOL shouldShow = self.isBackgroundVisualEffectsEnabled &&
+        self.isBackgroundMediaEffectActive &&
+        self.backgroundRhythmFeatureController.prefersMetalOverlay;
+    if (!shouldShow) {
+        if (self.backgroundRhythmFeatureRenderer.view.superview) {
+            [self.backgroundRhythmFeatureRenderer.view removeFromSuperview];
+        }
+        [self.backgroundRhythmFeatureRenderer reset];
+        return;
+    }
+
+    if (!self.backgroundRhythmFeatureRenderer) {
+        self.backgroundRhythmFeatureRenderer = [[RhythmFeatureMetalRenderer alloc] initWithFrame:self.view.bounds];
+    }
+    self.backgroundRhythmFeatureRenderer.effectType = self.backgroundRhythmFeatureController.selectedEffectType;
+    self.backgroundRhythmFeatureRenderer.beatSyncEnabled = self.backgroundRhythmFeatureController.beatSyncEnabled;
+    [self.backgroundRhythmFeatureRenderer updateFrame:self.view.bounds];
+    if (self.backgroundRhythmFeatureRenderer.view.superview != self.view) {
+        [self.view insertSubview:self.backgroundRhythmFeatureRenderer.view atIndex:0];
+    }
+    [self refreshBackgroundRhythmOverlayZOrder];
+}
+
+- (void)syncBackgroundTransformRendererInHierarchy {
+    RhythmFeatureEffectController *controller = self.backgroundRhythmFeatureController;
+    BOOL shouldShow = self.isBackgroundVisualEffectsEnabled &&
+        self.isBackgroundMediaEffectActive &&
+        self.backgroundVideoPlayer != nil &&
+        controller.prefersTransformRenderer;
+    self.backgroundVideoLayer.hidden = shouldShow;
+    if (!shouldShow) {
+        if (self.backgroundRhythmTransformRenderer.view.superview) {
+            [self.backgroundRhythmTransformRenderer.view removeFromSuperview];
+        }
+        [self.backgroundRhythmTransformRenderer attachToPlayer:nil];
+        [self.backgroundRhythmTransformRenderer reset];
+        return;
+    }
+
+    if (!self.backgroundRhythmTransformRenderer) {
+        self.backgroundRhythmTransformRenderer = [[RhythmTransformMetalRenderer alloc] initWithFrame:self.view.bounds];
+    }
+
+    self.backgroundRhythmTransformRenderer.effectType = controller ? controller.selectedEffectType : RhythmFeatureEffectTypeDroplet;
+    self.backgroundRhythmTransformRenderer.baseIntensity = controller ? controller.transformIntensity : 0.72;
+    self.backgroundRhythmTransformRenderer.beatBoost = controller ? controller.transformBeatBoost : 0.82;
+    self.backgroundRhythmTransformRenderer.radius = controller ? controller.transformRadius : 0.56;
+    self.backgroundRhythmTransformRenderer.speed = controller ? controller.transformSpeed : 0.64;
+    self.backgroundRhythmTransformRenderer.beatSyncEnabled = controller ? controller.beatSyncEnabled : NO;
+    [self.backgroundRhythmTransformRenderer attachToPlayer:self.backgroundVideoPlayer];
+    [self.backgroundRhythmTransformRenderer updateFrame:self.view.bounds];
+    if (self.backgroundRhythmTransformRenderer.view.superview != self.view) {
+        [self.view insertSubview:self.backgroundRhythmTransformRenderer.view atIndex:0];
+    }
+    [self refreshBackgroundRhythmOverlayZOrder];
+}
+
+- (void)rebuildBackgroundTransformRendererForEffectSwitch {
+    if (self.backgroundRhythmTransformRenderer) {
+        [self.backgroundRhythmTransformRenderer attachToPlayer:nil];
+        [self.backgroundRhythmTransformRenderer reset];
+        if (self.backgroundRhythmTransformRenderer.view.superview) {
+            [self.backgroundRhythmTransformRenderer.view removeFromSuperview];
+        }
+        self.backgroundRhythmTransformRenderer = nil;
+    }
+    [self syncBackgroundTransformRendererInHierarchy];
 }
 
 // 同步闪屏 view 到视图层级。slider=0 → 移除；slider>0 → lazy-create 并插入
@@ -1207,8 +1342,6 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     if (self.backgroundRhythmBeatPeriod <= 0.0) self.backgroundRhythmBeatPeriod = 0.50;
 
     if (!resolvedEnabled) {
-        [self.backgroundRhythmDisplayLink invalidate];
-        self.backgroundRhythmDisplayLink = nil;
         self.backgroundRhythmPulse = 0.0f;
         self.backgroundRhythmSmoothedBass = 0.0f;
         self.backgroundRhythmLastBeatTime = 0;
@@ -1230,11 +1363,6 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
         self.backgroundRhythmFilterStrongMix = 0.0f;
         self.backgroundRhythmFilterMotionBlur = 0.0f;
 
-        [self.backgroundRhythmColorMaskView reset];
-        if (self.backgroundRhythmColorMaskView.superview) {
-            [self.backgroundRhythmColorMaskView removeFromSuperview];
-        }
-
         if (self.backgroundVideoPlayer && self.isBackgroundMediaEffectActive) {
             [self.backgroundVideoPlayer setRate:1.0];
         }
@@ -1249,6 +1377,9 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
             self.backgroundRhythmFlashView.hidden = YES;
         }
     } else {
+        if (!self.backgroundRhythmFeatureController) {
+            self.backgroundRhythmFeatureController = [[RhythmFeatureEffectController alloc] init];
+        }
         if (!self.backgroundRhythmLastSpectrum) self.backgroundRhythmLastSpectrum = [NSMutableArray array];
         if (!self.backgroundRhythmFluxHistory) self.backgroundRhythmFluxHistory = [NSMutableArray array];
 
@@ -1258,18 +1389,34 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
         self.backgroundRhythmFilterShiftMax = 0.0f;
 
         // 色散与闪屏：均按 slider 当前值同步层级（slider=0 → 不创建 view）
-        [self syncRhythmColorMaskInHierarchy];
         [self syncRhythmFlashInHierarchy];
-
-        if (!self.backgroundRhythmDisplayLink) {
-            self.backgroundRhythmDisplayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(backgroundRhythmTick:)];
-            if (@available(iOS 10.0, *)) {
-                self.backgroundRhythmDisplayLink.preferredFramesPerSecond = 60;
-            }
-            [self.backgroundRhythmDisplayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
-        }
     }
 
+    [self syncBackgroundReactiveDisplayLink];
+
+    [self refreshBackgroundMediaButtonState];
+}
+
+- (void)setBackgroundVisualEffectsEnabled:(BOOL)enabled {
+    BOOL resolvedEnabled = enabled;
+    if (!self.isBackgroundMediaEffectActive || ![self isBackgroundMediaEnabled]) {
+        resolvedEnabled = NO;
+    }
+
+    self.isBackgroundVisualEffectsEnabled = resolvedEnabled;
+
+    if (!resolvedEnabled) {
+        [self teardownBackgroundVisualEffects];
+    } else {
+        if (!self.backgroundRhythmFeatureController) {
+            self.backgroundRhythmFeatureController = [[RhythmFeatureEffectController alloc] init];
+        }
+        [self syncRhythmColorMaskInHierarchy];
+        [self syncRhythmFeatureRendererInHierarchy];
+        [self syncBackgroundTransformRendererInHierarchy];
+    }
+
+    [self syncBackgroundReactiveDisplayLink];
     [self refreshBackgroundMediaButtonState];
 }
 
@@ -1341,16 +1488,24 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 
 - (float)bassEnergyFromSpectrum:(NSArray<NSNumber *> *)spectrum {
     if (spectrum.count == 0) return 0.0f;
-    NSUInteger count = MIN(spectrum.count, (NSUInteger)80);
+    NSUInteger count = MIN(spectrum.count, (NSUInteger)48);
     if (count == 0) return 0.0f;
 
+    float subBass = 0.0f;
     float bass = 0.0f;
-    NSUInteger bassBins = MIN((NSUInteger)17, count);
-    for (NSUInteger i = 0; i < bassBins; i++) {
+    NSUInteger subBassBins = MIN((NSUInteger)6, count);
+    NSUInteger bassBins = MIN((NSUInteger)12, count);
+    for (NSUInteger i = 0; i < subBassBins; i++) {
+        subBass += (float)[spectrum[i] doubleValue];
+    }
+    for (NSUInteger i = subBassBins; i < bassBins; i++) {
         bass += (float)[spectrum[i] doubleValue];
     }
-    bass /= (float)bassBins;
-    return fminf(1.0f, fmaxf(0.0f, bass * 6.0f));
+    subBass /= MAX(1.0f, (float)subBassBins);
+    bass /= MAX(1.0f, (float)(bassBins - subBassBins));
+
+    float weightedBass = 0.72f * subBass + 0.28f * bass;
+    return fminf(1.0f, fmaxf(0.0f, weightedBass * 7.2f));
 }
 
 // 返回 (flux, isBeat)；flux 写入 outFlux，是否鼓点写入 outIsBeat。
@@ -1373,14 +1528,29 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
         }
     }
 
-    // 计算 spectral flux（只累正向能量增量），低频强加权
+    float lowFlux = 0.0f;
+    float midFlux = 0.0f;
+
+    // 计算 spectral flux（只累正向能量增量），强偏向低频，明显压低中高频权重
     float flux = 0.0f;
     for (NSUInteger i = 0; i < N; i++) {
         float curr = (float)[spectrum[i] doubleValue];
         float prev = (float)[self.backgroundRhythmLastSpectrum[i] doubleValue];
         float diff = curr - prev;
         if (diff > 0.0f) {
-            float w = (i < 10) ? 2.4f : ((i < 24) ? 1.0f : 0.25f);
+            float w = 0.10f;
+            if (i < 6) {
+                w = 4.4f;
+                lowFlux += diff * 1.35f;
+            } else if (i < 12) {
+                w = 2.6f;
+                lowFlux += diff;
+            } else if (i < 24) {
+                w = 0.35f;
+                midFlux += diff;
+            } else {
+                w = 0.06f;
+            }
             flux += diff * w;
         }
         self.backgroundRhythmLastSpectrum[i] = @(curr);
@@ -1413,16 +1583,20 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     }
     float stdv = sqrtf(varSum / (float)histCount);
 
-    // 阈值：基线 + 1.45 std + 一个绝对最小值
-    float threshold = mean + 1.45f * stdv + 0.0008f;
+    // 阈值：提高触发难度，减少中频碎拍误触
+    float threshold = mean + 1.95f * stdv + 0.0022f;
 
-    // 节拍最小间隔：根据预估的 BPM 自适应（下限 ~140ms）
-    CFTimeInterval minBeatInterval = 0.16;
+    // 节拍最小间隔：整体再放宽一点，避免连续中小拍重复触发
+    CFTimeInterval minBeatInterval = 0.24;
     if (self.backgroundRhythmBeatPeriod > 0.30) {
-        minBeatInterval = MAX(0.16, self.backgroundRhythmBeatPeriod * 0.55);
+        minBeatInterval = MAX(0.24, self.backgroundRhythmBeatPeriod * 0.72);
     }
 
-    BOOL isBeat = (flux > threshold) && (now - self.backgroundRhythmLastBeatTime > minBeatInterval);
+    float bassDominance = lowFlux / MAX(0.0025f, midFlux + 0.12f * flux);
+    BOOL strongLowEnd = (lowFlux > 0.010f) && (bassDominance > 1.28f);
+    BOOL isBeat = strongLowEnd &&
+        (flux > threshold) &&
+        (now - self.backgroundRhythmLastBeatTime > minBeatInterval);
 
     if (outFlux) *outFlux = flux;
     if (outIsBeat) *outIsBeat = isBeat;
@@ -1463,7 +1637,6 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 
     float flashT = self.backgroundMediaRhythmFlashSlider ?
         (float)MAX(0.0, MIN(self.backgroundMediaRhythmFlashSlider.value, 1.0)) : 0.0f;
-
     self.backgroundRhythmFilterIntensity = 0.0f;     // CIFilter 不再做色散
     self.backgroundRhythmFilterShiftMax  = 0.0f;
     self.backgroundRhythmFilterStrongMix = strongMix;
@@ -1481,9 +1654,6 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     } else {
         self.backgroundRhythmShakeAxis = 1 - self.backgroundRhythmShakeAxis;
     }
-
-    // 色散：触发蒙版模块（slider=0 时模块内部直接 noop）
-    [self.backgroundRhythmColorMaskView triggerOnBeatWithStrongMix:strongMix axis:self.backgroundRhythmShakeAxis];
 
     // 高潮密集 beat 检测（只有这种状态才允许 motion blur，降 CPU/GPU 开销）：
     // 维护近 2s 内 beat 时间戳，密度 ≥ 4 次（≈120 BPM）+ 当前是中强拍 → 进入"高潮模式"
@@ -1511,9 +1681,52 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 
     // 闪屏 slider 控制：白屏 alpha 强度
     self.backgroundRhythmFlashIntensity = flashT * (0.60f + 0.40f * strongMix);
+    if (self.isBackgroundVisualEffectsEnabled) {
+        BOOL beatSync = self.backgroundRhythmFeatureController.beatSyncEnabled;
+        [self syncRhythmFeatureRendererInHierarchy];
+        [self syncBackgroundTransformRendererInHierarchy];
+        if (beatSync) {
+            static int __beatLogCounter = 0;
+            if (__beatLogCounter % 4 == 0) {
+                NSLog(@"🎵 rhythmHandleBeat[beatSync ON]: strongMix=%.2f featureInView=%d transformInView=%d",
+                      strongMix,
+                      self.backgroundRhythmFeatureRenderer.view.superview != nil,
+                      self.backgroundRhythmTransformRenderer.view.superview != nil);
+            }
+            __beatLogCounter++;
+        }
+        [self.backgroundRhythmColorMaskView triggerOnBeatWithStrongMix:strongMix axis:self.backgroundRhythmShakeAxis];
+        self.backgroundRhythmFeatureRenderer.effectType = self.backgroundRhythmFeatureController.selectedEffectType;
+        self.backgroundRhythmFeatureRenderer.beatSyncEnabled = beatSync;
+        if (self.latestAudioFeatures) {
+            AnalyzerCategoryFeatures cat;
+            memset(&cat, 0, sizeof(cat));
+            cat.lowEnergy = self.latestAudioFeatures.subBassEnergy;
+            cat.subBass = self.latestAudioFeatures.subOnlyEnergy;
+            cat.transient = self.latestAudioFeatures.transientStrength;
+            cat.harmonic = self.latestAudioFeatures.harmonicStrength;
+            cat.noise = self.latestAudioFeatures.noiseStrength;
+            cat.spectralFlatness = self.latestAudioFeatures.spectralFlatness;
+            [self.backgroundRhythmFeatureRenderer triggerWithCategoryFeatures:cat];
+        }
+        [self.backgroundRhythmFeatureRenderer triggerBeatWithStrongMix:strongMix];
+        self.backgroundRhythmTransformRenderer.effectType = self.backgroundRhythmFeatureController.selectedEffectType;
+        self.backgroundRhythmTransformRenderer.baseIntensity = self.backgroundRhythmFeatureController.transformIntensity;
+        self.backgroundRhythmTransformRenderer.beatBoost = self.backgroundRhythmFeatureController.transformBeatBoost;
+        self.backgroundRhythmTransformRenderer.radius = self.backgroundRhythmFeatureController.transformRadius;
+        self.backgroundRhythmTransformRenderer.speed = self.backgroundRhythmFeatureController.transformSpeed;
+        self.backgroundRhythmTransformRenderer.beatSyncEnabled = beatSync;
+        [self.backgroundRhythmTransformRenderer triggerBeatWithStrongMix:strongMix];
+        if (beatSync &&
+            self.backgroundRhythmFeatureController.selectedEffectType != RhythmFeatureEffectTypeDroplet) {
+            [self rhythmPerformVisibleBeatPlaybackWithStrongMix:strongMix];
+        }
+    }
 
     // 加速 chain rate-burst：律动一开就有，不绑定 rate slider
-    [self rhythmPerformBeatJumpWithStrongMix:strongMix];
+    if (self.isBackgroundRhythmEnabled) {
+        [self rhythmPerformBeatJumpWithStrongMix:strongMix];
+    }
 }
 
 // Motionleap 风格 chain rate-burst：基于上次录屏帧差分析，每个 beat 触发 1-3 个
@@ -1569,6 +1782,54 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     // 立即把第一段的 rate 应用上（dispatch_after 0 也行，但直接调更即时）
     [player setRate:baseRate];
     self.backgroundRhythmLastBoostEndsAt = CACurrentMediaTime() + finalEnd;
+}
+
+- (void)rhythmPerformVisibleBeatPlaybackWithStrongMix:(float)strongMix {
+    CGFloat clampedMix = MAX(0.0, MIN((CGFloat)strongMix, 1.0));
+    CGFloat scaleUp = 1.0 + 0.016 + clampedMix * 0.030;
+    CGFloat scaleDown = 0.995 - clampedMix * 0.010;
+
+    UIView *mediaView = nil;
+    if (self.backgroundRhythmTransformRenderer.view.superview == self.view &&
+        !self.backgroundRhythmTransformRenderer.view.hidden) {
+        mediaView = self.backgroundRhythmTransformRenderer.view;
+    } else if (self.livePhotoPosterView.superview == self.view && !self.livePhotoPosterView.hidden) {
+        mediaView = self.livePhotoPosterView;
+    }
+
+    if (mediaView) {
+        [mediaView.layer removeAnimationForKey:@"rhythmBeatScale"];
+        CAKeyframeAnimation *scaleAnim = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale"];
+        scaleAnim.values = @[@1.0, @(scaleUp), @(scaleDown), @1.0];
+        scaleAnim.keyTimes = @[@0.0, @0.18, @0.60, @1.0];
+        scaleAnim.duration = 0.26 + clampedMix * 0.06;
+        scaleAnim.timingFunctions = @[
+            [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut],
+            [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut],
+            [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut]
+        ];
+        [mediaView.layer addAnimation:scaleAnim forKey:@"rhythmBeatScale"];
+    }
+
+    if (self.backgroundVideoLayer && !self.backgroundVideoLayer.hidden) {
+        [self.backgroundVideoLayer removeAnimationForKey:@"rhythmBeatOpacity"];
+        CAKeyframeAnimation *opacityAnim = [CAKeyframeAnimation animationWithKeyPath:@"opacity"];
+        opacityAnim.values = @[@1.0, @(0.90 - clampedMix * 0.08), @1.0];
+        opacityAnim.keyTimes = @[@0.0, @0.30, @1.0];
+        opacityAnim.duration = 0.22 + clampedMix * 0.05;
+        [self.backgroundVideoLayer addAnimation:opacityAnim forKey:@"rhythmBeatOpacity"];
+    }
+
+    if (self.backgroundRhythmFeatureRenderer.view.superview == self.view &&
+        !self.backgroundRhythmFeatureRenderer.view.hidden) {
+        self.backgroundRhythmFeatureRenderer.view.alpha = 1.0;
+        [self.backgroundRhythmFeatureRenderer.view.layer removeAnimationForKey:@"rhythmBeatOverlayPulse"];
+        CAKeyframeAnimation *overlayAnim = [CAKeyframeAnimation animationWithKeyPath:@"opacity"];
+        overlayAnim.values = @[@0.0, @(0.82 + clampedMix * 0.18), @0.0];
+        overlayAnim.keyTimes = @[@0.0, @0.16, @1.0];
+        overlayAnim.duration = 0.24 + clampedMix * 0.06;
+        [self.backgroundRhythmFeatureRenderer.view.layer addAnimation:overlayAnim forKey:@"rhythmBeatOverlayPulse"];
+    }
 }
 
 // 在主线程延后 offset 秒执行 setRate；带互踩检测：若期间新的 chain 已经接管，跳过本次
@@ -1632,9 +1893,10 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 #pragma mark - Rhythm: Display-link tick
 
 - (void)backgroundRhythmTick:(CADisplayLink *)link {
-    if (!self.isBackgroundRhythmEnabled) return;
+    if (![self isBackgroundReactivePipelineEnabled]) return;
     if (!self.isBackgroundMediaEffectActive) {
         [self setBackgroundRhythmEnabled:NO];
+        [self setBackgroundVisualEffectsEnabled:NO];
         return;
     }
 
@@ -1642,12 +1904,19 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     CFTimeInterval dt = link.duration > 0 ? link.duration : (1.0 / 60.0);
 
     NSArray<NSNumber *> *spectrum = self.latestSpectrumData ?: @[];
-    float bass = [self bassEnergyFromSpectrum:spectrum];
-    self.backgroundRhythmSmoothedBass = 0.85f * self.backgroundRhythmSmoothedBass + 0.15f * bass;
-
+    AudioFeatures *features = self.latestAudioFeatures;
+    float bass = 0.0f;
     BOOL isBeat = NO;
     float flux = 0.0f;
+    bass = [self bassEnergyFromSpectrum:spectrum];
     [self detectBeatFromSpectrum:spectrum atTime:now outFlux:&flux outIsBeat:&isBeat];
+    if (features) {
+        // 扩展 DSP 特征只用于增强“强度感”和特效风味，不接管 live beat 判定，
+        // 否则 HPSS 开关会改变背景律动是否触发，手感会飘。
+        bass = MAX(bass, features.subBassEnergy);
+        flux = MAX(flux, features.transientStrength * 0.65f);
+    }
+    self.backgroundRhythmSmoothedBass = 0.85f * self.backgroundRhythmSmoothedBass + 0.15f * bass;
 
     if (isBeat) {
         [self rhythmHandleBeatAtTime:now bass:bass];
@@ -1667,6 +1936,8 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     // 闪屏衰减（快衰减，~46ms 半衰期）+ 实时同步 slider 状态到层级
     self.backgroundRhythmFlashIntensity *= expf(-15.0f * (float)dt);
     [self syncRhythmFlashInHierarchy];
+    [self syncRhythmFeatureRendererInHierarchy];
+    [self syncBackgroundTransformRendererInHierarchy];
     if (self.backgroundRhythmFlashView && self.backgroundRhythmFlashView.superview) {
         CGFloat a = (CGFloat)self.backgroundRhythmFlashIntensity * self.backgroundRhythmFlashMaxAlpha;
         if (a < 0.001) a = 0.0;
@@ -1694,6 +1965,10 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     blur *= expf(-blurDecayRate * (float)dt);
     if (blur < 0.001f) blur = 0.0f;
     self.backgroundRhythmFilterMotionBlur = blur;
+    if (self.isBackgroundVisualEffectsEnabled) {
+        [self.backgroundRhythmFeatureRenderer tickWithDelta:dt];
+        [self.backgroundRhythmTransformRenderer tickWithDelta:dt];
+    }
 
     // 物理 transform：scale + 微旋转 + **单轴**正弦震颤（不再上下左右乱抖）
     if (self.backgroundVideoLayer && rateT > 0.001) {
@@ -1731,11 +2006,13 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
         [CATransaction begin];
         [CATransaction setDisableActions:YES];
         self.backgroundVideoLayer.affineTransform = t;
+        self.backgroundRhythmTransformRenderer.view.transform = t;
         [CATransaction commit];
     } else if (self.backgroundVideoLayer) {
         [CATransaction begin];
         [CATransaction setDisableActions:YES];
         self.backgroundVideoLayer.affineTransform = CGAffineTransformIdentity;
+        self.backgroundRhythmTransformRenderer.view.transform = CGAffineTransformIdentity;
         [CATransaction commit];
         self.backgroundRhythmShakeOffset = CGPointZero;
         self.backgroundRhythmShakeVelocity = CGPointZero;
@@ -1796,18 +2073,21 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
         BOOL rhythmAvailable = enabled && self.isBackgroundMediaEffectActive;
         self.backgroundMediaRhythmButton.enabled = rhythmAvailable;
         self.backgroundMediaRhythmButton.alpha = rhythmAvailable ? 1.0 : 0.55;
-        self.backgroundMediaRhythmButton.backgroundColor = self.isBackgroundRhythmEnabled ?
+        self.backgroundMediaRhythmButton.backgroundColor = (self.isBackgroundVisualEffectsEnabled || self.isBackgroundMediaEffectSelectionVisible) ?
             [UIColor colorWithRed:0.95 green:0.55 blue:0.18 alpha:1.0] :
             [UIColor colorWithWhite:1.0 alpha:0.10];
-        self.backgroundMediaRhythmButton.layer.borderWidth = self.isBackgroundRhythmEnabled ? 1.0 : 0.0;
+        self.backgroundMediaRhythmButton.layer.borderWidth = (self.isBackgroundVisualEffectsEnabled || self.isBackgroundMediaEffectSelectionVisible) ? 1.0 : 0.0;
         self.backgroundMediaRhythmButton.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.22].CGColor;
     }
 
     if (self.backgroundMediaRhythmControlsView) {
-        BOOL controlsEnabled = self.isBackgroundRhythmEnabled;
+        BOOL controlsEnabled = enabled && self.isBackgroundMediaEffectActive;
         self.backgroundMediaRhythmControlsView.alpha = controlsEnabled ? 1.0 : 0.55;
         self.backgroundMediaRhythmRateSlider.enabled = controlsEnabled;
         self.backgroundMediaRhythmShakeSlider.enabled = controlsEnabled;
+        self.backgroundMediaRhythmFlashSlider.enabled = controlsEnabled;
+        self.backgroundMediaRhythmBoostSlider.enabled = controlsEnabled;
+        self.backgroundMediaRhythmBlurSlider.enabled = controlsEnabled;
 
         // 同步 slider -> 参数（以 slider 为准）
         if (self.backgroundMediaRhythmRateSlider) {
@@ -1821,6 +2101,8 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     }
 
     [self updateSpectrumLiveEditingAvailability];
+    [self syncBackgroundRhythmEffectSelectionPanelState];
+    [self syncRhythmFeatureRendererInHierarchy];
 }
 
 - (void)persistBackgroundMediaItems {
@@ -1985,8 +2267,9 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     if (self.backgroundVideoPlayer &&
         self.backgroundVideoLayer.player == self.backgroundVideoPlayer &&
         [self.playingBackgroundMediaIdentifier isEqualToString:item.identifier]) {
-        self.backgroundVideoLayer.hidden = NO;
+        self.backgroundVideoLayer.hidden = !self.backgroundRhythmFeatureController.prefersTransformRenderer ? NO : YES;
         self.backgroundVideoLayer.frame = self.view.bounds;
+        [self syncBackgroundTransformRendererInHierarchy];
         self.livePhotoPosterView.hidden = YES;
         [self.backgroundVideoPlayer play];
         return;
@@ -2026,6 +2309,7 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
         self.backgroundVideoLayer.hidden = NO;
         self.backgroundVideoLayer.frame = self.view.bounds;
     }
+    self.backgroundVideoLayer.hidden = !self.backgroundRhythmFeatureController.prefersTransformRenderer ? NO : YES;
 
     if (!self.livePhotoPosterView) {
         self.livePhotoPosterView = [[UIImageView alloc] initWithFrame:self.view.bounds];
@@ -2036,11 +2320,15 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
     }
 
     self.livePhotoPosterView.hidden = YES;
+    [self syncBackgroundTransformRendererInHierarchy];
     [queuePlayer play];
 
     // 如果用户之前已开启律动，切换/重建播放器后继续生效
     if (self.isBackgroundRhythmEnabled) {
         [self setBackgroundRhythmEnabled:YES];
+    }
+    if (self.isBackgroundVisualEffectsEnabled) {
+        [self setBackgroundVisualEffectsEnabled:YES];
     }
 }
 
@@ -2054,6 +2342,7 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 
     // 停止背景播放时，律动也应停止并清理震动/速率
     [self setBackgroundRhythmEnabled:NO];
+    [self setBackgroundVisualEffectsEnabled:NO];
 }
 
 - (void)updateBackgroundMediaEffectStateForEffect:(VisualEffectType)effectType {
@@ -2093,6 +2382,7 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 }
 
 - (void)backgroundMediaCloseButtonTapped:(UIButton *)sender {
+    [self setBackgroundMediaEffectSelectionVisible:NO animated:NO];
     [self toggleBackgroundMediaPanel:NO animated:YES];
 }
 
@@ -2146,6 +2436,8 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
         return;
     }
 
+    [self setBackgroundMediaEffectSelectionVisible:NO animated:NO];
+
     void (^hideBlock)(void) = ^{
         self.backgroundMediaPanelView.alpha = 0.0;
         self.backgroundMediaPanelView.transform = CGAffineTransformMakeTranslation(16.0, 0.0);
@@ -2158,6 +2450,83 @@ static NSString * const kBackgroundMediaManifestFileName = @"background_media_it
 
     if (animated) {
         [UIView animateWithDuration:0.2 animations:hideBlock completion:completionBlock];
+    } else {
+        hideBlock();
+        completionBlock(YES);
+    }
+}
+
+- (void)syncBackgroundRhythmEffectSelectionPanelState {
+    if (!self.backgroundMediaEffectSelectionPanel) return;
+    RhythmFeatureEffectType featureType = self.backgroundRhythmFeatureController ?
+        self.backgroundRhythmFeatureController.selectedEffectType :
+        RhythmFeatureEffectTypeDroplet;
+    [self.backgroundMediaEffectSelectionPanel applyRhythmEnabled:self.isBackgroundVisualEffectsEnabled
+                                               dispersionEffect:self.backgroundRhythmDispersionEffectType
+                                                  featureEffect:featureType
+                                              transformIntensity:(self.backgroundRhythmFeatureController ? self.backgroundRhythmFeatureController.transformIntensity : 0.72)
+                                             transformBeatBoost:(self.backgroundRhythmFeatureController ? self.backgroundRhythmFeatureController.transformBeatBoost : 0.82)
+                                               transformRadius:(self.backgroundRhythmFeatureController ? self.backgroundRhythmFeatureController.transformRadius : 0.56)
+                                                transformSpeed:(self.backgroundRhythmFeatureController ? self.backgroundRhythmFeatureController.transformSpeed : 0.64)
+                                              beatSyncEnabled:(self.backgroundRhythmFeatureController ? self.backgroundRhythmFeatureController.beatSyncEnabled : NO)];
+}
+
+- (void)setBackgroundMediaEffectSelectionVisible:(BOOL)visible animated:(BOOL)animated {
+    if (!self.backgroundMediaEffectSelectionPanel) return;
+
+    [self syncBackgroundRhythmEffectSelectionPanelState];
+    if (self.isBackgroundMediaEffectSelectionVisible == visible) {
+        self.backgroundMediaEffectSelectionPanel.hidden = !visible;
+        self.backgroundMediaEffectSelectionPanel.alpha = visible ? 1.0 : 0.0;
+        if (visible) {
+            [self.view bringSubviewToFront:self.backgroundMediaEffectSelectionPanel];
+        }
+        return;
+    }
+
+    self.isBackgroundMediaEffectSelectionVisible = visible;
+    [self refreshBackgroundMediaButtonState];
+
+    if (visible) {
+        UIEdgeInsets safeInsets = RhythmEffectiveSafeAreaInsets(self.view);
+        CGFloat bottomSafe = safeInsets.bottom;
+        CGFloat maxSheetHeight = self.view.bounds.size.height - MAX(safeInsets.top, 20.0) - 24.0;
+        CGFloat sheetHeight = MIN(maxSheetHeight, MAX(360.0, self.view.bounds.size.height * 0.56));
+        self.backgroundMediaEffectSelectionPanel.frame = CGRectMake(0.0,
+                                                                    self.view.bounds.size.height - sheetHeight - bottomSafe,
+                                                                    self.view.bounds.size.width,
+                                                                    sheetHeight + bottomSafe);
+        self.backgroundMediaPanelView.hidden = YES;
+        self.backgroundMediaPanelView.alpha = 0.0;
+        self.isBackgroundMediaPanelVisible = NO;
+        [self.view bringSubviewToFront:self.backgroundMediaEffectSelectionPanel];
+        self.backgroundMediaEffectSelectionPanel.hidden = NO;
+        if (animated) {
+            self.backgroundMediaEffectSelectionPanel.transform = CGAffineTransformMakeTranslation(0.0, 24.0);
+            [UIView animateWithDuration:0.22 animations:^{
+                self.backgroundMediaEffectSelectionPanel.alpha = 1.0;
+                self.backgroundMediaEffectSelectionPanel.transform = CGAffineTransformIdentity;
+            }];
+        } else {
+            self.backgroundMediaEffectSelectionPanel.alpha = 1.0;
+            self.backgroundMediaEffectSelectionPanel.transform = CGAffineTransformIdentity;
+        }
+        return;
+    }
+
+    void (^hideBlock)(void) = ^{
+        self.backgroundMediaEffectSelectionPanel.alpha = 0.0;
+        self.backgroundMediaEffectSelectionPanel.transform = CGAffineTransformMakeTranslation(0.0, 24.0);
+    };
+
+    void (^completionBlock)(BOOL) = ^(BOOL finished) {
+        (void)finished;
+        self.backgroundMediaEffectSelectionPanel.hidden = YES;
+        self.backgroundMediaEffectSelectionPanel.transform = CGAffineTransformIdentity;
+    };
+
+    if (animated) {
+        [UIView animateWithDuration:0.18 animations:hideBlock completion:completionBlock];
     } else {
         hideBlock();
         completionBlock(YES);

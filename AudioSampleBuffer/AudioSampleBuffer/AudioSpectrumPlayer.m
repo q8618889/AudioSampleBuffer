@@ -4,6 +4,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <Accelerate/Accelerate.h>
 #import "RealtimeAnalyzer.h"
+#import "RealtimeAnalyzerDSP.h"
 #import "LyricsManager.h"
 #import "LRCParser.h"
 #import "MusicAIAnalyzer.h"
@@ -24,7 +25,8 @@ NSString *const kAudioPlayerDidStartPlaybackNotification = @"AudioPlayerDidStart
 @property (nonatomic, strong) AVAudioEngine *engine;
 @property (nonatomic, strong) AVAudioPlayerNode *player;
 @property (nonatomic, strong) AVAudioUnitTimePitch *timePitchNode;  // 🎵 音高/速率调整节点
-@property (nonatomic, strong) RealtimeAnalyzer *analyzer;
+@property (nonatomic, strong) RealtimeAnalyzer *liveAnalyzer;
+@property (nonatomic, strong) RealtimeAnalyzer *extendedAnalyzer;
 @property (nonatomic, assign) int bufferSize;
 @property (nonatomic, strong) AVAudioFile *file;
 @property (nonatomic, assign) NSTimeInterval currentTime;
@@ -52,9 +54,16 @@ NSString *const kAudioPlayerDidStartPlaybackNotification = @"AudioPlayerDidStart
 }
 
 - (void)configInit {
+    // Live / beat visuals stay on an isolated legacy-exact 2048 path.
     self.bufferSize = 2048;
-    self.analyzer = [[RealtimeAnalyzer alloc] initWithFFTSize:self.bufferSize];
+    self.liveAnalyzer = [[RealtimeAnalyzer alloc] initWithFFTSize:2048];
+    self.liveAnalyzer.legacyExactMode = YES;
+    // Extended analysis runs on its own analyzer so HPSS / larger FFT won't
+    // change the legacy spectrum consumed by live effects and beat detection.
+    self.extendedAnalyzer = [[RealtimeAnalyzer alloc] initWithFFTSize:4096];
     self.enableLyrics = YES;  // 默认启用歌词
+    // Default to low-power path. HPSS extended analysis is opt-in from UI.
+    self.extendedAnalysisEnabled = NO;
     
     // 🎵 初始化音高/速率参数
     _pitchShift = 0.0f;      // 默认原调
@@ -94,9 +103,16 @@ NSString *const kAudioPlayerDidStartPlaybackNotification = @"AudioPlayerDidStart
     [mixerNode installTapOnBus:0 bufferSize:self.bufferSize format:format block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
         if (!self.player.isPlaying) return ;
         buffer.frameLength = self.bufferSize;
-        NSArray *spectrums = [self.analyzer analyse:buffer withAmplitudeLevel:5];
+        NSArray *spectrums = [self.liveAnalyzer analyse:buffer withAmplitudeLevel:5];
         if ([self.delegate respondsToSelector:@selector(playerDidGenerateSpectrum:)]) {
             [self.delegate playerDidGenerateSpectrum:spectrums];
+        }
+        if (self.extendedAnalysisEnabled) {
+            RealtimeAnalyzerResult *result = [self.extendedAnalyzer analyseExtended:buffer
+                                                          withAmplitudeLevel:5];
+            if ([self.delegate respondsToSelector:@selector(playerDidGenerateExtendedAnalysis:)]) {
+                [self.delegate playerDidGenerateExtendedAnalysis:result];
+            }
         }
     }];
 

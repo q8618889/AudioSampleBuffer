@@ -32,6 +32,7 @@ typedef struct {
     vector_float4 cyberpunkControls; // 赛博朋克控制: (enableClimaxEffect, showDebugBars, enableGrid, backgroundMode)
     vector_float4 cyberpunkFrequencyControls; // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
     vector_float4 cyberpunkBackgroundParams; // 赛博朋克背景参数: (solidColorR, solidColorG, solidColorB, intensity)
+    vector_float4 categoryFeatures; // (subBass, transient, harmonic, noise)
 } Uniforms;
 
 // AI 增强的统一缓冲区（用于丁达尔效应等需要动态颜色的效果）
@@ -47,6 +48,7 @@ typedef struct {
     vector_float4 cyberpunkControls;
     vector_float4 cyberpunkFrequencyControls;
     vector_float4 cyberpunkBackgroundParams;
+    vector_float4 categoryFeatures; // (subBass, transient, harmonic, noise)
     
     // AI 音乐分析参数
     vector_float4 aiParams1;  // (bpm/100, energy, danceability, valence)
@@ -355,6 +357,14 @@ typedef struct {
         };
     }
     
+    NSDictionary *params = self.renderParameters ?: @{};
+    uniforms->categoryFeatures = (vector_float4){
+        [params[@"subBass"] floatValue],
+        [params[@"transient"] floatValue],
+        [params[@"harmonic"] floatValue],
+        [params[@"noise"] floatValue]
+    };
+
     // 更新星系参数（如果是星系渲染器）
     if ([self isKindOfClass:[GalaxyRenderer class]]) {
         [self updateGalaxyUniforms:uniforms];

@@ -9,9 +9,19 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef NS_ENUM(NSInteger, RhythmColorMaskStyle) {
-    RhythmColorMaskStyleHueCycle = 0,   // 红/蓝/橙/青绿/紫/黄 6 色循环
-    RhythmColorMaskStyleWarmCool = 1,   // 暖红 ↔ 冷蓝交替
-    RhythmColorMaskStyleNeon     = 2,   // 霓虹粉/青/紫
+    RhythmColorMaskStyleHueCycle = 0,
+    RhythmColorMaskStyleWarmCool = 1,
+    RhythmColorMaskStyleNeon     = 2,
+};
+
+typedef NS_ENUM(NSInteger, RhythmDispersionEffectType) {
+    RhythmDispersionEffectTypeColorPulse = 0,
+    RhythmDispersionEffectTypeDualChromaticShift = 1,
+    RhythmDispersionEffectTypeLocalFlash = 2,
+    RhythmDispersionEffectTypeSweepLight = 3,
+    RhythmDispersionEffectTypeVignetteBreath = 4,
+    RhythmDispersionEffectTypeEdgeGlowPulse = 5,
+    RhythmDispersionEffectTypeFrameShakeZoomPunch = 6,
 };
 
 /// 律动色彩蒙版：每个 beat 触发后切色 + 单轴 x/y 微位移，按帧自衰减。
@@ -19,6 +29,7 @@ typedef NS_ENUM(NSInteger, RhythmColorMaskStyle) {
 @interface RhythmColorMaskEffect : UIView
 
 @property (nonatomic, assign) RhythmColorMaskStyle style;
+@property (nonatomic, assign) RhythmDispersionEffectType dispersionEffectType;
 
 /// 蒙版 alpha 上限（外部按色散 slider 计算，例如 0.5 × sliderValue）
 @property (nonatomic, assign) CGFloat maxAlpha;
@@ -36,6 +47,8 @@ typedef NS_ENUM(NSInteger, RhythmColorMaskStyle) {
 
 /// 律动关闭时复位：alpha=0、transform=identity、内部状态清零。
 - (void)reset;
+
+- (NSString *)displayNameForCurrentEffect;
 
 @end
 

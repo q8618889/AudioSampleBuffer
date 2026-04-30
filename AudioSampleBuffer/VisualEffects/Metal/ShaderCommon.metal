@@ -38,6 +38,7 @@ struct Uniforms {
     float4 cyberpunkControls; // 赛博朋克控制: (enableClimaxEffect, showDebugBars, enableGrid, backgroundMode)
     float4 cyberpunkFrequencyControls; // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
     float4 cyberpunkBackgroundParams; // 赛博朋克背景参数: (solidColorR, solidColorG, solidColorB, intensity)
+    float4 categoryFeatures; // (subBass, transient, harmonic, noise)
 };
 
 // AI 增强的 Uniforms（用于丁达尔效应等需要动态颜色的效果）
@@ -53,6 +54,7 @@ struct UniformsAI {
     float4 cyberpunkControls;
     float4 cyberpunkFrequencyControls;
     float4 cyberpunkBackgroundParams;
+    float4 categoryFeatures; // (subBass, transient, harmonic, noise)
     
     // AI 音乐分析参数
     float4 aiParams1;  // (bpm/100, energy, danceability, valence)

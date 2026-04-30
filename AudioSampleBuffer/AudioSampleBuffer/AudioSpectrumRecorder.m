@@ -23,7 +23,7 @@
 
 - (void)configInit {
     self.bufferSize = 2048;
-    self.analyzer = [[RealtimeAnalyzer alloc] initWithFFTSize:self.bufferSize];
+    self.analyzer = [[RealtimeAnalyzer alloc] initWithFFTSize:4096];
 }
 
 - (void)setupRecorder {

@@ -2,6 +2,7 @@
 
 #import "AudioFileFormats.h"
 #import "ViewController+PlaybackProgress.h"
+#import "AudioSampleBuffer/RealtimeAnalyzer.h"
 
 #import <AVFoundation/AVFoundation.h>
 #import <MediaPlayer/MediaPlayer.h>
@@ -136,11 +137,46 @@
 
         if (spectrums.count > 0) {
             NSArray *firstChannelData = spectrums.firstObject;
+            NSArray *secondChannelData = spectrums.count > 1 ? spectrums[1] : nil;
             self.latestSpectrumData = firstChannelData;
             [self.visualEffectManager updateSpectrumData:firstChannelData];
+            if (!self.player.extendedAnalysisEnabled) {
+                AudioFeatureExtractor *extractor = [AudioFeatureExtractor sharedExtractor];
+                [extractor processStereoSpectrumData:firstChannelData
+                                       rightSpectrum:secondChannelData
+                                          sampleRate:44100.0f];
+                self.latestAudioFeatures = extractor.currentFeatures;
+            }
         } else {
             self.latestSpectrumData = nil;
+            self.latestAudioFeatures = nil;
         }
+    });
+}
+
+- (void)playerDidGenerateExtendedAnalysis:(RealtimeAnalyzerResult *)result {
+    if (result.frames.count == 0) return;
+    RealtimeAnalyzerFrame *first = result.frames.firstObject;
+    if (!first) return;
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        AudioFeatureExtractor *extractor = [AudioFeatureExtractor sharedExtractor];
+        NSArray<NSNumber *> *bands = first.bands ?: @[];
+        NSArray<NSNumber *> *rightBands = nil;
+        if (result.frames.count > 1) {
+            RealtimeAnalyzerFrame *right = result.frames[1];
+            rightBands = right.bands;
+        }
+        [extractor processStereoSpectrumData:bands
+                               rightSpectrum:rightBands
+                            categoryFeatures:first.category];
+        self.latestAudioFeatures = extractor.currentFeatures;
+        [self.visualEffectManager setRenderParameters:@{
+            @"subBass": @(self.latestAudioFeatures.subBassEnergy),
+            @"transient": @(self.latestAudioFeatures.transientStrength),
+            @"harmonic": @(self.latestAudioFeatures.harmonicStrength),
+            @"noise": @(self.latestAudioFeatures.noiseStrength)
+        }];
     });
 }
 

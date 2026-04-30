@@ -1,9 +1,11 @@
 
 #import <Foundation/Foundation.h>
+#import "RealtimeAnalyzerDSP.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @class LRCParser;
+@class RealtimeAnalyzerResult;
 
 /// 歌词加载完成通知，userInfo: parser, filePath
 extern NSString *const kAudioPlayerDidLoadLyricsNotification;
@@ -24,6 +26,9 @@ extern NSString *const kAudioPlayerDidStartPlaybackNotification;
 - (void)playerDidUpdateTime:(NSTimeInterval)currentTime;
 /// 歌词加载完成（parser为nil表示没有找到歌词文件）
 - (void)playerDidLoadLyrics:(nullable LRCParser *)parser;
+/// HPSS 拆分后的扩展分析结果：包含 H/P/R 频段与 4 类标量特征。
+/// 在 `playerDidGenerateSpectrum:` 之后调用，且仅当 player 启用了扩展分析。
+- (void)playerDidGenerateExtendedAnalysis:(RealtimeAnalyzerResult *)result;
 
 @end
 
@@ -53,6 +58,10 @@ extern NSString *const kAudioPlayerDidStartPlaybackNotification;
 
 /// 🔊 是否允许与其他应用同时播放（默认NO）
 @property (nonatomic, assign) BOOL allowMixWithOthers;
+
+/// 是否启用扩展分析（HPSS + 4 类标量特征）。开启后 delegate 将收到
+/// `playerDidGenerateExtendedAnalysis:` 回调。默认 YES。
+@property (nonatomic, assign) BOOL extendedAnalysisEnabled;
 
 - (void)playWithFileName:(NSString *)fileName;
 

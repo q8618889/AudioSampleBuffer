@@ -27,6 +27,36 @@ static const float kEMAAlpha = 0.3f;
     features.beatDetected = NO;
     features.segmentChanged = NO;
     features.timestamp = 0;
+    features.subBassEnergy = 0.0f;
+    features.subOnlyEnergy = 0.0f;
+    features.transientStrength = 0.0f;
+    features.harmonicStrength = 0.0f;
+    features.harmonicPeakRatio = 0.0f;
+    features.noiseStrength = 0.0f;
+    features.spectralFlatness = 0.0f;
+    features.subBassHit = NO;
+    features.transientHit = NO;
+    features.noiseFXActive = NO;
+    features.stutterDetected = NO;
+    features.gateDetected = NO;
+    features.tremoloDetected = NO;
+    features.sidechainDetected = NO;
+    features.filterSweepDetected = NO;
+    features.autoPanDetected = NO;
+    features.delayDetected = NO;
+    features.distortionDetected = NO;
+    features.stutterConfidence = 0.0f;
+    features.gateConfidence = 0.0f;
+    features.tremoloConfidence = 0.0f;
+    features.sidechainConfidence = 0.0f;
+    features.filterSweepConfidence = 0.0f;
+    features.autoPanConfidence = 0.0f;
+    features.delayConfidence = 0.0f;
+    features.distortionConfidence = 0.0f;
+    features.hpssExplainable = NO;
+    features.harmonicDriven = NO;
+    features.transientDriven = NO;
+    features.noiseResidualDriven = NO;
     return features;
 }
 
@@ -43,6 +73,36 @@ static const float kEMAAlpha = 0.3f;
     copy.beatDetected = self.beatDetected;
     copy.segmentChanged = self.segmentChanged;
     copy.timestamp = self.timestamp;
+    copy.subBassEnergy = self.subBassEnergy;
+    copy.subOnlyEnergy = self.subOnlyEnergy;
+    copy.transientStrength = self.transientStrength;
+    copy.harmonicStrength = self.harmonicStrength;
+    copy.harmonicPeakRatio = self.harmonicPeakRatio;
+    copy.noiseStrength = self.noiseStrength;
+    copy.spectralFlatness = self.spectralFlatness;
+    copy.subBassHit = self.subBassHit;
+    copy.transientHit = self.transientHit;
+    copy.noiseFXActive = self.noiseFXActive;
+    copy.stutterDetected = self.stutterDetected;
+    copy.gateDetected = self.gateDetected;
+    copy.tremoloDetected = self.tremoloDetected;
+    copy.sidechainDetected = self.sidechainDetected;
+    copy.filterSweepDetected = self.filterSweepDetected;
+    copy.autoPanDetected = self.autoPanDetected;
+    copy.delayDetected = self.delayDetected;
+    copy.distortionDetected = self.distortionDetected;
+    copy.stutterConfidence = self.stutterConfidence;
+    copy.gateConfidence = self.gateConfidence;
+    copy.tremoloConfidence = self.tremoloConfidence;
+    copy.sidechainConfidence = self.sidechainConfidence;
+    copy.filterSweepConfidence = self.filterSweepConfidence;
+    copy.autoPanConfidence = self.autoPanConfidence;
+    copy.delayConfidence = self.delayConfidence;
+    copy.distortionConfidence = self.distortionConfidence;
+    copy.hpssExplainable = self.hpssExplainable;
+    copy.harmonicDriven = self.harmonicDriven;
+    copy.transientDriven = self.transientDriven;
+    copy.noiseResidualDriven = self.noiseResidualDriven;
     return copy;
 }
 
@@ -90,6 +150,30 @@ static const float kEMAAlpha = 0.3f;
 @property (nonatomic, assign) float smoothedBassEnergy;
 @property (nonatomic, assign) float smoothedMidEnergy;
 @property (nonatomic, assign) float smoothedHighEnergy;
+
+// HPSS 特征 EMA 与门限状态
+@property (nonatomic, assign) float smoothedSubBass;          // 平滑过的 subBass+bass 总能量
+@property (nonatomic, assign) float smoothedSubOnly;          // 平滑过的 20-60Hz 部分
+@property (nonatomic, assign) float smoothedTransient;
+@property (nonatomic, assign) float smoothedHarmonic;
+@property (nonatomic, assign) float smoothedNoise;
+@property (nonatomic, assign) float smoothedFlatness;
+@property (nonatomic, assign) float smoothedHarmonicPeakRatio;
+
+// Adaptive thresholds for sub-bass / transient hits
+@property (nonatomic, strong) NSMutableArray<NSNumber *> *subBassEnvHistory;   // 32-frame ring
+@property (nonatomic, strong) NSMutableArray<NSNumber *> *transientEnvHistory; // 32-frame ring
+@property (nonatomic, assign) NSTimeInterval lastSubBassHitTime;
+@property (nonatomic, assign) NSTimeInterval lastTransientHitTime;
+@property (nonatomic, assign) NSTimeInterval lastNoiseFXTime;
+@property (nonatomic, assign) BOOL hasCategoryFeatures;       // 是否使用了 HPSS 路径
+
+// EDM effect histories
+@property (nonatomic, strong) NSMutableArray<NSNumber *> *centroidHistory;
+@property (nonatomic, strong) NSMutableArray<NSNumber *> *envelopeHistory;
+@property (nonatomic, strong) NSMutableArray<NSNumber *> *onsetHistory;
+@property (nonatomic, strong) NSMutableArray<NSNumber *> *panHistory;
+@property (nonatomic, assign) float latestPanValue;
 
 // 时间
 @property (nonatomic, assign) NSTimeInterval startTime;
@@ -146,6 +230,27 @@ static const float kEMAAlpha = 0.3f;
         _smoothedBassEnergy = 0;
         _smoothedMidEnergy = 0;
         _smoothedHighEnergy = 0;
+
+        _smoothedSubBass = 0;
+        _smoothedSubOnly = 0;
+        _smoothedTransient = 0;
+        _smoothedHarmonic = 0;
+        _smoothedNoise = 0;
+        _smoothedFlatness = 0;
+        _smoothedHarmonicPeakRatio = 0;
+
+        _subBassEnvHistory = [NSMutableArray arrayWithCapacity:32];
+        _transientEnvHistory = [NSMutableArray arrayWithCapacity:32];
+        _lastSubBassHitTime = 0;
+        _lastTransientHitTime = 0;
+        _lastNoiseFXTime = 0;
+        _hasCategoryFeatures = NO;
+
+        _centroidHistory = [NSMutableArray arrayWithCapacity:96];
+        _envelopeHistory = [NSMutableArray arrayWithCapacity:96];
+        _onsetHistory = [NSMutableArray arrayWithCapacity:96];
+        _panHistory = [NSMutableArray arrayWithCapacity:96];
+        _latestPanValue = 0.0f;
         
         _startTime = CACurrentMediaTime();
         _frameCount = 0;
@@ -187,6 +292,25 @@ static const float kEMAAlpha = 0.3f;
     self.smoothedBassEnergy = 0;
     self.smoothedMidEnergy = 0;
     self.smoothedHighEnergy = 0;
+
+    self.smoothedSubBass = 0;
+    self.smoothedSubOnly = 0;
+    self.smoothedTransient = 0;
+    self.smoothedHarmonic = 0;
+    self.smoothedNoise = 0;
+    self.smoothedFlatness = 0;
+    self.smoothedHarmonicPeakRatio = 0;
+    [self.subBassEnvHistory removeAllObjects];
+    [self.transientEnvHistory removeAllObjects];
+    self.lastSubBassHitTime = 0;
+    self.lastTransientHitTime = 0;
+    self.lastNoiseFXTime = 0;
+    self.hasCategoryFeatures = NO;
+    [self.centroidHistory removeAllObjects];
+    [self.envelopeHistory removeAllObjects];
+    [self.onsetHistory removeAllObjects];
+    [self.panHistory removeAllObjects];
+    self.latestPanValue = 0.0f;
     
     self.startTime = CACurrentMediaTime();
     self.frameCount = 0;
@@ -196,6 +320,22 @@ static const float kEMAAlpha = 0.3f;
 
 - (void)processSpectrumData:(NSArray<NSNumber *> *)spectrum {
     [self processSpectrumData:spectrum sampleRate:44100.0f];
+}
+
+- (void)processStereoSpectrumData:(NSArray<NSNumber *> *)leftSpectrum
+                    rightSpectrum:(NSArray<NSNumber *> *)rightSpectrum
+                       sampleRate:(float)sampleRate {
+    float pan = [self computePanValueFromLeft:leftSpectrum right:rightSpectrum];
+    self.latestPanValue = pan;
+    [self processSpectrumData:leftSpectrum sampleRate:sampleRate];
+}
+
+- (void)processStereoSpectrumData:(NSArray<NSNumber *> *)leftSpectrum
+                    rightSpectrum:(NSArray<NSNumber *> *)rightSpectrum
+                 categoryFeatures:(AnalyzerCategoryFeatures)category {
+    float pan = [self computePanValueFromLeft:leftSpectrum right:rightSpectrum];
+    self.latestPanValue = pan;
+    [self processSpectrumData:leftSpectrum categoryFeatures:category];
 }
 
 - (void)processSpectrumData:(NSArray<NSNumber *> *)spectrum sampleRate:(float)sampleRate {
@@ -288,6 +428,7 @@ static const float kEMAAlpha = 0.3f;
     [self updateEnergyHistory:features.energy];
     
     // 更新当前特征
+    [self updateEDMEffectsWithFeatures:features useHPSS:NO];
     self.currentFeatures = features;
     
     // 通知观察者
@@ -296,6 +437,112 @@ static const float kEMAAlpha = 0.3f;
     if (features.beatDetected) {
         [self notifyBeatDetected:currentTime];
     }
+}
+
+- (void)processSpectrumData:(NSArray<NSNumber *> *)spectrum
+          categoryFeatures:(AnalyzerCategoryFeatures)category {
+    if (spectrum.count == 0) return;
+
+    self.hasCategoryFeatures = YES;
+    self.frameCount++;
+    NSTimeInterval currentTime = CACurrentMediaTime() - self.startTime;
+
+    AudioFeatures *features = [[AudioFeatures alloc] init];
+    features.timestamp = currentTime;
+
+    // Keep existing broadband statistics for segment detection compatibility.
+    NSInteger spectrumSize = spectrum.count;
+    float bassSum = 0, midSum = 0, highSum = 0, totalSum = 0, weightedSum = 0;
+    NSInteger bassEnd = MIN((NSInteger)(spectrumSize * 0.22f), spectrumSize);
+    NSInteger midEnd = MIN((NSInteger)(spectrumSize * 0.62f), spectrumSize);
+    for (NSInteger i = 0; i < spectrumSize; i++) {
+        float absValue = fabsf([spectrum[i] floatValue]);
+        totalSum += absValue;
+        if (i < bassEnd) bassSum += absValue;
+        else if (i < midEnd) midSum += absValue;
+        else highSum += absValue;
+        weightedSum += absValue * (float)i;
+    }
+    float bassEnergy = (bassEnd > 0) ? bassSum / bassEnd : 0.0f;
+    float midEnergy = (midEnd > bassEnd) ? midSum / (midEnd - bassEnd) : 0.0f;
+    float highEnergy = (spectrumSize > midEnd) ? highSum / (spectrumSize - midEnd) : 0.0f;
+    float totalEnergy = (spectrumSize > 0) ? totalSum / spectrumSize : 0.0f;
+    float spectralCentroid = (totalSum > 0) ? (weightedSum / totalSum / MAX(1.0f, (float)spectrumSize)) : 0.5f;
+
+    self.smoothedEnergy = kEMAAlpha * totalEnergy + (1 - kEMAAlpha) * self.smoothedEnergy;
+    self.smoothedBassEnergy = kEMAAlpha * bassEnergy + (1 - kEMAAlpha) * self.smoothedBassEnergy;
+    self.smoothedMidEnergy = kEMAAlpha * midEnergy + (1 - kEMAAlpha) * self.smoothedMidEnergy;
+    self.smoothedHighEnergy = kEMAAlpha * highEnergy + (1 - kEMAAlpha) * self.smoothedHighEnergy;
+    features.energy = MIN(1.0f, self.smoothedEnergy * 3.0f);
+    features.bassEnergy = MIN(1.0f, self.smoothedBassEnergy * 4.0f);
+    features.midEnergy = MIN(1.0f, self.smoothedMidEnergy * 4.0f);
+    features.highEnergy = MIN(1.0f, self.smoothedHighEnergy * 5.0f);
+    features.spectralCentroid = spectralCentroid;
+
+    // 4-category HPSS metrics
+    self.smoothedSubOnly = 0.28f * category.subBass + 0.72f * self.smoothedSubOnly;
+    self.smoothedSubBass = 0.28f * category.lowEnergy + 0.72f * self.smoothedSubBass;
+    self.smoothedTransient = 0.24f * category.transient + 0.76f * self.smoothedTransient;
+    self.smoothedHarmonic = 0.20f * category.harmonic + 0.80f * self.smoothedHarmonic;
+    self.smoothedNoise = 0.20f * category.noise + 0.80f * self.smoothedNoise;
+    self.smoothedFlatness = 0.18f * category.spectralFlatness + 0.82f * self.smoothedFlatness;
+    self.smoothedHarmonicPeakRatio = 0.18f * category.harmonicPeakRatio + 0.82f * self.smoothedHarmonicPeakRatio;
+
+    features.subOnlyEnergy = MIN(1.0f, self.smoothedSubOnly * 6.2f);
+    features.subBassEnergy = MIN(1.0f, self.smoothedSubBass * 4.6f);
+    features.transientStrength = MIN(1.0f, self.smoothedTransient * 7.2f);
+    features.harmonicStrength = MIN(1.0f, self.smoothedHarmonic * 4.0f);
+    features.noiseStrength = MIN(1.0f, self.smoothedNoise * 5.0f);
+    features.spectralFlatness = MIN(1.0f, MAX(0.0f, self.smoothedFlatness));
+    features.harmonicPeakRatio = MIN(1.0f, self.smoothedHarmonicPeakRatio / 6.0f);
+    features.spectralFlux = features.transientStrength;
+
+    [self pushAdaptiveValue:features.subBassEnergy toHistory:self.subBassEnvHistory maxLen:32];
+    [self pushAdaptiveValue:features.transientStrength toHistory:self.transientEnvHistory maxLen:32];
+    features.subBassHit = [self detectAdaptiveHitWithValue:features.subBassEnergy
+                                                    history:self.subBassEnvHistory
+                                                      floor:0.10f
+                                                   sigmaMul:1.85f
+                                                minInterval:0.23
+                                                  lastStamp:&_lastSubBassHitTime
+                                                        now:currentTime];
+    features.transientHit = [self detectAdaptiveHitWithValue:features.transientStrength
+                                                      history:self.transientEnvHistory
+                                                        floor:0.08f
+                                                     sigmaMul:1.65f
+                                                  minInterval:0.08
+                                                    lastStamp:&_lastTransientHitTime
+                                                          now:currentTime];
+    BOOL noiseGate = (features.noiseStrength > 0.30f && features.spectralFlatness > 0.40f);
+    if (noiseGate) self.lastNoiseFXTime = currentTime;
+    features.noiseFXActive = (currentTime - self.lastNoiseFXTime) < 0.22;
+
+    features.beatDetected = (features.subBassHit ||
+                            (features.transientHit && features.subBassEnergy > 0.10f));
+    if (features.subBassHit) {
+        [self.beatTimeHistory addObject:@(currentTime)];
+        if (self.beatTimeHistory.count > kBeatHistorySize) {
+            [self.beatTimeHistory removeObjectAtIndex:0];
+        }
+        [self updateBPMEstimate];
+    }
+    features.bpm = self.averageBPM;
+
+    MusicSegment newSegment = [self detectSegment:features];
+    features.currentSegment = newSegment;
+    features.segmentChanged = (newSegment != self.previousSegment);
+    if (features.segmentChanged) {
+        [self notifySegmentChange:self.previousSegment to:newSegment];
+        self.previousSegment = newSegment;
+        self.segmentStartTime = currentTime;
+    }
+
+    self.previousSpectrum = [spectrum mutableCopy];
+    [self updateEnergyHistory:features.energy];
+    [self updateEDMEffectsWithFeatures:features useHPSS:YES];
+    self.currentFeatures = features;
+    [self notifyFeaturesUpdate:features];
+    if (features.beatDetected) [self notifyBeatDetected:currentTime];
 }
 
 #pragma mark - Beat Detection
@@ -624,6 +871,190 @@ static const float kEMAAlpha = 0.3f;
     [self.energyHistory addObject:@(energy)];
     if (self.energyHistory.count > kEnergyHistorySize) {
         [self.energyHistory removeObjectAtIndex:0];
+    }
+}
+
+- (void)pushAdaptiveValue:(float)value
+                toHistory:(NSMutableArray<NSNumber *> *)history
+                   maxLen:(NSUInteger)maxLen {
+    [history addObject:@(value)];
+    if (history.count > maxLen) {
+        [history removeObjectAtIndex:0];
+    }
+}
+
+- (BOOL)detectAdaptiveHitWithValue:(float)value
+                           history:(NSArray<NSNumber *> *)history
+                             floor:(float)floor
+                          sigmaMul:(float)sigmaMul
+                       minInterval:(NSTimeInterval)minInterval
+                         lastStamp:(NSTimeInterval *)lastStamp
+                               now:(NSTimeInterval)now {
+    if (history.count < 8) return NO;
+    float mean = 0.0f;
+    for (NSNumber *n in history) mean += n.floatValue;
+    mean /= (float)history.count;
+    float var = 0.0f;
+    for (NSNumber *n in history) {
+        float d = n.floatValue - mean;
+        var += d * d;
+    }
+    float stdv = sqrtf(var / (float)history.count);
+    float threshold = MAX(floor, mean + sigmaMul * stdv);
+    BOOL intervalPassed = (now - *lastStamp) > minInterval;
+    BOOL hit = intervalPassed && value > threshold;
+    if (hit) *lastStamp = now;
+    return hit;
+}
+
+- (float)computePanValueFromLeft:(NSArray<NSNumber *> *)left right:(NSArray<NSNumber *> *)right {
+    if (left.count == 0 || right.count == 0) return 0.0f;
+    NSUInteger N = MIN(left.count, right.count);
+    float l = 0.0f, r = 0.0f;
+    for (NSUInteger i = 0; i < N; i++) {
+        l += fabsf([left[i] floatValue]);
+        r += fabsf([right[i] floatValue]);
+    }
+    if (N == 0) return 0.0f;
+    l /= (float)N;
+    r /= (float)N;
+    float den = l + r + 1e-6f;
+    return (l - r) / den;
+}
+
+- (float)envelopePeriodicityFromHistory:(NSArray<NSNumber *> *)history {
+    // Simple normalized autocorrelation peak in 3..30 frame lags (~2..20Hz at ~60fps)
+    NSInteger N = history.count;
+    if (N < 32) return 0.0f;
+    float mean = 0.0f;
+    for (NSNumber *n in history) mean += n.floatValue;
+    mean /= (float)N;
+
+    float denom = 0.0f;
+    for (NSNumber *n in history) {
+        float d = n.floatValue - mean;
+        denom += d * d;
+    }
+    if (denom < 1e-6f) return 0.0f;
+
+    float best = 0.0f;
+    for (NSInteger lag = 3; lag <= 30; lag++) {
+        float num = 0.0f;
+        for (NSInteger i = lag; i < N; i++) {
+            float a = history[i].floatValue - mean;
+            float b = history[i - lag].floatValue - mean;
+            num += a * b;
+        }
+        float corr = num / denom;
+        if (corr > best) best = corr;
+    }
+    return MAX(0.0f, MIN(best, 1.0f));
+}
+
+- (void)updateEDMEffectsWithFeatures:(AudioFeatures *)features useHPSS:(BOOL)useHPSS {
+    // Update histories
+    [self pushAdaptiveValue:features.spectralCentroid toHistory:self.centroidHistory maxLen:96];
+    [self pushAdaptiveValue:features.energy toHistory:self.envelopeHistory maxLen:96];
+    [self pushAdaptiveValue:(features.transientHit || features.beatDetected) ? 1.0f : 0.0f
+                  toHistory:self.onsetHistory
+                     maxLen:96];
+    [self pushAdaptiveValue:self.latestPanValue toHistory:self.panHistory maxLen:96];
+
+    float periodicity = [self envelopePeriodicityFromHistory:self.envelopeHistory];
+
+    // Onset density in last ~1s (60 frames)
+    NSInteger onsetCount = 0;
+    NSInteger onsetWindow = MIN((NSInteger)self.onsetHistory.count, 60);
+    for (NSInteger i = self.onsetHistory.count - onsetWindow; i < self.onsetHistory.count; i++) {
+        if (i >= 0 && self.onsetHistory[i].floatValue > 0.5f) onsetCount++;
+    }
+    float onsetDensityHz = (float)onsetCount; // ~per second
+
+    // Centroid trend / slope
+    float centroidSlope = 0.0f;
+    NSInteger cN = MIN((NSInteger)self.centroidHistory.count, 24);
+    if (cN >= 6) {
+        float first = self.centroidHistory[self.centroidHistory.count - cN].floatValue;
+        float last = self.centroidHistory.lastObject.floatValue;
+        centroidSlope = (last - first) / (float)cN;
+    }
+
+    // Pan movement strength
+    float panStd = 0.0f;
+    NSInteger pN = MIN((NSInteger)self.panHistory.count, 64);
+    if (pN >= 8) {
+        float mean = 0.0f;
+        for (NSInteger i = self.panHistory.count - pN; i < self.panHistory.count; i++) mean += self.panHistory[i].floatValue;
+        mean /= (float)pN;
+        float var = 0.0f;
+        for (NSInteger i = self.panHistory.count - pN; i < self.panHistory.count; i++) {
+            float d = self.panHistory[i].floatValue - mean;
+            var += d * d;
+        }
+        panStd = sqrtf(var / (float)pN);
+    }
+
+    // Delay: autocorr multi-peak proxy (periodicity + moderate onset density)
+    float delayConf = MIN(1.0f, periodicity * 0.8f + MIN(1.0f, onsetDensityHz / 12.0f) * 0.2f);
+
+    // Stutter / Gate
+    features.stutterConfidence = MIN(1.0f, MIN(1.0f, onsetDensityHz / 12.0f) * 0.7f + periodicity * 0.3f);
+    features.gateConfidence = MIN(1.0f, periodicity * 0.75f + (1.0f - features.energy) * 0.25f);
+    features.stutterDetected = features.stutterConfidence > 0.55f;
+    features.gateDetected = features.gateConfidence > 0.58f;
+
+    // Tremolo / Sidechain
+    features.tremoloConfidence = MIN(1.0f, periodicity * 0.75f + MIN(1.0f, features.spectralFlux) * 0.25f);
+    float bpmSync = (features.bpm > 70.0f && features.bpm < 180.0f) ? 1.0f : 0.0f;
+    if (useHPSS) {
+        features.sidechainConfidence = MIN(1.0f,
+                                           features.subBassEnergy * 0.45f +
+                                           features.transientStrength * 0.30f +
+                                           periodicity * 0.15f +
+                                           bpmSync * 0.10f);
+    } else {
+        features.sidechainConfidence = MIN(1.0f,
+                                           features.bassEnergy * 0.55f +
+                                           periodicity * 0.30f +
+                                           bpmSync * 0.15f);
+    }
+    features.tremoloDetected = features.tremoloConfidence > 0.58f;
+    features.sidechainDetected = features.sidechainConfidence > 0.62f;
+
+    // Filter Sweep
+    features.filterSweepConfidence = MIN(1.0f, fabsf(centroidSlope) * 18.0f);
+    features.filterSweepDetected = features.filterSweepConfidence > 0.42f;
+
+    // Auto-Pan
+    features.autoPanConfidence = MIN(1.0f, panStd * 8.0f);
+    features.autoPanDetected = features.autoPanConfidence > 0.40f;
+
+    // Delay
+    features.delayConfidence = delayConf;
+    features.delayDetected = features.delayConfidence > 0.55f;
+
+    // Distortion weak detect
+    if (useHPSS) {
+        float harmonicNoiseRatio = features.harmonicStrength / MAX(0.05f, features.noiseStrength);
+        float distortion = (1.0f - MIN(1.0f, harmonicNoiseRatio / 2.0f)) * 0.45f
+                         + features.spectralFlatness * 0.35f
+                         + features.highEnergy * 0.20f;
+        features.distortionConfidence = MIN(1.0f, MAX(0.0f, distortion));
+    } else {
+        features.distortionConfidence = MIN(1.0f, features.highEnergy * 0.65f + features.spectralFlux * 0.35f);
+    }
+    features.distortionDetected = features.distortionConfidence > 0.65f;
+
+    // Explainability flags (HPSS only)
+    features.hpssExplainable = useHPSS;
+    if (useHPSS) {
+        features.harmonicDriven = features.harmonicStrength > MAX(features.noiseStrength, features.transientStrength);
+        features.transientDriven = features.transientStrength > MAX(features.harmonicStrength, features.noiseStrength);
+        features.noiseResidualDriven = features.noiseStrength > MAX(features.harmonicStrength, features.transientStrength);
+    } else {
+        features.harmonicDriven = NO;
+        features.transientDriven = NO;
+        features.noiseResidualDriven = NO;
     }
 }
 

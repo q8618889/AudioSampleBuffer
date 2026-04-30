@@ -1,4 +1,5 @@
 #import "ViewController.h"
+#import "ViewController+MotionPhoto.h"
 
 #import <PhotosUI/PhotosUI.h>
 #import <QuartzCore/CADisplayLink.h>
@@ -13,10 +14,15 @@
 #import "LRCParser.h"
 #import "MusicLibraryManager.h"
 #import "PerformanceControlPanel.h"
+#import "RhythmEffectSelectionPanelView.h"
+#import "RhythmFeatureEffectController.h"
+#import "RhythmFeatureMetalRenderer.h"
+#import "RhythmTransformMetalRenderer.h"
 #import "RhythmColorMaskEffect.h"
 #import "SpectrumView.h"
 #import "VinylRecordView.h"
 #import "VisualEffectManager.h"
+#import "AI/AudioFeatureExtractor.h"
 
 #import <AVFoundation/AVFoundation.h>
 #import <Photos/Photos.h>
@@ -57,6 +63,8 @@ typedef NS_ENUM(NSInteger, BackgroundMediaKind) {
 @property (nonatomic, strong) UIButton *backgroundMediaEnableButton;
 @property (nonatomic, strong) UIButton *backgroundMediaRhythmButton;
 @property (nonatomic, strong) UIButton *importBackgroundMediaButton;
+@property (nonatomic, strong, nullable) RhythmEffectSelectionPanelView *backgroundMediaEffectSelectionPanel;
+@property (nonatomic, assign) BOOL isBackgroundMediaEffectSelectionVisible;
 @property (nonatomic, strong) UIView *backgroundMediaRhythmControlsView;
 @property (nonatomic, strong) UISlider *backgroundMediaRhythmRateSlider;
 @property (nonatomic, strong) UISlider *backgroundMediaRhythmShakeSlider;
@@ -70,10 +78,12 @@ typedef NS_ENUM(NSInteger, BackgroundMediaKind) {
 @property (nonatomic, strong) AVQueuePlayer *backgroundVideoPlayer;
 @property (nonatomic, strong) AVPlayerLooper *backgroundVideoLooper;
 @property (nonatomic, strong) AVPlayerLayer *backgroundVideoLayer;
+@property (nonatomic, strong, nullable) RhythmTransformMetalRenderer *backgroundRhythmTransformRenderer;
 @property (nonatomic, strong) UIImageView *livePhotoPosterView;
 @property (nonatomic, assign) BOOL isBackgroundMediaEffectActive;
 
 @property (nonatomic, assign) BOOL isBackgroundRhythmEnabled;
+@property (nonatomic, assign) BOOL isBackgroundVisualEffectsEnabled;
 @property (nonatomic, strong, nullable) CADisplayLink *backgroundRhythmDisplayLink;
 @property (nonatomic, assign) CGFloat backgroundRhythmBaseRate;
 @property (nonatomic, assign) CGFloat backgroundRhythmMaxRate;
@@ -106,6 +116,9 @@ typedef NS_ENUM(NSInteger, BackgroundMediaKind) {
 // 色散特效模块（"色散" slider 控制）：封装 alpha/位移衰减、beat 切色等内部状态。
 // ViewController 只持有 view 引用、把它加进层级、转发 trigger / tick / reset。
 @property (nonatomic, strong, nullable) RhythmColorMaskEffect *backgroundRhythmColorMaskView;
+@property (nonatomic, assign) RhythmDispersionEffectType backgroundRhythmDispersionEffectType;
+@property (nonatomic, strong, nullable) RhythmFeatureEffectController *backgroundRhythmFeatureController;
+@property (nonatomic, strong, nullable) RhythmFeatureMetalRenderer *backgroundRhythmFeatureRenderer;
 
 // Motionleap-style filter state (driven by display link, read by CIFilter compositor on bg queue)
 @property (atomic, assign) float backgroundRhythmFilterIntensity;       // 0..1，beat 上为 1，每帧指数衰减
@@ -163,8 +176,10 @@ typedef NS_ENUM(NSInteger, BackgroundMediaKind) {
 @property (nonatomic, strong) UIButton *cyberpunkControlButton;
 @property (nonatomic, strong) PerformanceControlPanel *performanceControlPanel;
 @property (nonatomic, strong) UIButton *performanceControlButton;
+@property (nonatomic, strong) UIButton *motionPhotoButton;
 
 @property (nonatomic, strong) UIButton *aiModeButton;
+@property (nonatomic, strong) UIButton *hpssModeButton;
 
 @property (nonatomic, strong) UILabel *fpsLabel;
 @property (nonatomic, strong, nullable) CADisplayLink *fpsDisplayLink;
@@ -174,6 +189,7 @@ typedef NS_ENUM(NSInteger, BackgroundMediaKind) {
 @property (nonatomic, strong) LyricsView *lyricsView;
 @property (nonatomic, strong) UIView *lyricsContainer;
 @property (nonatomic, strong) NSArray<NSNumber *> *latestSpectrumData;
+@property (nonatomic, strong, nullable) AudioFeatures *latestAudioFeatures;
 @property (nonatomic, strong) UIView *visualLyricsOverlayView;
 @property (nonatomic, strong) NSArray<UILabel *> *visualLyricsOverlayLabels;
 @property (nonatomic, strong) NSArray<NSValue *> *visualLyricsOverlayBaseCenters;
@@ -285,6 +301,15 @@ typedef NS_ENUM(NSInteger, BackgroundMediaKind) {
 - (void)playSelectedBackgroundMediaIfNeeded;
 - (void)stopBackgroundMediaPlayback;
 - (void)updateBackgroundMediaEffectStateForEffect:(VisualEffectType)effectType;
+- (void)setBackgroundRhythmEnabled:(BOOL)enabled;
+- (void)setBackgroundVisualEffectsEnabled:(BOOL)enabled;
+- (void)syncRhythmColorMaskInHierarchy;
+- (void)syncRhythmFeatureRendererInHierarchy;
+- (void)syncBackgroundTransformRendererInHierarchy;
+- (void)rebuildBackgroundTransformRendererForEffectSwitch;
+- (void)rhythmPerformVisibleBeatPlaybackWithStrongMix:(float)strongMix;
+- (void)setBackgroundMediaEffectSelectionVisible:(BOOL)visible animated:(BOOL)animated;
+- (void)syncBackgroundRhythmEffectSelectionPanelState;
 - (void)clearAICacheButtonTapped:(UIButton *)sender;
 - (void)aiSettingsButtonTapped:(UIButton *)sender;
 - (void)dismissKeyboard;
