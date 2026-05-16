@@ -309,7 +309,7 @@ static const CGFloat kDefaultEffectRenderScale = 0.85f;
             settings[@"glowIntensity"] = @(1.2);
             settings[@"audioSensitivity"] = @(1.0);
             break;
-            
+
         case VisualEffectTypeNeuralResonance:
             // 节点数量 & 连接半径
             settings[@"nodeCount"] = @(14);          // 14个节点（性能/细节平衡）
@@ -342,6 +342,20 @@ static const CGFloat kDefaultEffectRenderScale = 0.85f;
             settings[@"travelSpeed"] = @(0.82);
             settings[@"audioSensitivity"] = @(1.05);
             settings[@"trailSoftness"] = @(0.85);
+            break;
+
+        case VisualEffectTypeAudioActivityMeter:
+            settings[@"barGlow"] = @(0.85);
+            settings[@"rowContrast"] = @(0.78);
+            settings[@"audioSensitivity"] = @(1.0);
+            settings[@"showGuideGrid"] = @(1.0);
+            break;
+
+        case VisualEffectTypeMusicFeatureScope:
+            settings[@"pulseSharpness"] = @(0.72);
+            settings[@"labelIntensity"] = @(1.0);
+            settings[@"audioSensitivity"] = @(1.08);
+            settings[@"scopeGlow"] = @(0.82);
             break;
 
         case VisualEffectTypeUserMediaBackground:
@@ -382,6 +396,16 @@ static const CGFloat kDefaultEffectRenderScale = 0.85f;
     } else if (effectType == VisualEffectTypeVisualLyricsTunnel) {
         // 视觉歌词以宽屏斜向流动构图为主，直接使用容器宽高，保留对角线运动的空间感。
         CGFloat renderScale = 0.72;
+        _metalView.drawableSize = CGSizeMake(containerSize.width * screenScale * renderScale,
+                                             containerSize.height * screenScale * renderScale);
+    } else if (effectType == VisualEffectTypeAudioActivityMeter) {
+        // 声音活动表以横向行式 UI 为主，使用容器比例，低分辨率即可保持可读轮廓。
+        CGFloat renderScale = 0.60;
+        _metalView.drawableSize = CGSizeMake(containerSize.width * screenScale * renderScale,
+                                             containerSize.height * screenScale * renderScale);
+    } else if (effectType == VisualEffectTypeMusicFeatureScope) {
+        // 音乐特征镜是标签调试面板，使用容器比例避免文字覆盖与视觉槽位错位。
+        CGFloat renderScale = 0.62;
         _metalView.drawableSize = CGSizeMake(containerSize.width * screenScale * renderScale,
                                              containerSize.height * screenScale * renderScale);
     } else if (effectType == VisualEffectTypeNeuralResonance) {
@@ -510,6 +534,18 @@ static const CGFloat kDefaultEffectRenderScale = 0.85f;
                     if (_metalView.preferredFramesPerSecond != targetFPS) {
                         _metalView.preferredFramesPerSecond = targetFPS;
                         NSLog(@"📝 视觉歌词启用电影感帧率: %ldfps", (long)targetFPS);
+                    }
+                } else if (effectType == VisualEffectTypeAudioActivityMeter) {
+                    NSInteger targetFPS = 24;
+                    if (_metalView.preferredFramesPerSecond != targetFPS) {
+                        _metalView.preferredFramesPerSecond = targetFPS;
+                        NSLog(@"📊 声音活动表启用低负载帧率: %ldfps", (long)targetFPS);
+                    }
+                } else if (effectType == VisualEffectTypeMusicFeatureScope) {
+                    NSInteger targetFPS = 24;
+                    if (_metalView.preferredFramesPerSecond != targetFPS) {
+                        _metalView.preferredFramesPerSecond = targetFPS;
+                        NSLog(@"🔬 音乐特征镜启用低负载帧率: %ldfps", (long)targetFPS);
                     }
                 } else if (!_savedPerformanceSettings && _metalView.preferredFramesPerSecond < 30) {
                     _metalView.preferredFramesPerSecond = 30;
@@ -790,6 +826,8 @@ static const CGFloat kDefaultEffectRenderScale = 0.85f;
         case VisualEffectTypeWormholeDrive:
         case VisualEffectTypePrismResonance:
         case VisualEffectTypeVisualLyricsTunnel:
+        case VisualEffectTypeAudioActivityMeter:
+        case VisualEffectTypeMusicFeatureScope:
             return YES;
 
         case VisualEffectTypeUserMediaBackground:

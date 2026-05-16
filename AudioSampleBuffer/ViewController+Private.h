@@ -119,6 +119,14 @@ typedef NS_ENUM(NSInteger, BackgroundMediaKind) {
 @property (nonatomic, assign) RhythmDispersionEffectType backgroundRhythmDispersionEffectType;
 @property (nonatomic, strong, nullable) RhythmFeatureEffectController *backgroundRhythmFeatureController;
 @property (nonatomic, strong, nullable) RhythmFeatureMetalRenderer *backgroundRhythmFeatureRenderer;
+@property (nonatomic, strong, nullable) UILabel *backgroundRhythmDiagnosticLabel;
+@property (nonatomic, strong, nullable) NSMutableArray<UILabel *> *backgroundRhythmDiagnosticLabels;
+@property (nonatomic, strong, nullable) NSMutableDictionary<NSString *, NSNumber *> *backgroundRhythmDiagnosticCooldowns;
+@property (nonatomic, copy, nullable) NSString *backgroundRhythmLastDiagnosticText;
+@property (nonatomic, assign) CFTimeInterval backgroundRhythmLastDiagnosticTextTime;
+@property (nonatomic, assign) float backgroundRhythmLastDiagnosticEnergy;
+@property (nonatomic, assign) float backgroundRhythmLastDiagnosticHighEnergy;
+@property (nonatomic, assign) float backgroundRhythmLastDiagnosticHarmonic;
 
 // Motionleap-style filter state (driven by display link, read by CIFilter compositor on bg queue)
 @property (atomic, assign) float backgroundRhythmFilterIntensity;       // 0..1，beat 上为 1，每帧指数衰减
@@ -190,6 +198,17 @@ typedef NS_ENUM(NSInteger, BackgroundMediaKind) {
 @property (nonatomic, strong) UIView *lyricsContainer;
 @property (nonatomic, strong) NSArray<NSNumber *> *latestSpectrumData;
 @property (nonatomic, strong, nullable) AudioFeatures *latestAudioFeatures;
+@property (nonatomic, strong, nullable) UIView *audioActivityMeterOverlayView;
+@property (nonatomic, strong, nullable) NSArray<UILabel *> *audioActivityMeterLabels;
+@property (nonatomic, strong, nullable) UIView *musicFeatureScopeOverlayView;
+@property (nonatomic, strong, nullable) NSArray<UILabel *> *musicFeatureScopeLabels;
+@property (nonatomic, strong, nullable) UIView *musicFeatureScopeGuitarECGView;
+@property (nonatomic, strong, nullable) UILabel *musicFeatureScopeGuitarECGLabel;
+@property (nonatomic, strong, nullable) CAShapeLayer *musicFeatureScopeGuitarECGGridLayer;
+@property (nonatomic, strong, nullable) CAShapeLayer *musicFeatureScopeGuitarECGLayer;
+@property (nonatomic, strong, nullable) CAShapeLayer *musicFeatureScopeBassECGLayer;
+@property (nonatomic, assign) CFTimeInterval musicFeatureScopeGuitarImpactCooldownUntil;
+@property (nonatomic, assign) CFTimeInterval musicFeatureScopeBassImpactCooldownUntil;
 @property (nonatomic, strong) UIView *visualLyricsOverlayView;
 @property (nonatomic, strong) NSArray<UILabel *> *visualLyricsOverlayLabels;
 @property (nonatomic, strong) NSArray<NSValue *> *visualLyricsOverlayBaseCenters;
@@ -265,6 +284,8 @@ typedef NS_ENUM(NSInteger, BackgroundMediaKind) {
 - (void)refreshSpectrumStyleButtonState;
 - (void)refreshSpectrumAdaptiveThemeIfNeeded;
 - (void)updateSpectrumLiveEditingAvailability;
+- (void)updateAudioActivityMeterOverlayWithFeatures:(nullable AudioFeatures *)features;
+- (void)updateMusicFeatureScopeOverlayWithFeatures:(nullable AudioFeatures *)features;
 - (nullable UIColor *)dominantColorForBackgroundMediaItem:(nullable BackgroundMediaItem *)item;
 
 @end

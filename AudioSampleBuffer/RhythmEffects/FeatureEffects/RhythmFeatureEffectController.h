@@ -12,6 +12,7 @@ typedef NS_ENUM(NSInteger, RhythmFeatureEffectType) {
     RhythmFeatureEffectTypeDroplet = 6,
     RhythmFeatureEffectTypePortal = 7,
     RhythmFeatureEffectTypeImpactWave = 8,
+    RhythmFeatureEffectTypeMusicMicroscope = 9,
 };
 
 @interface RhythmFeatureEffectController : NSObject

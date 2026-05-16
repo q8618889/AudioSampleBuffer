@@ -6,6 +6,7 @@ static RhythmFeatureEffectType RhythmNormalizedFeatureEffectType(RhythmFeatureEf
     switch (effectType) {
         case RhythmFeatureEffectTypeDroplet:
         case RhythmFeatureEffectTypeImpactWave:
+        case RhythmFeatureEffectTypeMusicMicroscope:
             return effectType;
         case RhythmFeatureEffectTypePortal:
         case RhythmFeatureEffectTypeGlitch:
@@ -20,7 +21,8 @@ static RhythmFeatureEffectType RhythmNormalizedFeatureEffectType(RhythmFeatureEf
 }
 
 - (BOOL)prefersMetalOverlay {
-    return NO;
+    RhythmFeatureEffectType type = RhythmNormalizedFeatureEffectType(self.selectedEffectType);
+    return type == RhythmFeatureEffectTypeMusicMicroscope;
 }
 
 - (BOOL)prefersTransformRenderer {
@@ -28,6 +30,7 @@ static RhythmFeatureEffectType RhythmNormalizedFeatureEffectType(RhythmFeatureEf
         case RhythmFeatureEffectTypeDroplet:
         case RhythmFeatureEffectTypeImpactWave:
             return YES;
+        case RhythmFeatureEffectTypeMusicMicroscope:
         default:
             return NO;
     }
@@ -56,6 +59,7 @@ static RhythmFeatureEffectType RhythmNormalizedFeatureEffectType(RhythmFeatureEf
     switch (RhythmNormalizedFeatureEffectType(self.selectedEffectType)) {
         case RhythmFeatureEffectTypeDroplet:
         case RhythmFeatureEffectTypeImpactWave:
+        case RhythmFeatureEffectTypeMusicMicroscope:
             break;
         default:
             break;
@@ -73,6 +77,7 @@ static RhythmFeatureEffectType RhythmNormalizedFeatureEffectType(RhythmFeatureEf
     switch (RhythmNormalizedFeatureEffectType(self.selectedEffectType)) {
         case RhythmFeatureEffectTypeDroplet: return @"Droplet";
         case RhythmFeatureEffectTypeImpactWave: return @"Impact Wave";
+        case RhythmFeatureEffectTypeMusicMicroscope: return @"Music Microscope";
         default:
             return @"Droplet";
     }

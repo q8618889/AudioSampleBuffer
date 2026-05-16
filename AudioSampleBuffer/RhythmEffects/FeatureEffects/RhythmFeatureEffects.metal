@@ -162,6 +162,36 @@ fragment float4 rhythmFeatureFragment(RhythmFeatureVarying in [[stage_in]],
                  tunnel * (0.07 + beatDrive * 0.18) +
                  vacuum * 0.24 +
                  idle * (0.54 + restDrive * 0.30)) * intensity;
+    } else if (u.effectType == 9) {
+        float r = length(centered);
+        float angle = atan2(centered.y, centered.x);
+        float kick = clamp(u.transient * 0.55 + u.subBass * 0.75, 0.0, 1.0);
+        float melody = clamp(u.harmonic, 0.0, 1.0);
+        float air = clamp(u.noise, 0.0, 1.0);
+        float lowRing = smoothstep(0.055, 0.0, abs(r - (0.20 + 0.16 * sin(t * 2.2)))) * (0.25 + 0.95 * kick);
+        float bassField = smoothstep(0.92, 0.08, r) * (0.18 + 0.82 * u.subBass);
+        float melodyLine = smoothstep(0.030, 0.0, abs(centered.y - 0.32 * sin(centered.x * 4.5 + t * (1.4 + melody * 3.0))));
+        float melodyLine2 = smoothstep(0.024, 0.0, abs(centered.y + 0.24 * sin(centered.x * 5.8 - t * (1.1 + melody * 2.6) + 1.4)));
+        float airGrain = rfNoise(uv * (42.0 + air * 28.0) + float2(t * 3.0, -t * 1.7));
+        float airMask = smoothstep(0.56 - air * 0.22, 0.98, airGrain) * smoothstep(0.18, 1.0, abs(centered.y));
+        float tickMarks = pow(max(0.0, cos(angle * 32.0 + t * (1.0 + u.transient * 7.0))), 18.0) * smoothstep(0.82, 0.18, abs(r - 0.62));
+        float sweep = smoothstep(0.040, 0.0, abs(fract(uv.x + t * (0.10 + air * 0.20)) - 0.50)) * air;
+
+        float3 bassColor = float3(0.10, 0.78, 1.0);
+        float3 hitColor = float3(1.0, 0.48, 0.16);
+        float3 melodyColor = float3(0.70, 1.0, 0.30);
+        float3 airColor = float3(0.92, 0.92, 1.0);
+        color = bassColor * bassField * (0.22 + u.subBass * 0.72);
+        color += hitColor * (lowRing + tickMarks) * (0.28 + kick * 0.95);
+        color += melodyColor * (melodyLine + melodyLine2) * (0.18 + melody * 0.90);
+        color += airColor * (airMask + sweep) * (0.12 + air * 0.76);
+        alpha = (bassField * (0.08 + u.subBass * 0.28) +
+                 lowRing * (0.14 + kick * 0.34) +
+                 tickMarks * (0.08 + u.transient * 0.28) +
+                 (melodyLine + melodyLine2) * (0.10 + melody * 0.28) +
+                 airMask * (0.05 + air * 0.22) +
+                 sweep * 0.12 +
+                 idle * 0.35) * max(intensity, 0.68);
     } else {
         float n = rfNoise(uv * (8.0 + u.strongMix * 10.0) + float2(t * 0.8, u.seed));
         color = mix(float3(0.18, 0.75, 1.0), float3(1.0, 0.30, 0.55), n);

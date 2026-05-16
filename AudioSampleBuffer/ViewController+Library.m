@@ -1146,6 +1146,14 @@ static UIEdgeInsets RhythmEffectiveSafeAreaInsets(UIView *view) {
     if (self.backgroundRhythmFlashView.superview == self.view) {
         [self.view bringSubviewToFront:self.backgroundRhythmFlashView];
     }
+    if (self.backgroundRhythmDiagnosticLabel.superview == self.view) {
+        [self.view bringSubviewToFront:self.backgroundRhythmDiagnosticLabel];
+    }
+    for (UILabel *label in self.backgroundRhythmDiagnosticLabels) {
+        if (label.superview == self.view) {
+            [self.view bringSubviewToFront:label];
+        }
+    }
     [self bringControlButtonsToFront];
     if (self.isBackgroundMediaEffectSelectionVisible &&
         self.backgroundMediaEffectSelectionPanel &&
@@ -1188,6 +1196,13 @@ static UIEdgeInsets RhythmEffectiveSafeAreaInsets(UIView *view) {
     if (self.backgroundRhythmTransformRenderer.view.superview) {
         [self.backgroundRhythmTransformRenderer.view removeFromSuperview];
     }
+    if (self.backgroundRhythmDiagnosticLabel.superview) {
+        [self.backgroundRhythmDiagnosticLabel removeFromSuperview];
+    }
+    for (UILabel *label in self.backgroundRhythmDiagnosticLabels.copy) {
+        [label removeFromSuperview];
+    }
+    [self.backgroundRhythmDiagnosticLabels removeAllObjects];
     self.backgroundVideoLayer.hidden = NO;
 }
 
@@ -1226,14 +1241,26 @@ static UIEdgeInsets RhythmEffectiveSafeAreaInsets(UIView *view) {
 }
 
 - (void)syncRhythmFeatureRendererInHierarchy {
+    RhythmFeatureEffectType featureType = self.backgroundRhythmFeatureController.selectedEffectType;
+    BOOL isDiagnostic = featureType == RhythmFeatureEffectTypeMusicMicroscope;
     BOOL shouldShow = self.isBackgroundVisualEffectsEnabled &&
         self.isBackgroundMediaEffectActive &&
-        self.backgroundRhythmFeatureController.prefersMetalOverlay;
+        self.backgroundRhythmFeatureController.prefersMetalOverlay &&
+        (!isDiagnostic || self.player.extendedAnalysisEnabled);
     if (!shouldShow) {
         if (self.backgroundRhythmFeatureRenderer.view.superview) {
             [self.backgroundRhythmFeatureRenderer.view removeFromSuperview];
         }
         [self.backgroundRhythmFeatureRenderer reset];
+        if (isDiagnostic && self.backgroundRhythmDiagnosticLabel.superview) {
+            [self.backgroundRhythmDiagnosticLabel removeFromSuperview];
+        }
+        if (isDiagnostic) {
+            for (UILabel *label in self.backgroundRhythmDiagnosticLabels.copy) {
+                [label removeFromSuperview];
+            }
+            [self.backgroundRhythmDiagnosticLabels removeAllObjects];
+        }
         return;
     }
 
@@ -1602,6 +1629,199 @@ static UIEdgeInsets RhythmEffectiveSafeAreaInsets(UIView *view) {
     if (outIsBeat) *outIsBeat = isBeat;
 }
 
+#pragma mark - Rhythm: Music microscope diagnostics
+
+- (BOOL)isMusicDiagnosticEffectActive {
+    RhythmFeatureEffectType featureType = self.backgroundRhythmFeatureController.selectedEffectType;
+    return self.isBackgroundVisualEffectsEnabled &&
+        self.isBackgroundMediaEffectActive &&
+        self.player.extendedAnalysisEnabled &&
+        featureType == RhythmFeatureEffectTypeMusicMicroscope;
+}
+
+- (void)showRhythmDiagnosticText:(NSString *)text
+                            tint:(UIColor *)tintColor
+                              now:(CFTimeInterval)now {
+    if (text.length == 0) return;
+    if (!self.backgroundRhythmDiagnosticCooldowns) {
+        self.backgroundRhythmDiagnosticCooldowns = [NSMutableDictionary dictionary];
+    }
+    NSNumber *lastShown = self.backgroundRhythmDiagnosticCooldowns[text];
+    if (lastShown && now - lastShown.doubleValue < 0.55) {
+        return;
+    }
+    self.backgroundRhythmDiagnosticCooldowns[text] = @(now);
+
+    self.backgroundRhythmLastDiagnosticText = text;
+    self.backgroundRhythmLastDiagnosticTextTime = now;
+
+    if (!self.backgroundRhythmDiagnosticLabels) {
+        self.backgroundRhythmDiagnosticLabels = [NSMutableArray array];
+    }
+
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.font = [UIFont systemFontOfSize:21.0 weight:UIFontWeightBlack];
+    label.numberOfLines = 1;
+    label.layer.cornerRadius = 13.0;
+    label.layer.masksToBounds = YES;
+    label.layer.borderWidth = 1.0;
+    label.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.24].CGColor;
+    label.text = text;
+    label.textColor = tintColor ?: [UIColor whiteColor];
+    label.backgroundColor = [UIColor colorWithWhite:0.02 alpha:0.58];
+    CGSize fit = [label sizeThatFits:CGSizeMake(self.view.bounds.size.width - 48.0, 38.0)];
+    CGFloat width = MIN(self.view.bounds.size.width - 48.0, MAX(132.0, fit.width + 30.0));
+    NSUInteger visibleCount = self.backgroundRhythmDiagnosticLabels.count;
+    CGFloat row = (CGFloat)(visibleCount % 5);
+    label.frame = CGRectMake((self.view.bounds.size.width - width) * 0.5,
+                             MAX(76.0, self.view.bounds.size.height * 0.13) + row * 46.0,
+                             width,
+                             36.0);
+    [self.backgroundRhythmDiagnosticLabels addObject:label];
+    [self.view addSubview:label];
+    [self.view bringSubviewToFront:label];
+
+    label.alpha = 1.0;
+    label.transform = CGAffineTransformMakeScale(0.86, 0.86);
+    [label.layer removeAnimationForKey:@"rhythmDiagnosticPulse"];
+    __weak typeof(self) weakSelf = self;
+    __weak UILabel *weakLabel = label;
+    [UIView animateWithDuration:0.12 animations:^{
+        label.transform = CGAffineTransformIdentity;
+    } completion:^(BOOL finished) {
+        (void)finished;
+        [UIView animateWithDuration:0.28 delay:0.70 options:UIViewAnimationOptionCurveEaseOut animations:^{
+            label.alpha = 0.0;
+            label.transform = CGAffineTransformMakeTranslation(0.0, -10.0);
+        } completion:^(BOOL finished) {
+            (void)finished;
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            UILabel *finishedLabel = weakLabel;
+            [finishedLabel removeFromSuperview];
+            [strongSelf.backgroundRhythmDiagnosticLabels removeObject:finishedLabel];
+        }];
+    }];
+}
+
+- (void)updateMusicMicroscopeWithFeatures:(AudioFeatures *)features now:(CFTimeInterval)now {
+    if (![self isMusicDiagnosticEffectActive] || !features.hpssExplainable) return;
+    RhythmFeatureEffectType selectedFeatureType = self.backgroundRhythmFeatureController.selectedEffectType;
+
+    AnalyzerCategoryFeatures cat;
+    memset(&cat, 0, sizeof(cat));
+    cat.lowEnergy = features.subBassEnergy;
+    cat.subBass = features.subOnlyEnergy;
+    cat.transient = features.transientStrength;
+    cat.harmonic = features.harmonicStrength;
+    cat.harmonicPeakRatio = features.harmonicPeakRatio;
+    cat.noise = features.noiseStrength;
+    cat.spectralFlatness = features.spectralFlatness;
+
+    [self syncRhythmFeatureRendererInHierarchy];
+    self.backgroundRhythmFeatureRenderer.effectType = selectedFeatureType;
+    self.backgroundRhythmFeatureRenderer.beatSyncEnabled = NO;
+    [self.backgroundRhythmFeatureRenderer triggerWithCategoryFeatures:cat];
+
+    NSMutableArray<NSDictionary<NSString *, id> *> *diagnostics = [NSMutableArray array];
+    float energyJump = features.energy - self.backgroundRhythmLastDiagnosticEnergy;
+    float highJump = features.highEnergy - self.backgroundRhythmLastDiagnosticHighEnergy;
+    float harmonicJump = features.harmonicStrength - self.backgroundRhythmLastDiagnosticHarmonic;
+    BOOL brightTop = features.highEnergy > 0.46f && features.spectralCentroid > 0.58f;
+    BOOL denseHats = features.highEnergy > 0.38f &&
+        features.transientStrength > 0.22f &&
+        features.noiseStrength > 0.18f &&
+        features.subBassEnergy < 0.42f;
+    BOOL electricTexture = features.noiseStrength > 0.34f &&
+        features.spectralFlatness > 0.28f &&
+        features.highEnergy > 0.30f;
+    BOOL tearingTexture = features.distortionDetected ||
+        (features.distortionConfidence > 0.54f &&
+         features.noiseStrength > 0.28f &&
+         features.harmonicStrength > 0.22f);
+    BOOL bassMotion = features.subBassEnergy > 0.35f &&
+        features.harmonicStrength > 0.24f &&
+        features.harmonicPeakRatio > 0.12f;
+    BOOL wobbleBass = bassMotion &&
+        (features.tremoloDetected || features.gateDetected ||
+         (features.transientStrength > 0.20f && features.subBassEnergy > 0.45f));
+    BOOL spaceWide = features.delayDetected ||
+        (features.noiseStrength > 0.24f &&
+         features.harmonicStrength > 0.28f &&
+         features.transientStrength < 0.22f);
+    BOOL padThick = features.harmonicStrength > 0.42f &&
+        features.harmonicPeakRatio < 0.18f &&
+        features.transientStrength < 0.18f;
+
+    if (energyJump > 0.32f && features.energy > 0.58f) {
+        [diagnostics addObject:@{@"text": @"突然爆开", @"color": [UIColor colorWithRed:1.0 green:0.42 blue:0.16 alpha:1.0]}];
+    }
+    if (tearingTexture && features.energy > 0.38f) {
+        [diagnostics addObject:@{@"text": @"声音撕裂", @"color": [UIColor colorWithRed:1.0 green:0.24 blue:0.34 alpha:1.0]}];
+    }
+    if ((features.stutterDetected && features.stutterConfidence > 0.42f) ||
+               (features.gateDetected && features.gateConfidence > 0.48f)) {
+        [diagnostics addObject:@{@"text": @"声音被切碎", @"color": [UIColor colorWithRed:1.0 green:0.76 blue:0.28 alpha:1.0]}];
+    }
+    if (features.subBassHit) {
+        [diagnostics addObject:@{@"text": @"大鼓咚一下", @"color": [UIColor colorWithRed:1.0 green:0.56 blue:0.24 alpha:1.0]}];
+    }
+    if (wobbleBass) {
+        [diagnostics addObject:@{@"text": @"低音在抖动", @"color": [UIColor colorWithRed:0.20 green:0.86 blue:1.0 alpha:1.0]}];
+    } else if (bassMotion) {
+        [diagnostics addObject:@{@"text": @"低音在滚动", @"color": [UIColor colorWithRed:0.36 green:0.90 blue:1.0 alpha:1.0]}];
+    }
+    if (features.noiseFXActive || (features.noiseStrength > 0.42f && features.spectralFlatness > 0.34f)) {
+        [diagnostics addObject:@{@"text": @"空气声上升", @"color": [UIColor colorWithRed:0.86 green:0.94 blue:1.0 alpha:1.0]}];
+    }
+    if (features.sidechainDetected && features.sidechainConfidence > 0.42f) {
+        [diagnostics addObject:@{@"text": @"画面一吸一放", @"color": [UIColor colorWithRed:0.52 green:0.88 blue:1.0 alpha:1.0]}];
+    }
+    if (features.autoPanDetected && features.autoPanConfidence > 0.42f) {
+        [diagnostics addObject:@{@"text": @"左右来回跑", @"color": [UIColor colorWithRed:0.48 green:0.82 blue:1.0 alpha:1.0]}];
+    }
+    if (features.delayDetected && features.delayConfidence > 0.48f) {
+        [diagnostics addObject:@{@"text": @"回声拖尾", @"color": [UIColor colorWithRed:0.74 green:0.80 blue:1.0 alpha:1.0]}];
+    }
+    if (features.filterSweepDetected && features.filterSweepConfidence > 0.38f) {
+        [diagnostics addObject:@{@"text": @"声音在扫上来", @"color": [UIColor colorWithRed:0.92 green:0.82 blue:1.0 alpha:1.0]}];
+    }
+    if (electricTexture) {
+        [diagnostics addObject:@{@"text": @"电流感", @"color": [UIColor colorWithRed:0.72 green:0.96 blue:1.0 alpha:1.0]}];
+    }
+    if (brightTop || highJump > 0.18f) {
+        [diagnostics addObject:@{@"text": @"高音很亮", @"color": [UIColor colorWithRed:0.96 green:0.98 blue:1.0 alpha:1.0]}];
+    }
+    if (denseHats) {
+        [diagnostics addObject:@{@"text": @"碎镲很多", @"color": [UIColor colorWithRed:0.98 green:0.94 blue:0.76 alpha:1.0]}];
+    }
+    if (features.harmonicStrength > 0.48f && harmonicJump > 0.12f) {
+        [diagnostics addObject:@{@"text": @"主旋律出现", @"color": [UIColor colorWithRed:0.82 green:1.0 blue:0.38 alpha:1.0]}];
+    }
+    if (features.harmonicStrength > 0.34f && features.harmonicPeakRatio > 0.16f) {
+        [diagnostics addObject:@{@"text": @"旋律线在动", @"color": [UIColor colorWithRed:0.76 green:1.0 blue:0.36 alpha:1.0]}];
+    }
+    if (padThick) {
+        [diagnostics addObject:@{@"text": @"铺底氛围变厚", @"color": [UIColor colorWithRed:0.62 green:0.92 blue:1.0 alpha:1.0]}];
+    }
+    if (spaceWide) {
+        [diagnostics addObject:@{@"text": @"空间变大", @"color": [UIColor colorWithRed:0.72 green:0.78 blue:1.0 alpha:1.0]}];
+    }
+    if (features.transientHit) {
+        [diagnostics addObject:@{@"text": @"短促敲击", @"color": [UIColor colorWithRed:1.0 green:0.82 blue:0.42 alpha:1.0]}];
+    }
+    if (features.subOnlyEnergy > 0.42f || features.subBassEnergy > 0.50f) {
+        [diagnostics addObject:@{@"text": @"低频压迫感", @"color": [UIColor colorWithRed:0.40 green:0.88 blue:1.0 alpha:1.0]}];
+    }
+
+    for (NSDictionary<NSString *, id> *item in diagnostics) {
+        [self showRhythmDiagnosticText:item[@"text"] tint:item[@"color"] now:now];
+    }
+    self.backgroundRhythmLastDiagnosticEnergy = features.energy;
+    self.backgroundRhythmLastDiagnosticHighEnergy = features.highEnergy;
+    self.backgroundRhythmLastDiagnosticHarmonic = features.harmonicStrength;
+}
+
 #pragma mark - Rhythm: Beat handling (Motionleap-style)
 
 - (void)rhythmHandleBeatAtTime:(CFTimeInterval)now bass:(float)bass {
@@ -1915,6 +2135,7 @@ static UIEdgeInsets RhythmEffectiveSafeAreaInsets(UIView *view) {
         // 否则 HPSS 开关会改变背景律动是否触发，手感会飘。
         bass = MAX(bass, features.subBassEnergy);
         flux = MAX(flux, features.transientStrength * 0.65f);
+        [self updateMusicMicroscopeWithFeatures:features now:now];
     }
     self.backgroundRhythmSmoothedBass = 0.85f * self.backgroundRhythmSmoothedBass + 0.15f * bass;
 

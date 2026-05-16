@@ -259,6 +259,20 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 /**
+ * 声音活动表渲染器 - 实验性效果
+ * 低成本行式强度表，用来观察当前活跃声音标签与强度
+ */
+@interface AudioActivityMeterRenderer : BaseMetalRenderer
+@end
+
+/**
+ * 音乐特征镜渲染器 - 实验性效果
+ * 把 Beat/Kick/Sub Bass/Hi-hat/Drop 等音乐标签映射到对应视觉槽位
+ */
+@interface MusicFeatureScopeRenderer : BaseMetalRenderer
+@end
+
+/**
  * 默认效果渲染器
  */
 @interface DefaultEffectRenderer : BaseMetalRenderer

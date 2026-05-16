@@ -122,6 +122,9 @@
 		4C7D33C02F11200000000007 /* LocalLyricsListViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D33B02F1110000000000E /* LocalLyricsListViewController.m */; };
 		4C8A100130BA500000ACCA11 /* PrismResonanceShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4C8A100230BA500000ACCA11 /* PrismResonanceShader.metal */; };
 		4C8B200130BA600000ACCA11 /* VisualLyricsTunnelShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4C8B200230BA600000ACCA11 /* VisualLyricsTunnelShader.metal */; };
+		4C8C300130BA700000ACCA11 /* AudioActivityMeterShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4C8C300230BA700000ACCA11 /* AudioActivityMeterShader.metal */; };
+		4C8D400130BA800000ACCA11 /* MusicFeatureScopeShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4C8D400230BA800000ACCA11 /* MusicFeatureScopeShader.metal */; };
+		4C9E510130BB100000ACCA11 /* InstrumentTruthConfig.json in Resources */ = {isa = PBXBuildFile; fileRef = 4C9E510230BB100000ACCA11 /* InstrumentTruthConfig.json */; };
 		4CCD33A02F30000000000001 /* RhythmColorMaskEffect.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCD33A02F30000000000003 /* RhythmColorMaskEffect.m */; };
 		4CCDEFC82F497C7C00A2DB9C /* VisualEffectAIController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCDEFC72F497C7C00A2DB9C /* VisualEffectAIController.m */; };
 		4CCDEFC92F497C7C00A2DB9C /* UserPreferenceEngine.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CCDEFC52F497C7C00A2DB9C /* UserPreferenceEngine.m */; };
@@ -375,6 +378,9 @@
 		4C7D33B02F1110000000000E /* LocalLyricsListViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LocalLyricsListViewController.m; sourceTree = "<group>"; };
 		4C8A100230BA500000ACCA11 /* PrismResonanceShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = PrismResonanceShader.metal; sourceTree = "<group>"; };
 		4C8B200230BA600000ACCA11 /* VisualLyricsTunnelShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = VisualLyricsTunnelShader.metal; sourceTree = "<group>"; };
+		4C8C300230BA700000ACCA11 /* AudioActivityMeterShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = AudioActivityMeterShader.metal; sourceTree = "<group>"; };
+		4C8D400230BA800000ACCA11 /* MusicFeatureScopeShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = MusicFeatureScopeShader.metal; sourceTree = "<group>"; };
+		4C9E510230BB100000ACCA11 /* InstrumentTruthConfig.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = InstrumentTruthConfig.json; sourceTree = "<group>"; };
 		4CCD33A02F30000000000002 /* RhythmColorMaskEffect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RhythmColorMaskEffect.h; sourceTree = "<group>"; };
 		4CCD33A02F30000000000003 /* RhythmColorMaskEffect.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RhythmColorMaskEffect.m; sourceTree = "<group>"; };
 		4CCDEFB82F497C7C00A2DB9C /* AudioFeatureExtractor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioFeatureExtractor.h; sourceTree = "<group>"; };
@@ -722,6 +728,7 @@
 			children = (
 				4CCFF5FD2F3B1DAC004FFF9A /* AIColorConfiguration.h */,
 				4CCFF5FE2F3B1DAC004FFF9A /* AIColorConfiguration.m */,
+				4C9E510230BB100000ACCA11 /* InstrumentTruthConfig.json */,
 				4CF7A11030A1000000000001 /* LLMAPISettings.h */,
 				4CF7A11130A1000000000002 /* LLMAPISettings.m */,
 				4CCFF5FF2F3B1DAC004FFF9A /* MusicAIAnalyzer.h */,
@@ -796,6 +803,8 @@
 				4C110D5F2EAD600000D59E12 /* WormholeDriveShader.metal */,
 				4C8A100230BA500000ACCA11 /* PrismResonanceShader.metal */,
 				4C8B200230BA600000ACCA11 /* VisualLyricsTunnelShader.metal */,
+				4C8C300230BA700000ACCA11 /* AudioActivityMeterShader.metal */,
+				4C8D400230BA800000ACCA11 /* MusicFeatureScopeShader.metal */,
 				4C6F9A0230B8401000ACCA11 /* ChromaticCausticsShader.metal */,
 				4C66E7A12E8A9256003200DA /* SpectrumReduce.metal */,
 			);
@@ -1065,6 +1074,7 @@
 				4C6548852EA0C500006DD8DD /* extract_ncm_lyrics.sh in Resources */,
 				4C6548862EA0C500006DD8DD /* ncm_lyrics_extractor.py in Resources */,
 				4C6548872EA0C500006DD8DD /* decrypt_ncm_to_mp3.py in Resources */,
+				4C9E510130BB100000ACCA11 /* InstrumentTruthConfig.json in Resources */,
 				4CE2D33A2FA3555B0006CE2C /* HPSSValidation.md in Resources */,
 				64C5446B28C838D100C23393 /* Main.storyboard in Resources */,
 			);
@@ -1113,6 +1123,8 @@
 				4C110D5E2EAD600000D59E12 /* WormholeDriveShader.metal in Sources */,
 				4C8A100130BA500000ACCA11 /* PrismResonanceShader.metal in Sources */,
 				4C8B200130BA600000ACCA11 /* VisualLyricsTunnelShader.metal in Sources */,
+				4C8C300130BA700000ACCA11 /* AudioActivityMeterShader.metal in Sources */,
+				4C8D400130BA800000ACCA11 /* MusicFeatureScopeShader.metal in Sources */,
 				4C6F9A0130B8401000ACCA11 /* ChromaticCausticsShader.metal in Sources */,
 				4C66E7A02E8A9256003200DA /* SpectrumReduce.metal in Sources */,
 				4C699F8F2E9F951A009090AB /* AAFilter.cpp in Sources */,

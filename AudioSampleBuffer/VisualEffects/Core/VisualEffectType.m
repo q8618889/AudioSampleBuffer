@@ -212,6 +212,22 @@
                                                            performanceLevel:PerformanceLevelHigh];
     visualLyricsTunnel.requiresMetal = YES;
     [effects addObject:visualLyricsTunnel];
+
+    VisualEffectInfo *audioActivityMeter = [VisualEffectInfo effectWithType:VisualEffectTypeAudioActivityMeter
+                                                                       name:@"声音活动表"
+                                                                description:@"用中文标签和强度条直接显示当前活跃的低频、瞬态、旋律、噪声与效果特征"
+                                                                   category:EffectCategoryExperimental
+                                                           performanceLevel:PerformanceLevelLow];
+    audioActivityMeter.requiresMetal = YES;
+    [effects addObject:audioActivityMeter];
+
+    VisualEffectInfo *musicFeatureScope = [VisualEffectInfo effectWithType:VisualEffectTypeMusicFeatureScope
+                                                                      name:@"音乐特征镜"
+                                                               description:@"把 Beat、Kick、Hi-hat、Riser、Drop 等音乐特征映射成对应视觉触发，并显示中文强度读数"
+                                                                  category:EffectCategoryExperimental
+                                                          performanceLevel:PerformanceLevelLow];
+    musicFeatureScope.requiresMetal = YES;
+    [effects addObject:musicFeatureScope];
     
     self.effects = [effects copy];
 }

@@ -33,6 +33,11 @@ typedef struct {
     vector_float4 cyberpunkFrequencyControls; // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
     vector_float4 cyberpunkBackgroundParams; // 赛博朋克背景参数: (solidColorR, solidColorG, solidColorB, intensity)
     vector_float4 categoryFeatures; // (subBass, transient, harmonic, noise)
+    vector_float4 activityMeter1; // (low, transient, harmonic, noise)
+    vector_float4 activityMeter2; // (high, electric, chopped, sweep)
+    vector_float4 activityMeter3; // (pan, echo, sidechain, energy)
+    vector_float4 activityMeter4; // (flatness, electricBassLine, electricGuitarTexture, distortedGuitar)
+    vector_float4 activityMeter5; // (pluckGrain, soundWall, reserved, reserved)
 } Uniforms;
 
 // AI 增强的统一缓冲区（用于丁达尔效应等需要动态颜色的效果）
@@ -363,6 +368,36 @@ typedef struct {
         [params[@"transient"] floatValue],
         [params[@"harmonic"] floatValue],
         [params[@"noise"] floatValue]
+    };
+    uniforms->activityMeter1 = (vector_float4){
+        [params[@"activityLow"] floatValue],
+        [params[@"activityTransient"] floatValue],
+        [params[@"activityHarmonic"] floatValue],
+        [params[@"activityNoise"] floatValue]
+    };
+    uniforms->activityMeter2 = (vector_float4){
+        [params[@"activityHigh"] floatValue],
+        [params[@"activityElectric"] floatValue],
+        [params[@"activityChopped"] floatValue],
+        [params[@"activitySweep"] floatValue]
+    };
+    uniforms->activityMeter3 = (vector_float4){
+        [params[@"activityPan"] floatValue],
+        [params[@"activityEcho"] floatValue],
+        [params[@"activitySidechain"] floatValue],
+        [params[@"activityEnergy"] floatValue]
+    };
+    uniforms->activityMeter4 = (vector_float4){
+        [params[@"activityFlatness"] floatValue],
+        [params[@"activityElectricBassLine"] floatValue],
+        [params[@"activityElectricGuitarTexture"] floatValue],
+        [params[@"activityDistortedGuitar"] floatValue]
+    };
+    uniforms->activityMeter5 = (vector_float4){
+        [params[@"activityPluckGrain"] floatValue],
+        [params[@"activitySoundWall"] floatValue],
+        0.0f,
+        0.0f
     };
 
     // 更新星系参数（如果是星系渲染器）
@@ -1653,6 +1688,70 @@ typedef struct {
 
 @end
 
+@implementation AudioActivityMeterRenderer
+
+- (void)setupPipeline {
+    MTLRenderPipelineDescriptor *pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+    pipelineDescriptor.label = @"AudioActivityMeter";
+    pipelineDescriptor.vertexFunction = [self.defaultLibrary newFunctionWithName:@"neon_vertex"];
+    pipelineDescriptor.fragmentFunction = [self.defaultLibrary newFunctionWithName:@"audioActivityMeterFragment"];
+    pipelineDescriptor.colorAttachments[0].pixelFormat = self.metalView.colorPixelFormat;
+    pipelineDescriptor.sampleCount = self.metalView.sampleCount;
+    pipelineDescriptor.depthAttachmentPixelFormat = self.metalView.depthStencilPixelFormat;
+    pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
+    pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
+    pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+    pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+
+    NSError *error = nil;
+    self.pipelineState = [self.device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+    if (!self.pipelineState) {
+        NSLog(@"❌ 创建声音活动表管线失败: %@", error);
+    }
+}
+
+- (void)encodeRenderCommands:(id<MTLRenderCommandEncoder>)encoder {
+    if (!self.pipelineState) return;
+    [encoder setRenderPipelineState:self.pipelineState];
+    [encoder setVertexBuffer:self.uniformBuffer offset:0 atIndex:0];
+    [encoder setFragmentBuffer:self.uniformBuffer offset:0 atIndex:0];
+    [encoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+}
+
+@end
+
+@implementation MusicFeatureScopeRenderer
+
+- (void)setupPipeline {
+    MTLRenderPipelineDescriptor *pipelineDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+    pipelineDescriptor.label = @"MusicFeatureScope";
+    pipelineDescriptor.vertexFunction = [self.defaultLibrary newFunctionWithName:@"neon_vertex"];
+    pipelineDescriptor.fragmentFunction = [self.defaultLibrary newFunctionWithName:@"musicFeatureScopeFragment"];
+    pipelineDescriptor.colorAttachments[0].pixelFormat = self.metalView.colorPixelFormat;
+    pipelineDescriptor.sampleCount = self.metalView.sampleCount;
+    pipelineDescriptor.depthAttachmentPixelFormat = self.metalView.depthStencilPixelFormat;
+    pipelineDescriptor.colorAttachments[0].blendingEnabled = YES;
+    pipelineDescriptor.colorAttachments[0].rgbBlendOperation = MTLBlendOperationAdd;
+    pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+    pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+
+    NSError *error = nil;
+    self.pipelineState = [self.device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+    if (!self.pipelineState) {
+        NSLog(@"❌ 创建音乐特征镜管线失败: %@", error);
+    }
+}
+
+- (void)encodeRenderCommands:(id<MTLRenderCommandEncoder>)encoder {
+    if (!self.pipelineState) return;
+    [encoder setRenderPipelineState:self.pipelineState];
+    [encoder setVertexBuffer:self.uniformBuffer offset:0 atIndex:0];
+    [encoder setFragmentBuffer:self.uniformBuffer offset:0 atIndex:0];
+    [encoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+}
+
+@end
+
 @implementation DefaultEffectRenderer
 
 - (void)setupPipeline {
@@ -2863,6 +2962,12 @@ typedef struct {
 
         case VisualEffectTypeVisualLyricsTunnel:
             return [[VisualLyricsTunnelRenderer alloc] initWithMetalView:metalView];
+
+        case VisualEffectTypeAudioActivityMeter:
+            return [[AudioActivityMeterRenderer alloc] initWithMetalView:metalView];
+
+        case VisualEffectTypeMusicFeatureScope:
+            return [[MusicFeatureScopeRenderer alloc] initWithMetalView:metalView];
             
         default:
             return [[DefaultEffectRenderer alloc] initWithMetalView:metalView];

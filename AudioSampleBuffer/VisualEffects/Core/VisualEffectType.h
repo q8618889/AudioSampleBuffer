@@ -47,6 +47,8 @@ typedef NS_ENUM(NSUInteger, VisualEffectType) {
     VisualEffectTypePrismResonance,         // 棱镜共振 - 清晰几何频段分层
     VisualEffectTypeVisualLyricsTunnel,     // 视觉歌词隧道 - 45° 斜向歌词流持续入场与离场
     VisualEffectTypeUserMediaBackground,    // 视频/Live Photo 循环背景 - 用户导入媒体作为播放器背景
+    VisualEffectTypeAudioActivityMeter,     // 声音活动表 - 文字标签与强度条显示当前活跃声音特征
+    VisualEffectTypeMusicFeatureScope,      // 音乐特征镜 - Beat/Kick/Drop 等音乐标签触发对应 Metal 视觉
 
     // 数量
     VisualEffectTypeCount

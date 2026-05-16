@@ -1828,6 +1828,8 @@ static UIEdgeInsets RhythmEffectiveSafeAreaInsets(UIView *view) {
     [self updateEffectButtonStates:effectType];
     [self updateBackgroundMediaEffectStateForEffect:effectType];
     [self refreshVisualLyricsOverlayVisibility];
+    [self updateAudioActivityMeterOverlayWithFeatures:self.latestAudioFeatures];
+    [self updateMusicFeatureScopeOverlayWithFeatures:self.latestAudioFeatures];
 }
 
 - (void)visualEffectManager:(VisualEffectManager *)manager didUpdatePerformance:(NSDictionary *)stats {

@@ -36,6 +36,7 @@
     return @[
         [self descriptorWithTitle:@"珠滴" summary:@"水珠折射和液态拉扯，重点改画面本身。" rawValue:RhythmFeatureEffectTypeDroplet],
         [self descriptorWithTitle:@"冲击波" summary:@"拍点炸出一圈位移波纹，适合卡鼓点。" rawValue:RhythmFeatureEffectTypeImpactWave],
+        [self descriptorWithTitle:@"音乐数据显微镜" summary:@"高精度 DSP 专用，显示听到的声音成分。" rawValue:RhythmFeatureEffectTypeMusicMicroscope],
     ];
 }
 

@@ -691,6 +691,6 @@ fragment float4 tyndallBeamFragment(VertexOut in [[stage_in]],
     float pLenSq = dot(p, p);
     float vig = 1.0 - 0.2 * pLenSq;
     finalColor *= max(vig, 0.0);
-    
+
     return float4(finalColor, 1.0);
 }

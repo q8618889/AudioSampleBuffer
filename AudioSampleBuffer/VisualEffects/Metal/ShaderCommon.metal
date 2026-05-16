@@ -39,6 +39,11 @@ struct Uniforms {
     float4 cyberpunkFrequencyControls; // 赛博朋克频段控制: (enableBass, enableMid, enableTreble, reserved)
     float4 cyberpunkBackgroundParams; // 赛博朋克背景参数: (solidColorR, solidColorG, solidColorB, intensity)
     float4 categoryFeatures; // (subBass, transient, harmonic, noise)
+    float4 activityMeter1; // (low, transient, harmonic, noise)
+    float4 activityMeter2; // (high, electric, chopped, sweep)
+    float4 activityMeter3; // (pan, echo, sidechain, energy)
+    float4 activityMeter4; // (flatness, electricBassLine, electricGuitarTexture, distortedGuitar)
+    float4 activityMeter5; // (pluckGrain, soundWall, reserved, reserved)
 };
 
 // AI 增强的 Uniforms（用于丁达尔效应等需要动态颜色的效果）
@@ -143,4 +148,3 @@ static inline float radians(float degrees) {
 }
 
 #endif /* ShaderCommon_metal */
-
